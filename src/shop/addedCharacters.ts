@@ -85,8 +85,9 @@ export function sheetLayout(width: number, height: number, rules: Rules = GAME_C
   return { ok: true, frameW, frameH: height, frames };
 }
 
-export type Pose = 'stand' | 'happy' | 'thinking' | 'walkA' | 'walkB';
-const POSE_FRAME: Record<Pose, number> = { stand: 0, happy: 1, thinking: 2, walkA: 3, walkB: 4 };
+export type Pose = 'stand' | 'happy' | 'thinking' | 'walkA' | 'walkB' | 'blink';
+/** Blink comes after the five frames a picture can have, so only the built-in friends blink. */
+const POSE_FRAME: Record<Pose, number> = { stand: 0, happy: 1, thinking: 2, walkA: 3, walkB: 4, blink: 5 };
 
 /** Frame index for a pose; poses the picture doesn't have use the standing frame. */
 export function frameFor(frames: number, pose: Pose): number {
@@ -94,7 +95,7 @@ export function frameFor(frames: number, pose: Pose): number {
   return i < frames ? i : 0;
 }
 
-/** Characters with both walk frames step; the rest hop along. */
+/** Characters with both walk frames step; the rest just sway as they walk. */
 export const hasWalkFrames = (frames: number): boolean => frames > POSE_FRAME.walkB;
 
 // ---------------------------------------------------------------------------

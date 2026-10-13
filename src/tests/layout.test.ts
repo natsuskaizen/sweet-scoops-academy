@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { tubSpot } from '../scenes/shopRoom';
 import { layoutFor, paradeSpots, PORTRAIT_MAX_H, PORTRAIT_MIN_H, SHOP_H, SHOP_W, type Rect } from '../ui/theme';
 
 const inside = (inner: Rect, outer: Rect) =>
@@ -63,5 +64,18 @@ describe('paradeSpots', () => {
   it('handles a short round', () => {
     expect(paradeSpots(1)).toHaveLength(1);
     expect(paradeSpots(0)).toEqual([]);
+  });
+});
+
+describe('tubSpot', () => {
+  it('finds each flavour its own tub inside the shop, and uses the middle tub otherwise', () => {
+    const spots = ['strawberry', 'honey-lavender', 'blueberry', 'lemon', 'chocolate', 'mint'].map(tubSpot);
+    expect(new Set(spots.map((s) => `${s.x},${s.y}`)).size).toBe(6);
+    for (const s of spots) {
+      expect(s.x).toBeGreaterThan(0);
+      expect(s.x).toBeLessThan(SHOP_W);
+      expect(s.y).toBeLessThan(SHOP_H);
+    }
+    expect(tubSpot('vanilla')).toEqual(tubSpot('honey-lavender'));
   });
 });

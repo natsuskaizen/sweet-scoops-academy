@@ -34,6 +34,7 @@ import { VisualAidView } from '../ui/VisualAidView';
 import { backupActions } from './backupActions';
 import { characterAction } from './characterActions';
 import { confetti, ResultsOverlay } from './ResultsOverlay';
+import { scoopOntoCone } from './serveAnimation';
 import { drawDecorations, drawShopRoom } from './shopArt';
 
 /** Test hooks (`window.__ssa`, `?fast`) exist in dev, and in a build only when opened with `?e2e`. */
@@ -197,7 +198,7 @@ export class ShopScene extends Phaser.Scene {
 
     if (result.kind === 'try-again') {
       this.ticket.wiggle();
-      this.customer?.setExpression('thinking');
+      this.customer?.puzzled();
       this.showHint(result.presentation);
       await this.wait(450);
       this.keypad.clear();
@@ -237,6 +238,8 @@ export class ShopScene extends Phaser.Scene {
       this.ticket.setAnswer(typed || presentation.correctAnswer, CSS.mint);
       this.ticket.setFeedback(lineFor(lines, Number(presentation.correctAnswer)), 'happy');
       this.aid.hide();
+      this.customer?.setExpression('happy');
+      void this.customer?.cheer();
     }
     await this.serve(presentation, sprinkles, flavor);
   }
@@ -273,22 +276,12 @@ export class ShopScene extends Phaser.Scene {
     this.nextOrder();
   }
 
-  /** Shopkeeper stacks up to four scoops on a cone on the counter. */
+  /** Shopkeeper scoops up to four scoops from the tubs onto a cone on the counter. */
   private async scoopTreat(answer: number, flavor: string): Promise<Phaser.GameObjects.Container> {
     const treat = this.add.container(LAYOUT.counter.x + 80, LAYOUT.counter.y - 40).setDepth(45);
     this.treat = treat;
     treat.add(this.add.image(0, 0, 'cone').setScale(6).setOrigin(0.5, 0));
-    void this.shopkeeper.hop();
-    const scoops = Phaser.Math.Clamp(answer || 1, 1, 4);
-    for (let i = 0; i < scoops; i++) {
-      const s = this.add
-        .image(0, -i * 22 + 4, `scoop-${flavor}`)
-        .setScale(0)
-        .setOrigin(0.5, 1);
-      treat.add(s);
-      this.tweens.add({ targets: s, scale: 6, duration: 160, ease: 'Back.easeOut' });
-      await this.wait(170);
-    }
+    await scoopOntoCone(this, this.shopkeeper, treat, flavor, Phaser.Math.Clamp(answer || 1, 1, 4));
     return treat;
   }
 

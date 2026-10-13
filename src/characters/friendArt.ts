@@ -4,9 +4,9 @@
  * grid of sprites.ts so shop accessories can scale onto them later.
  *
  * Each character is its standing frame as a text grid ('.' is clear, 'o' is
- * the shared outline, other letters come from its palette). The happy and
- * thinking frames are drawn from it by friendFrames(), so every character
- * gets the same faces. Walking uses the gentle hop.
+ * the shared outline, other letters come from its palette). The other
+ * frames (happy, thinking, two walking steps and a blink) are drawn from it
+ * by friendFrames(), so every character gets the same faces and steps.
  */
 
 export const FRIEND_W = 32;
@@ -20,6 +20,9 @@ export interface FriendArt {
 
 /** Where every character's eyes sit: two pixels wide, rows 18-20. */
 export const FRIEND_EYES = { left: 8, right: 22, top: 18 } as const;
+/** Rows from here down hold the feet; a step lifts one half of them. */
+const FEET_TOP = 33;
+const STEP_LIFT = 2;
 /** Characters without a coloured nose have a two-pixel mouth here. */
 const MOUTH = { x: 15, y: 22 } as const;
 
@@ -703,12 +706,28 @@ function thinking(grid: Grid): void {
   if (hasMouth(grid)) grid[MOUTH.y]![MOUTH.x + 1] = grid[MOUTH.y]![MOUTH.x - 1]!;
 }
 
-/** Standing, happy and thinking frames, in sprite-sheet order. */
+/** Closed eyes: a short line along the bottom of each eye. */
+function blink(grid: Grid): void {
+  redrawEyes(grid, (g, x, ink) => g[FRIEND_EYES.top + 2]!.splice(x, 2, ink, ink));
+}
+
+/** Lifts the left or right foot by moving that half of the feet rows up. */
+const step =
+  (side: 'left' | 'right') =>
+  (grid: Grid): void => {
+    const from = side === 'left' ? 0 : FRIEND_W / 2;
+    for (let y = FEET_TOP; y < FRIEND_H; y++) {
+      const below = grid[y + STEP_LIFT];
+      for (let x = from; x < from + FRIEND_W / 2; x++) grid[y]![x] = below?.[x] ?? '.';
+    }
+  };
+
+/** Standing, happy, thinking, two walking steps and a blink, in sprite-sheet order. */
 export function friendFrames(art: FriendArt): string[][] {
   const pose = (change?: (grid: Grid) => void): string[] => {
     const grid = art.rows.map((r) => r.split(''));
     change?.(grid);
     return grid.map((r) => r.join(''));
   };
-  return [pose(), pose(happy), pose(thinking)];
+  return [pose(), pose(happy), pose(thinking), pose(step('left')), pose(step('right')), pose(blink)];
 }

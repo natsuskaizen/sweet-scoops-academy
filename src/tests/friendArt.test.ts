@@ -40,6 +40,31 @@ describe('built-in friends', () => {
     }
   });
 
+  it.each(FRIEND_IDS)('%s lifts one foot at a time to walk, and nothing else moves', (id) => {
+    const [stand, , , walkA, walkB] = friendFrames(FRIEND_ART[id]);
+    for (const [step, still] of [
+      [walkA!, (x: number) => x >= FRIEND_W / 2],
+      [walkB!, (x: number) => x < FRIEND_W / 2],
+    ] as const) {
+      expect(step).not.toEqual(stand);
+      step.forEach((row, y) => {
+        for (let x = 0; x < FRIEND_W; x++) if (y < 33 || still(x)) expect(row[x]).toBe(stand![y]![x]);
+      });
+      // The lifted foot leaves the bottom row clear on its side.
+      const bottom = step[FRIEND_H - 1]!;
+      expect([...bottom].filter((ch, x) => !still(x) && ch !== '.')).toEqual([]);
+    }
+  });
+
+  it.each(FRIEND_IDS)('%s blinks by closing its eyes to a line', (id) => {
+    const frames = friendFrames(FRIEND_ART[id]);
+    expect(frames).toHaveLength(6);
+    const [stand, , , , , blink] = frames;
+    const { left, top } = FRIEND_EYES;
+    expect(blink![top + 2]!.slice(left, left + 2)).toBe(stand![top + 1]!.slice(left, left + 2));
+    expect(blink![top]!.slice(left, left + 2)).not.toBe(stand![top]!.slice(left, left + 2));
+  });
+
   it('draws the outline in the shared ink colour', () => {
     expect(friendColor(FRIEND_ART.momo, 'o')).toBe(FRIEND_OUTLINE);
     expect(friendColor(FRIEND_ART.momo, '?')).toBeNull();
