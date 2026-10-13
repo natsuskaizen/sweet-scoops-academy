@@ -148,7 +148,7 @@ submit(input: string): SubmitResult {
 }
 ```
 
-Each `submit()` and `finishOrder()` also adds the time since the previous step to the round's play time, capped so a long pause counts as a short one. The finished round's summary keeps that time and the questions (as the ticket showed them) that needed help, for the grown-ups "Progress by round" pages built by `src/shop/roundReport.ts`:
+Each `submit()` and `finishOrder()` also adds the time since the previous step to the round's play time, capped so a long pause counts as a short one. The finished round's summary keeps that time and the questions (as the ticket showed them) that needed help, for the grown-ups Progress screen. `src/shop/progressReport.ts` turns the history into tiles, cards, chart bars and practice chips (Phaser-free and unit tested), and `src/ui/ProgressScreen.ts` only draws them:
 
 ```ts
 private trackPlayTime(round: RoundState): void {

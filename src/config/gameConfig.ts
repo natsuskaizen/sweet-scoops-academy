@@ -75,8 +75,18 @@ export interface GameConfig {
     maxImportBytes: number;
   };
   parentArea: {
-    /** Text lines that fit on one page of the grown-ups progress report. */
-    reportLinesPerPage: number;
+    /** Round cards per page in the grown-ups "Rounds" view (a 2x2 grid). */
+    roundCardsPerPage: number;
+    /** Questions named on a round card before "+N more". */
+    cardPracticeFacts: number;
+    /** Bars in the "Overview" chart, one per recent round. */
+    chartRounds: number;
+    /** The "Overview" tiles cover this many days back from now. */
+    overviewDays: number;
+    /** "Needs practice" looks at this many recent rounds... */
+    practiceLookbackRounds: number;
+    /** ...and lists at most this many questions. */
+    practiceFacts: number;
   };
   timing: {
     /** How long to hold the ⚙ button to open the grown-ups area. */
@@ -121,6 +131,13 @@ export const GAME_CONFIG: GameConfig = {
     factorTiers: { 1: 0, 2: 1, 10: 1, 5: 2, 11: 2, 3: 3, 4: 3, 9: 4, 6: 5, 7: 5, 8: 5, 12: 5 },
   },
   backup: { maxImportBytes: 1_000_000 },
-  parentArea: { reportLinesPerPage: 16 },
+  parentArea: {
+    roundCardsPerPage: 4,
+    cardPracticeFacts: 3,
+    chartRounds: 10,
+    overviewDays: 7,
+    practiceLookbackRounds: 5,
+    practiceFacts: 8,
+  },
   timing: { parentHoldMs: 1200, greetingMs: 900 },
 };
