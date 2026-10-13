@@ -148,6 +148,16 @@ submit(input: string): SubmitResult {
 }
 ```
 
+Each `submit()` and `finishOrder()` also adds the time since the previous step to the round's play time, capped so a long pause counts as a short one. The finished round's summary keeps that time and the questions (as the ticket showed them) that needed help, for the grown-ups "Progress by round" pages built by `src/shop/roundReport.ts`:
+
+```ts
+private trackPlayTime(round: RoundState): void {
+  const now = this.now();
+  if (round.playMs !== null) round.playMs += Math.min(Math.max(0, now - round.lastActiveAt), this.idleCapMs);
+  round.lastActiveAt = now;
+}
+```
+
 `src/shop/rewards.ts` is the only place Sprinkles are computed:
 
 ```ts
@@ -173,7 +183,17 @@ write(save: SaveFile): WriteResult {
 }
 ```
 
-On load, a bad primary is copied to `sweet-scoops-academy.save.quarantine.<time>` first, then the backup is tried. Bump `SAVE_SCHEMA_VERSION` in `saveTypes.ts` and add a step in `migrate()` when the format changes.
+On load, a bad primary is copied to `sweet-scoops-academy.save.quarantine.<time>` first, then the backup is tried. Bump `SAVE_SCHEMA_VERSION` in `saveTypes.ts` and add a step to `MIGRATIONS` in `src/save/migrations.ts` when the format changes. Each step upgrades one version and only fills in what is missing; older data gets "unknown" rather than a guess:
+
+```ts
+// v1 -> v2: rounds gain timing and the questions that needed help.
+for (const summary of history) {
+  summary.startedAt ??= null; // shown as "time not recorded"
+  summary.playMs ??= null;
+  summary.retryFacts ??= [];
+  summary.missFacts ??= [];
+}
+```
 
 Backup files (`src/save/backup.ts`) reuse the same path. An imported file goes through `parseSave` (parse, migrate, validate) like a storage load, and only a valid one reaches the confirmation step. `replaceWith` then quarantines the live save before writing:
 

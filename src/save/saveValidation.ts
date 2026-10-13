@@ -13,6 +13,7 @@ const isNonNegInt = (v: unknown): v is number => typeof v === 'number' && Number
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 const isStr = (v: unknown): v is string => typeof v === 'string';
 const isStrArray = (v: unknown): v is string[] => Array.isArray(v) && v.every(isStr);
+const isNonNegIntOrNull = (v: unknown): boolean => v === null || isNonNegInt(v);
 
 const STATES = new Set(['learning', 'practicing', 'mastered']);
 const OUTCOMES = new Set(['first', 'retry', 'miss']);
@@ -56,9 +57,10 @@ function checkRound(v: unknown, path: string, out: string[]): void {
     return;
   }
   if (!isStr(v.id)) out.push(`${path}.id invalid`);
-  for (const f of ['roundNumber', 'seed', 'startedAt', 'currentIndex']) {
+  for (const f of ['roundNumber', 'seed', 'startedAt', 'currentIndex', 'lastActiveAt']) {
     if (!isNonNegInt(v[f])) out.push(`${path}.${f} invalid`);
   }
+  if (!isNonNegIntOrNull(v.playMs)) out.push(`${path}.playMs invalid`);
   if (typeof v.bonusPaid !== 'boolean') out.push(`${path}.bonusPaid invalid`);
   if (!Array.isArray(v.orders) || v.orders.length === 0) {
     out.push(`${path}.orders invalid`);
@@ -81,6 +83,32 @@ function checkRound(v: unknown, path: string, out: string[]): void {
   });
 }
 
+/** Per-field shape checks for one finished round in the history. */
+const SUMMARY_FIELDS: Record<string, (v: unknown) => boolean> = {
+  roundNumber: isNonNegInt,
+  startedAt: isNonNegIntOrNull,
+  finishedAt: isNonNegInt,
+  playMs: isNonNegIntOrNull,
+  ordersCompleted: isNonNegInt,
+  firstTryCorrect: isNonNegInt,
+  retryCorrect: isNonNegInt,
+  missed: isNonNegInt,
+  total: isNonNegInt,
+  retryFacts: isStrArray,
+  missFacts: isStrArray,
+};
+
+function checkHistory(history: unknown, path: string, out: string[]): void {
+  if (!Array.isArray(history)) {
+    out.push(`${path} invalid`);
+    return;
+  }
+  history.forEach((s, i) => {
+    if (isObj(s)) checkFields(s, `${path}[${i}]`, out, SUMMARY_FIELDS);
+    else out.push(`${path}[${i}] not an object`);
+  });
+}
+
 /** Simple per-field shape checks for a profile. */
 const PROFILE_FIELDS: Record<string, (v: unknown) => boolean> = {
   createdAt: isNonNegInt,
@@ -90,7 +118,6 @@ const PROFILE_FIELDS: Record<string, (v: unknown) => boolean> = {
   achievements: isStrArray,
   equipped: isObj,
   decorations: Array.isArray,
-  roundHistory: Array.isArray,
 };
 
 function checkFields(v: Obj, path: string, out: string[], fields: Record<string, (v: unknown) => boolean>): void {
@@ -109,6 +136,7 @@ function checkProfile(v: unknown, id: string, out: string[]): void {
   if (!isObj(v.settings) || typeof v.settings.showHints !== 'boolean' || typeof v.settings.reduceMotion !== 'boolean') {
     out.push(`${path}.settings invalid`);
   }
+  checkHistory(v.roundHistory, `${path}.roundHistory`, out);
   checkLearning(v.learning, `${path}.learning`, out);
   checkRound(v.currentRound, `${path}.currentRound`, out);
 }

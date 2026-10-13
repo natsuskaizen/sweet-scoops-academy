@@ -61,6 +61,11 @@ export interface GameConfig {
     ordersPerRound: number;
     /** Answers allowed per order before the answer is shown and explained. */
     attemptsPerOrder: number;
+    /**
+     * Play time counts at most this much for any gap between taps, so a round
+     * left open overnight shows minutes of play, not hours.
+     */
+    playTimeIdleCapMs: number;
   };
   rewards: RewardConfig;
   adaptive: AdaptiveConfig;
@@ -68,6 +73,10 @@ export interface GameConfig {
   backup: {
     /** Larger files are refused before reading; a real backup is a few KB. */
     maxImportBytes: number;
+  };
+  parentArea: {
+    /** Text lines that fit on one page of the grown-ups progress report. */
+    reportLinesPerPage: number;
   };
   timing: {
     /** How long to hold the ⚙ button to open the grown-ups area. */
@@ -78,7 +87,7 @@ export interface GameConfig {
 }
 
 export const GAME_CONFIG: GameConfig = {
-  round: { ordersPerRound: 10, attemptsPerOrder: 2 },
+  round: { ordersPerRound: 10, attemptsPerOrder: 2, playTimeIdleCapMs: 120_000 },
   rewards: {
     perOrder: { first: 10, retry: 5, miss: 2 },
     completionBonus: 10,
@@ -112,5 +121,6 @@ export const GAME_CONFIG: GameConfig = {
     factorTiers: { 1: 0, 2: 1, 10: 1, 5: 2, 11: 2, 3: 3, 4: 3, 9: 4, 6: 5, 7: 5, 8: 5, 12: 5 },
   },
   backup: { maxImportBytes: 1_000_000 },
+  parentArea: { reportLinesPerPage: 16 },
   timing: { parentHoldMs: 1200, greetingMs: 900 },
 };

@@ -73,11 +73,13 @@ src/
   shop/
     orderManager.ts          round/order state machine; persists every step
     rewards.ts               the only place Sprinkles are calculated and paid
+    roundReport.ts           text for the grown-ups "Progress by round" pages
     customerManager.ts       customer roster and lineup
     catalog.ts               item catalog (prices live only here)
   save/
     saveTypes.ts             persisted shapes + SAVE_SCHEMA_VERSION
     saveValidation.ts        structural validation of save files
+    migrations.ts            one upgrade step per save format version
     saveManager.ts           localStorage with backup slot and quarantine
     backup.ts                backup files: export, validated import, summary
   pwa/
@@ -130,7 +132,7 @@ Each child has separate `multiplication` and `division` records. A fact starts i
 
 ### Saving
 
-Every meaningful change (a new round, each answer, each payout, moving to the next customer) is written immediately. Each write first copies the previous valid save into a backup slot. On load, invalid or newer-version data is copied to a `quarantine.<timestamp>` key before anything else happens, then the backup is used if it is valid. Saved rounds are re-validated question by question. Payouts are guarded by a persisted `paid` flag, so double taps and reloads cannot pay twice.
+Every meaningful change (a new round, each answer, each payout, moving to the next customer) is written immediately. Each write first copies the previous valid save into a backup slot. On load, invalid or newer-version data is copied to a `quarantine.<timestamp>` key before anything else happens, then the backup is used if it is valid. Saved rounds are re-validated question by question. Payouts are guarded by a persisted `paid` flag, so double taps and reloads cannot pay twice. Older saves are upgraded on load by the steps in `src/save/migrations.ts` (version 2 added round timing), and the result is validated like any other save.
 
 ### Screen layouts
 
@@ -145,6 +147,7 @@ All positions come from `LAYOUT` in `src/ui/theme.ts`, built by `layoutFor(scree
 
 Press and hold the ⚙ button in the top-right corner for about a second, then type the number shown in words. Inside: progress per operation, facts that need practice, and these actions:
 
+- **Progress by round**: every finished round, newest first, a few per page. Each shows when it started, how long it took, first-try / second-try / shown counts, Sprinkles earned, and which questions needed a second try or had their answer shown. The time is active play: any gap between taps counts as 2 minutes at most (`GAME_CONFIG.round.playTimeIdleCapMs`), so a round left open overnight still shows minutes. Rounds finished before this was added say "time not recorded". None of this appears outside the grown-ups area.
 - **Save a backup file**: the whole save as JSON, through the share sheet on iPad and iPhone (Save to Files, AirDrop, Mail) or as a download elsewhere.
 - **Load a backup file**: picks a file, checks it the same way a save is checked on load, shows whose progress it holds, and replaces the current progress only after a confirmation. The replaced progress is kept aside in storage, not deleted.
 - **Restore previous save**, **Reset learning progress**, **Reset whole profile**, each with a confirmation step.

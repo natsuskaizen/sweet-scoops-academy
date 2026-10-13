@@ -16,6 +16,7 @@ import { resetSubjectProgress, subjectProgress } from '../save/saveTypes';
 import type { RoundSummary } from '../save/saveTypes';
 import { itemById } from '../shop/catalog';
 import { lineFor, type CustomerDef } from '../shop/customerManager';
+import { roundReportPages } from '../shop/roundReport';
 import { OrderManager, type ActiveOrder } from '../shop/orderManager';
 import type { AttemptOutcome, ChallengePresentation } from '../learning/types';
 import { Button } from '../ui/Button';
@@ -48,7 +49,8 @@ export class ShopScene extends Phaser.Scene {
   private treat: Phaser.GameObjects.Container | null = null;
   private gotIt: Button | null = null;
   private busy = false;
-  private gateOpen = false;
+  /** The open grown-ups area, if any (the e2e test drives it through `__ssa`). */
+  private gate: ParentGate | null = null;
 
   constructor() {
     super('Shop');
@@ -60,7 +62,7 @@ export class ShopScene extends Phaser.Scene {
     this.treat = null;
     this.gotIt = null;
     this.busy = false;
-    this.gateOpen = false;
+    this.gate = null;
 
     if (testHooksEnabled() && new URLSearchParams(window.location.search).has('fast')) {
       this.tweens.timeScale = 6;
@@ -167,7 +169,7 @@ export class ShopScene extends Phaser.Scene {
   /** Hands control back to the player (unless the grown-ups area is open). */
   private readyForAnswer(): void {
     this.busy = false;
-    if (!this.gateOpen) this.keypad.setEnabled(true);
+    if (!this.gate) this.keypad.setEnabled(true);
   }
 
   private async handleSubmit(value: string): Promise<void> {
@@ -326,15 +328,14 @@ export class ShopScene extends Phaser.Scene {
   // -------------------------------------------------------------------------
 
   private openParentGate(): void {
-    if (this.gateOpen) return;
-    this.gateOpen = true;
+    if (this.gate) return;
     const keypadWasEnabled = this.keypad.isEnabled;
     this.keypad.setEnabled(false);
-    new ParentGate(this, {
+    this.gate = new ParentGate(this, {
       info: () => this.parentInfo(),
       actions: () => this.parentActions(),
       onClose: () => {
-        this.gateOpen = false;
+        this.gate = null;
         if (keypadWasEnabled && !this.busy) this.keypad.setEnabled(true);
       },
     });
@@ -359,6 +360,11 @@ export class ShopScene extends Phaser.Scene {
     const saves = this.services.saves;
     const save = this.services.load.save;
     return [
+      {
+        label: 'Progress by round',
+        enabled: true,
+        run: (gate) => gate.report('Progress by round', roundReportPages(this.manager.profile.roundHistory)),
+      },
       ...backupActions(this.services, () => this.scene.restart()),
       {
         label: 'Restore previous save',
