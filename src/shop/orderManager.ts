@@ -19,6 +19,7 @@ import {
   type SaveFile,
 } from '../save/saveTypes';
 import { CUSTOMERS, customerById, lineup, type CustomerDef } from './customerManager';
+import { recordRound } from './progressCalendar';
 import { payOrder, payRoundBonus, type RoundBonus } from './rewards';
 
 export type OrderPhase =
@@ -49,7 +50,13 @@ export interface RoundSticker {
 export type FinishResult =
   | { kind: 'ignored' }
   | { kind: 'next-order' }
-  | { kind: 'round-complete'; summary: RoundSummary; stickers: RoundSticker[] };
+  | {
+      kind: 'round-complete';
+      summary: RoundSummary;
+      stickers: RoundSticker[];
+      /** This round reached today's goal on the progress calendar. */
+      heartEarned: boolean;
+    };
 
 export interface Persister {
   write(save: SaveFile): { ok: true } | { ok: false; error: string };
@@ -203,9 +210,10 @@ export class OrderManager {
       .filter((o) => o.outcome !== null)
       .map((o) => ({ customer: customerById(o.customerId, this.roster), firstTry: o.outcome === 'first' }));
     this.profile.roundHistory = [...this.profile.roundHistory, summary].slice(-MAX_HISTORY);
+    const heartEarned = recordRound(this.profile, summary, this.opts.subject.id);
     this.profile.currentRound = null;
     this.persist();
-    return { kind: 'round-complete', summary, stickers };
+    return { kind: 'round-complete', summary, stickers, heartEarned };
   }
 
   /** Adds the time since the last step, capped so a long pause counts as a short one. */

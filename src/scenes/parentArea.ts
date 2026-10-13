@@ -6,6 +6,7 @@
 import type Phaser from 'phaser';
 import type { GameServices } from '../game/services';
 import { resetLearning, resetProfile } from '../save/profileActions';
+import { nextGoal } from '../shop/progressCalendar';
 import { subjectProgress, type Profile } from '../save/saveTypes';
 import type { ParentAction, ParentGate, ParentGateOptions } from '../ui/ParentGate';
 import { showProgress } from '../ui/ProgressScreen';
@@ -41,11 +42,30 @@ function parentActions(host: ParentAreaHost): ParentAction[] {
   const { scene, services, profile } = host;
   return [
     { label: 'Progress', enabled: true, run: (gate) => showProgress(gate, scene, profile().roundHistory) },
+    dailyGoalAction(host),
     characterAction(scene, services),
     ...backupActions(services, () => void restartWithCharacters(scene, services)),
     restoreAction(host),
     ...resetActions(host),
   ];
+}
+
+/** Each tap moves the calendar's daily goal to the next choice; hearts already earned stay. */
+function dailyGoalAction({ services, profile }: ParentAreaHost): ParentAction {
+  const goal = profile().settings.dailyGoal;
+  return {
+    label: `Heart goal: ${goal} ${goal === 1 ? 'game' : 'games'} a day`,
+    enabled: true,
+    run: (gate) => {
+      const settings = profile().settings;
+      const before = settings.dailyGoal;
+      settings.dailyGoal = nextGoal(before);
+      const result = services.saves.write(services.save);
+      if (result.ok) return gate.showMenu();
+      settings.dailyGoal = before;
+      gate.notice('Not saved', `The change could not be saved: ${result.error}`);
+    },
+  };
 }
 
 function restoreAction({ scene, services }: ParentAreaHost): ParentAction {

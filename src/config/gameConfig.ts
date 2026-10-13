@@ -103,6 +103,15 @@ export interface GameConfig {
     /** ...and lists at most this many questions. */
     practiceFacts: number;
   };
+  /** The kids' progress calendar: a heart stamp on each day the goal is reached. */
+  calendar: {
+    /** Games (finished rounds, any subject) in a day for a heart, until a grown-up picks another goal. */
+    defaultDailyGoal: number;
+    /** The goals a grown-up can choose from. */
+    dailyGoal: { min: number; max: number };
+    /** Days kept in the log (about 13 months), so the save stays small. */
+    keepDays: number;
+  };
   timing: {
     /** How long to hold the ⚙ button to open the grown-ups area. */
     parentHoldMs: number;
@@ -195,6 +204,7 @@ export const GAME_CONFIG: GameConfig = {
     practiceLookbackRounds: 5,
     practiceFacts: 8,
   },
+  calendar: { defaultDailyGoal: 3, dailyGoal: { min: 1, max: 5 }, keepDays: 400 },
   timing: {
     parentHoldMs: 1200,
     greetingMs: 900,

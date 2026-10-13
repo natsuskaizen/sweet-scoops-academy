@@ -88,6 +88,8 @@ export interface Layout {
   doorSpot: { x: number; y: number };
   bubble: Rect;
   board: Rect;
+  /** The wall calendar between the window and the display case; tapping it opens the progress calendar. */
+  wallCalendar: Rect;
   /** Brown backdrop behind the register. */
   registerArea: Rect;
   panel: Rect;
@@ -132,6 +134,7 @@ const SHOP_PARTS = {
   doorSpot: { x: 105, y: 600 },
   bubble: { x: 140, y: 400, w: 440, h: 150 },
   board: { x: 180, y: 86, w: 610, h: 290 },
+  wallCalendar: { x: 452, y: 200, w: 136, h: 112 },
 };
 
 function landscapeLayout(): Layout {

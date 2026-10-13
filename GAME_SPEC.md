@@ -294,6 +294,7 @@ Show:
 - Sprinkles earned
 - New items unlocked
 - Encouraging visual celebrations
+- A progress calendar, opened from a calendar on the shop wall: a heart stamp on each day the child finishes the daily goal of games (3 by default; a grown-up can change it in the parent area), with the time played that day. Every subject's games count toward the same heart, and a small badge shows which subjects were played. Days short of the goal show the games played, never a cross, and a heart once earned stays.
 
 Do not display negative labels such as "bad at multiplication" or compare siblings.
 

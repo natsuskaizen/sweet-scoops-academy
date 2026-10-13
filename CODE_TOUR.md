@@ -95,6 +95,7 @@ The shop talks to subjects only through this interface. `OrderManager`, the save
 ```ts
 export interface LearningSubject<S extends ChallengeSpec, P> {
   readonly id: string;
+  readonly badge: string; // "123": the subject's chip on the progress calendar
   createProgress(): P;
   planRound(progress: P, ctx: PlanContext): S[];
   isValidSpec(spec: unknown): spec is S;
@@ -182,6 +183,24 @@ export function payOrder(wallet: Wallet, order: PayableOrder): number {
 }
 ```
 
+### The kids' progress calendar: `src/shop/progressCalendar.ts`
+
+A finished round is one "game". `finishOrder()` also adds it to the day it finished on (`profile.dailyLog`, keyed by local date), with its play time and subject. Reaching the day's goal (`settings.dailyGoal`, 3 by default and changed from the grown-ups area within `GAME_CONFIG.calendar.dailyGoal`) stamps a heart on that day. The heart is stored, so raising the goal later never takes one away, and `finishOrder` reports `heartEarned` so the wall calendar can bounce its hearts:
+
+```ts
+export function addRound(log, round, subjectId, goal): boolean {
+  const day = (log[dayKey(round.finishedAt)] ??= emptyDay());
+  day.rounds += 1;
+  day.playMs += round.playMs ?? 0;
+  day.subjects[subjectId] = (day.subjects[subjectId] ?? 0) + 1;
+  const earned = !day.heart && day.rounds >= goal;
+  if (earned) day.heart = true;
+  return earned;
+}
+```
+
+The log keeps `GAME_CONFIG.calendar.keepDays` days, separate from the 100-round history, so old months stay on the calendar. `dayView` and `monthView` turn it into what is drawn (gentle words such as "One more game for a heart!" or "A rest day", never a cross). In the shop, `src/ui/WallCalendar.ts` hangs between the window and the display case with one heart per game today; tapping it opens `src/ui/CalendarScreen.ts` over the shop: the chosen day with a heart that fills a slice per game, and the month of heart stamps. Each subject played shows its `badge` as a chip, so math and later subjects share one calendar.
+
 ## 5. Saving: `src/save/saveManager.ts`
 
 ```ts
@@ -195,6 +214,8 @@ write(save: SaveFile): WriteResult {
 ```
 
 On load, an unfinished round that no longer passes validation (its questions fall outside today's rules, for example) is dropped first (`dropUnplayableRounds`), so only a damaged save as a whole counts as bad. A bad primary is copied to `sweet-scoops-academy.save.quarantine.<time>`, then the backup is tried. Bump `SAVE_SCHEMA_VERSION` in `saveTypes.ts` and add a step to `MIGRATIONS` in `src/save/migrations.ts` when the format changes. Each step upgrades one version and only fills in what is missing; older data gets "unknown" rather than a guess:
+
+Version 3 adds the progress calendar: `settings.dailyGoal` and a `dailyLog` rebuilt from the round history (`logFromHistory`).
 
 ```ts
 // v1 -> v2: rounds gain timing and the questions that needed help.

@@ -3,6 +3,9 @@
  * into version n + 1, in place. Steps only fill in what is missing; the
  * result is still validated before anything uses it.
  */
+import { GAME_CONFIG } from '../config/gameConfig';
+import { logFromHistory } from '../shop/progressCalendar';
+
 type Obj = Record<string, unknown>;
 
 const isObj = (v: unknown): v is Obj => typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -34,8 +37,25 @@ function addRoundTiming(data: Obj): void {
   }
 }
 
+/**
+ * Version 3 adds the progress calendar: a daily goal setting and a log of
+ * games per day, rebuilt from the round history (every round so far was math).
+ */
+function addDailyLog(data: Obj): void {
+  for (const profile of profilesOf(data)) {
+    if (isObj(profile.settings)) profile.settings.dailyGoal ??= GAME_CONFIG.calendar.defaultDailyGoal;
+    if (isObj(profile.dailyLog)) continue;
+    const history = Array.isArray(profile.roundHistory) ? profile.roundHistory.filter(isObj) : [];
+    const rounds = history
+      .filter((s) => typeof s.finishedAt === 'number')
+      .map((s) => ({ finishedAt: s.finishedAt as number, playMs: typeof s.playMs === 'number' ? s.playMs : null }));
+    profile.dailyLog = logFromHistory(rounds, 'math', GAME_CONFIG.calendar.defaultDailyGoal);
+  }
+}
+
 export const MIGRATIONS: Readonly<Record<number, (data: Obj) => void>> = {
   1: addRoundTiming,
+  2: addDailyLog,
 };
 
 /** Runs every step from the save's version up to `target`. Returns false if a step is missing. */

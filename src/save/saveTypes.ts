@@ -7,7 +7,7 @@ import type { AttemptOutcome, ChallengeSpec, LearningSubject } from '../learning
 import type { EquipSlot, ShopSpot } from '../shop/catalog';
 import type { RoundBonus } from '../shop/rewards';
 
-export const SAVE_SCHEMA_VERSION = 2;
+export const SAVE_SCHEMA_VERSION = 3;
 
 export interface OrderState {
   /** Checked by the owning subject's isValidSpec on load. */
@@ -65,6 +65,20 @@ export interface PlacedDecoration {
 export interface ProfileSettings {
   showHints: boolean;
   reduceMotion: boolean;
+  /** Games (finished rounds) in a day that earn the day's heart stamp; a grown-up can change it. */
+  dailyGoal: number;
+}
+
+/** One day on the progress calendar, keyed by local date ("2026-10-13") in Profile.dailyLog. */
+export interface DayRecord {
+  /** Rounds finished that day, in any subject. */
+  rounds: number;
+  /** Active play time in those rounds. */
+  playMs: number;
+  /** Rounds finished per subject id. */
+  subjects: Record<string, number>;
+  /** The day's goal was reached. Kept once earned, so a later, bigger goal never takes a heart away. */
+  heart: boolean;
 }
 
 export interface Profile {
@@ -85,6 +99,8 @@ export interface Profile {
   };
   currentRound: RoundState | null;
   roundHistory: RoundSummary[];
+  /** The progress calendar: one record per day played, the oldest dropped after GAME_CONFIG.calendar.keepDays. */
+  dailyLog: Record<string, DayRecord>;
   achievements: string[];
   settings: ProfileSettings;
 }

@@ -40,6 +40,21 @@ export function createPropTextures(scene: Phaser.Scene): void {
     ['oooooooooooo', 'owwwwwwwwwwo', '.oppPppPppo.', '.oppPppPppo.', '..opPppPpo..', '..oooooooo..'],
     (ch) => ({ o: '#7a4a62', w: '#fffaf3', p: '#ff8fb3', P: '#ffd1df' })[ch] ?? null,
   );
+  // Progress calendar hearts: a stamp once earned, a pale outline until then.
+  const heart = ['.ooo...ooo.', 'oPWPo.oPPPo', 'oWPPPoPPPPo', 'oPPPPPPPPPo', 'oPPPPPPPPPo', '.oPPPPPPPo.'];
+  const tip = ['..oPPPPPo..', '...oPPPo...', '....oPo....', '.....o.....'];
+  makePixelTexture(
+    scene,
+    'heart',
+    [...heart, ...tip],
+    (ch) => ({ o: '#8f2f4c', P: '#ff8fb3', W: '#ffffff' })[ch] ?? null,
+  );
+  makePixelTexture(
+    scene,
+    'heart-empty',
+    [...heart, ...tip],
+    (ch) => ({ o: '#e8a8bc', P: '#ffe3ec', W: '#ffe3ec' })[ch] ?? null,
+  );
   for (const [flavor, color] of Object.entries(FLAVOR_COLORS)) {
     makePixelTexture(
       scene,

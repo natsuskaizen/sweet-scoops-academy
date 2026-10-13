@@ -8,6 +8,7 @@
  * Nothing invalid is ever loaded, and nothing recoverable is ever silently
  * overwritten: bad data is copied to quarantine before the game moves on.
  */
+import { GAME_CONFIG } from '../config/gameConfig';
 import { mathSubject } from '../learning/mathSubject';
 import { randomSeed } from '../core/rng';
 import { migrateToVersion } from './migrations';
@@ -57,8 +58,9 @@ export function createProfile(displayName: string, now: number, seed = randomSee
     learning: { seed, roundsStarted: 0, math: mathSubject.createProgress() },
     currentRound: null,
     roundHistory: [],
+    dailyLog: {},
     achievements: [],
-    settings: { showHints: true, reduceMotion: false },
+    settings: { showHints: true, reduceMotion: false, dailyGoal: GAME_CONFIG.calendar.defaultDailyGoal },
   };
 }
 

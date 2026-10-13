@@ -75,6 +75,7 @@ src/
     orderManager.ts          round/order state machine; persists every step
     rewards.ts               the only place Sprinkles are calculated and paid
     progressReport.ts        numbers and words for the grown-ups Progress screen
+    progressCalendar.ts      the kids' progress calendar: games and time per day, heart stamps
     customerManager.ts       the 13 built-in customers (names, flavours, lines) and lineup
     addedCharacters.ts       checks for grown-up-added characters; adds them to the roster
     catalog.ts               item catalog: designs in six tiers (prices live only here)
@@ -120,6 +121,7 @@ src/
     roomPixels.ts            tiny pixel painter the room is drawn with
   ui/                        NumberKeypad, OrderPanel (+ SpeechBubble), VisualAidView,
                              StatusBar, ShopMenu, ParentGate, ProgressScreen, Button, TierCard, theme,
+                             WallCalendar (on the shop wall) and CalendarScreen (the progress calendar),
                              CharacterDialog (a DOM form for adding characters);
                              tweenAsync.ts turns tweens and timers into awaitable promises;
                              aidLayout.ts sizes the hint board's scoops and cups (unit tested)

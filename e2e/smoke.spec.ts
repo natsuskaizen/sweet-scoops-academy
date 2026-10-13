@@ -12,6 +12,8 @@ interface ShopHook {
     parade: { skipButton: { x: number; y: number } | null };
     busy: boolean;
     results: object | null;
+    wallCalendar: { x: number; y: number };
+    calendar: object | null;
     handleSubmit: (value: string) => Promise<void>;
     scene: { restart: () => void };
   };
@@ -135,6 +137,25 @@ test('a perfect round brings the customers back, and Skip goes straight to the r
   await tapAt(page, skip.x, skip.y);
   await page.waitForFunction(() => (window as HookWindow).__ssa!.scene.results !== null, null, { timeout: 5_000 });
   await page.screenshot({ path: testInfo.outputPath('perfect-round.png') });
+  expect(errors).toEqual([]);
+});
+
+test('the wall calendar opens the progress calendar over the shop, and it closes again', async ({ page }, testInfo) => {
+  const errors: string[] = [];
+  await startFresh(page, errors);
+  await keypadReady(page);
+  const wall = await page.evaluate(() => {
+    const { x, y } = (window as HookWindow).__ssa!.scene.wallCalendar;
+    return { x, y };
+  });
+  await tapAt(page, wall.x + 60, wall.y + 60);
+  await page.waitForFunction(() => (window as HookWindow).__ssa!.scene.calendar !== null);
+  expect(await page.evaluate(() => (window as HookWindow).__ssa!.scene.keypad.isEnabled)).toBe(false);
+  await page.screenshot({ path: testInfo.outputPath('calendar.png') });
+
+  await tapAt(page, 400, 40); // the shade above the card
+  await page.waitForFunction(() => (window as HookWindow).__ssa!.scene.calendar === null);
+  await keypadReady(page);
   expect(errors).toEqual([]);
 });
 

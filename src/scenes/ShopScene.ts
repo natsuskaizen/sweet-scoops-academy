@@ -19,6 +19,7 @@ import { lineFor, type CustomerDef } from '../shop/customerManager';
 import { OrderManager, type ActiveOrder, type RoundSticker } from '../shop/orderManager';
 import type { AttemptOutcome, ChallengePresentation } from '../learning/types';
 import { Button } from '../ui/Button';
+import { CalendarScreen } from '../ui/CalendarScreen';
 import { NumberKeypad } from '../ui/NumberKeypad';
 import { OrderPanel, SpeechBubble } from '../ui/OrderPanel';
 import { ParentGate, type ParentGateOptions } from '../ui/ParentGate';
@@ -27,6 +28,7 @@ import { StatusBar } from '../ui/StatusBar';
 import { COLORS, CSS, LAYOUT, text } from '../ui/theme';
 import { delay, tweenAsync } from '../ui/tweenAsync';
 import { VisualAidView } from '../ui/VisualAidView';
+import { WallCalendar } from '../ui/WallCalendar';
 import { Parade } from './parade';
 import { parentArea } from './parentArea';
 import { ResultsOverlay } from './ResultsOverlay';
@@ -70,6 +72,9 @@ export class ShopScene extends Phaser.Scene {
   private closet: ClosetMode | null = null;
   /** The Sprinkle Shop's menu, while it is open. */
   private shopMenu: ShopMenu | null = null;
+  /** The calendar on the shop wall, and the progress calendar it opens (the e2e test drives both through `__ssa`). */
+  private wallCalendar!: WallCalendar;
+  private calendar: CalendarScreen | null = null;
   /** The results card and any parade, hidden while Decorate is open over them. */
   private resultsCover: Phaser.GameObjects.GameObject[] = [];
 
@@ -98,6 +103,8 @@ export class ShopScene extends Phaser.Scene {
 
     this.placed = new PlacedDecorations(this, drawShopRoom(this));
     this.placed.draw(this.manager.profile.decorations);
+    this.wallCalendar = new WallCalendar(this, () => this.openCalendar());
+    this.wallCalendar.refresh(this.manager.profile, Date.now());
     this.registerPanel = this.drawRegisterPanel();
 
     this.shopkeeper = this.makeShopkeeper();
@@ -209,6 +216,7 @@ export class ShopScene extends Phaser.Scene {
     this.results = null;
     this.resultsCover = [];
     this.shopMenu = null;
+    this.calendar = null;
     this.decorate = null;
     this.closet = null;
   }
@@ -221,7 +229,7 @@ export class ShopScene extends Phaser.Scene {
 
   /** The keypad takes answers only while the shop waits for one and the grown-ups area is closed. */
   private syncInput(): void {
-    const away = this.gate || this.decorate || this.closet || this.shopMenu;
+    const away = this.gate || this.decorate || this.closet || this.shopMenu || this.calendar;
     this.keypad.setEnabled(!this.busy && !away);
   }
 
@@ -356,8 +364,9 @@ export class ShopScene extends Phaser.Scene {
   private nextOrder(): void {
     const outcomes = this.roundOutcomes(); // the round is cleared once it finishes
     const finish = this.manager.finishOrder();
-    if (finish.kind === 'round-complete') void this.showResults(finish.summary, finish.stickers, outcomes);
-    else void this.runOrder();
+    if (finish.kind !== 'round-complete') return void this.runOrder();
+    this.wallCalendar.refresh(this.manager.profile, Date.now(), finish.heartEarned);
+    void this.showResults(finish.summary, finish.stickers, outcomes);
   }
 
   private async showResults(
@@ -408,6 +417,27 @@ export class ShopScene extends Phaser.Scene {
       onCloset: () => this.openCloset(),
       onClose: () => {
         this.shopMenu = null;
+        this.syncInput();
+      },
+    });
+    this.syncInput();
+  }
+
+  // -------------------------------------------------------------------------
+  // Progress calendar
+  // -------------------------------------------------------------------------
+
+  /** The wall calendar opens the progress calendar whenever the Sprinkle Shop could open. */
+  private openCalendar(): void {
+    if (this.calendar || this.shopMenu || this.gate || this.decorate || this.closet) return;
+    if (this.busy && !this.results) return;
+    this.calendar = new CalendarScreen(this, {
+      profile: () => this.manager.profile,
+      subjects: [this.services.subject],
+      now: () => Date.now(),
+      onClose: () => {
+        this.calendar = null;
+        this.wallCalendar.refresh(this.manager.profile, Date.now());
         this.syncInput();
       },
     });
@@ -486,6 +516,8 @@ export class ShopScene extends Phaser.Scene {
       ...this.parentArea,
       onClose: () => {
         this.gate = null;
+        // The daily goal may have changed.
+        this.wallCalendar.refresh(this.manager.profile, Date.now());
         this.syncInput();
       },
     });

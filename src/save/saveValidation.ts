@@ -109,6 +109,37 @@ function checkHistory(history: unknown, path: string, out: string[]): void {
   });
 }
 
+const DAY_KEY = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Per-field shape checks for one day on the progress calendar. */
+const DAY_FIELDS: Record<string, (v: unknown) => boolean> = {
+  rounds: isNonNegInt,
+  playMs: isNonNegInt,
+  heart: (v) => typeof v === 'boolean',
+  subjects: (v) => isObj(v) && Object.values(v).every(isNonNegInt),
+};
+
+function checkDailyLog(log: unknown, path: string, out: string[]): void {
+  if (!isObj(log)) {
+    out.push(`${path} invalid`);
+    return;
+  }
+  for (const [key, day] of Object.entries(log)) {
+    if (!DAY_KEY.test(key)) out.push(`${path}[${key}] not a date`);
+    if (isObj(day)) checkFields(day, `${path}[${key}]`, out, DAY_FIELDS);
+    else out.push(`${path}[${key}] not an object`);
+  }
+}
+
+/** Any whole number of games: a goal outside today's choices still loads, and the grown-ups area moves it back in range. */
+const isDailyGoal = (v: unknown): boolean => isNonNegInt(v) && v >= 1;
+
+function checkSettings(v: unknown, path: string, out: string[]): void {
+  if (!isObj(v) || typeof v.showHints !== 'boolean' || typeof v.reduceMotion !== 'boolean') {
+    out.push(`${path} invalid`);
+  } else if (!isDailyGoal(v.dailyGoal)) out.push(`${path}.dailyGoal invalid`);
+}
+
 /** Simple per-field shape checks for a profile. */
 const PROFILE_FIELDS: Record<string, (v: unknown) => boolean> = {
   createdAt: isNonNegInt,
@@ -133,10 +164,9 @@ function checkProfile(v: unknown, id: string, out: string[]): void {
   if (v.id !== id) out.push(`${path}.id mismatch`);
   if (!isStr(v.displayName) || v.displayName.length === 0) out.push(`${path}.displayName invalid`);
   checkFields(v, path, out, PROFILE_FIELDS);
-  if (!isObj(v.settings) || typeof v.settings.showHints !== 'boolean' || typeof v.settings.reduceMotion !== 'boolean') {
-    out.push(`${path}.settings invalid`);
-  }
+  checkSettings(v.settings, `${path}.settings`, out);
   checkHistory(v.roundHistory, `${path}.roundHistory`, out);
+  checkDailyLog(v.dailyLog, `${path}.dailyLog`, out);
   checkLearning(v.learning, `${path}.learning`, out);
   checkRound(v.currentRound, `${path}.currentRound`, out);
 }
