@@ -296,7 +296,11 @@ void customer.cheer(); // right answer: a jump and three hearts (reactions.ts)
 customer.puzzled(); // first miss: thinking face, a head tilt and a "?" bubble
 ```
 
-Serving is in `src/scenes/serveAnimation.ts`: a paw in the shopkeeper's body colour reaches into the flavour's tub (`tubSpot(flavor)` in `shopRoom.ts`), carries each scoop to the cone and drops it into the treat, then the shopkeeper cheers.
+Serving is in `src/scenes/serveAnimation.ts`: the shopkeeper's paw holds an ice cream scooper (`src/characters/scooperArt.ts`), dips it into the flavour's tub (`tubSpot(flavor)` in `shopRoom.ts`), carries each scoop to the cone in its bowl and drops it into the treat, then the shopkeeper cheers. She serves with the wooden scooper; the silver, golden and rainbow ones are drawn ready to become Milestone 3 shop items, and the golden and rainbow ones throw sparkles:
+
+```ts
+await scoopOntoCone(scene, { keeper: shopkeeper, scooper: 'wooden' }, treat, flavor, count);
+```
 
 The older 16×20 species in `sprites.ts` share one grid so clothing layers line up on any of them, which is how Milestone 3 equipment will plug in:
 

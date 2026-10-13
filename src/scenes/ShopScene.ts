@@ -297,7 +297,8 @@ export class ShopScene extends Phaser.Scene {
     const treat = this.add.container(LAYOUT.counter.x + 80, LAYOUT.counter.y - 40).setDepth(45);
     this.treat = treat;
     treat.add(this.add.image(0, 0, 'cone').setScale(6).setOrigin(0.5, 0));
-    await scoopOntoCone(this, this.shopkeeper, treat, flavor, Phaser.Math.Clamp(answer || 1, 1, 4));
+    const server = { keeper: this.shopkeeper, scooper: 'wooden' as const };
+    await scoopOntoCone(this, server, treat, flavor, Phaser.Math.Clamp(answer || 1, 1, 4));
     return treat;
   }
 
