@@ -7,6 +7,8 @@ interface ShopHook {
       buttons: { x: number; y: number; visible: boolean; list: { type: string; text?: string }[] }[];
     };
     scale: { gameSize: { width: number; height: number } };
+    aid: { visible: boolean };
+    gotIt: { x: number; y: number } | null;
   };
   manager: () => { current: () => { index: number; presentation: { correctAnswer: string } } | null };
 }
@@ -57,5 +59,44 @@ test('the shop opens and an order can be served', async ({ page }, testInfo) => 
   });
 
   await page.screenshot({ path: testInfo.outputPath('after-first-order.png') });
+  expect(errors).toEqual([]);
+});
+
+async function tapAt(page: Page, x: number, y: number): Promise<void> {
+  const width = await page.evaluate(() => (window as HookWindow).__ssa!.scene.scale.gameSize.width);
+  const box = (await page.locator('canvas').boundingBox())!;
+  const k = box.width / width;
+  await page.touchscreen.tap(box.x + x * k, box.y + y * k);
+}
+
+test('two misses show the hint, then the explanation, and the order still completes', async ({ page }, testInfo) => {
+  const errors: string[] = [];
+  await startFresh(page, errors);
+  await keypadReady(page);
+  const answer = await page.evaluate(
+    () => (window as HookWindow).__ssa!.manager().current()!.presentation.correctAnswer,
+  );
+  const wrong = String(Number(answer) + 1);
+
+  for (const digit of wrong) await tapKey(page, digit);
+  await tapKey(page, '✓');
+  await page.waitForFunction(() => (window as HookWindow).__ssa!.scene.aid.visible);
+  await keypadReady(page);
+
+  for (const digit of wrong) await tapKey(page, digit);
+  await tapKey(page, '✓');
+  await page.waitForFunction(() => (window as HookWindow).__ssa!.scene.gotIt !== null);
+  expect(await page.evaluate(() => (window as HookWindow).__ssa!.scene.aid.visible)).toBe(true);
+  await page.waitForTimeout(1500); // let the explanation play out for the screenshot
+  await page.screenshot({ path: testInfo.outputPath('explanation.png') });
+
+  const gotIt = await page.evaluate(() => {
+    const { x, y } = (window as HookWindow).__ssa!.scene.gotIt!;
+    return { x, y };
+  });
+  await tapAt(page, gotIt.x, gotIt.y);
+  await page.waitForFunction(() => (window as HookWindow).__ssa!.manager().current()?.index === 1, null, {
+    timeout: 30_000,
+  });
   expect(errors).toEqual([]);
 });

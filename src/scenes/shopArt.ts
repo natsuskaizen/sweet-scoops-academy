@@ -12,10 +12,6 @@ import { COLORS, CSS, LAYOUT, text } from '../ui/theme';
 
 const hex = (css: string): number => Number.parseInt(css.replace('#', ''), 16);
 
-export function flavorColor(flavor: string): number {
-  return hex(FLAVOR_COLORS[flavor] ?? FLAVOR_COLORS.vanilla!);
-}
-
 /** Small pixel textures used across the scene. */
 export function createPropTextures(scene: Phaser.Scene): void {
   makePixelTexture(
@@ -29,6 +25,13 @@ export function createPropTextures(scene: Phaser.Scene): void {
     'cone',
     ['oooooooo', 'oyyyyyyo', '.oyxyyo.', '.oyyxyo.', '..oyyo..', '..oxyo..', '...oo...'],
     (ch) => ({ o: '#9a6b52', y: '#f5c27a', x: '#e0a65a' })[ch] ?? null,
+  );
+  // Cup for the hint and explanation board; stretched to fit its scoops.
+  makePixelTexture(
+    scene,
+    'aid-cup',
+    ['oooooooooooo', 'owwwwwwwwwwo', '.oppPppPppo.', '.oppPppPppo.', '..opPppPpo..', '..oooooooo..'],
+    (ch) => ({ o: '#7a4a62', w: '#fffaf3', p: '#ff8fb3', P: '#ffd1df' })[ch] ?? null,
   );
   for (const [flavor, color] of Object.entries(FLAVOR_COLORS)) {
     makePixelTexture(
