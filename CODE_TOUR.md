@@ -248,6 +248,16 @@ private async serve(presentation, sprinkles, flavor) {
 
 The keypad disables itself the moment ✓ is tapped and the scene re-enables it when it is ready, so repeat taps never reach the manager; the manager ignores them anyway.
 
+A round ends with a sticker card over the shop. `finishOrder()` hands the scene one sticker per customer served, so the card never has to read the round itself:
+
+```ts
+const finish = manager.finishOrder();
+if (finish.kind === 'round-complete') {
+  finish.stickers; // [{ customer, firstTry: true }, ...] gold star for first tries, a heart otherwise
+}
+// A perfect round first brings everyone back: they walk in and line up at paradeSpots(10).
+```
+
 ## 7. Characters: `src/characters/`
 
 The shop's cast (Momo behind the counter and 13 customers) lives in `friendArt.ts`. Each one is its standing frame as a 32×40 text grid, and the happy and thinking faces are redrawn from it, so every character gets the same expressions:

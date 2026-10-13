@@ -176,6 +176,17 @@ function portraitLayout(screenAspect: number): Layout {
   };
 }
 
+/** Where a perfect round's parade lines up on the shop floor: a back row, then a front row offset between them. */
+export function paradeSpots(count: number): { x: number; y: number; scale: number }[] {
+  const perRow = Math.ceil(count / 2);
+  const step = (SHOP_W - 160) / Math.max(1, perRow);
+  return Array.from({ length: count }, (_, i) => {
+    const front = i >= perRow;
+    const col = front ? i - perRow : i;
+    return { x: 100 + step * col + (front ? step / 2 : 0), y: front ? SHOP_H - 30 : SHOP_H - 130, scale: 0.7 };
+  });
+}
+
 export function layoutFor(screenW: number, screenH: number): Layout {
   return screenH > screenW ? portraitLayout(screenH / screenW) : landscapeLayout();
 }

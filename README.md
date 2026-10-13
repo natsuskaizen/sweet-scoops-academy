@@ -100,7 +100,7 @@ src/
     ShopScene.ts             the persistent shop: animates what OrderManager decides
     backupActions.ts         grown-ups area actions for saving and loading backup files
     characterActions.ts      grown-ups area action that opens the Characters dialog
-    ResultsOverlay.ts        end-of-round card drawn over the shop
+    ResultsOverlay.ts        end-of-round sticker card (one sticker per customer, confetti); a perfect round starts with a parade
     shopArt.ts               prop textures, draws the room, places decorations
     shopRoom.ts              the pixel-art room and counter (strawberry parlour)
     roomPixels.ts            tiny pixel painter the room is drawn with

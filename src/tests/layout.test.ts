@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { layoutFor, PORTRAIT_MAX_H, PORTRAIT_MIN_H, SHOP_H, type Rect } from '../ui/theme';
+import { layoutFor, paradeSpots, PORTRAIT_MAX_H, PORTRAIT_MIN_H, SHOP_H, SHOP_W, type Rect } from '../ui/theme';
 
 const inside = (inner: Rect, outer: Rect) =>
   inner.x >= outer.x &&
@@ -44,4 +44,24 @@ describe('layoutFor', () => {
       expect(l.ticket.h).toBeGreaterThanOrEqual(300);
     });
   }
+});
+
+describe('paradeSpots', () => {
+  it('lines ten customers up in two rows on the shop floor, front row between the back row', () => {
+    const spots = paradeSpots(10);
+    expect(spots).toHaveLength(10);
+    expect(new Set(spots.map((s) => s.y)).size).toBe(2);
+    for (const s of spots) {
+      expect(s.x).toBeGreaterThan(0);
+      expect(s.x).toBeLessThan(SHOP_W);
+      expect(s.y).toBeLessThanOrEqual(SHOP_H);
+    }
+    expect(spots[5]!.x).toBeGreaterThan(spots[0]!.x);
+    expect(spots[5]!.x).toBeLessThan(spots[1]!.x);
+  });
+
+  it('handles a short round', () => {
+    expect(paradeSpots(1)).toHaveLength(1);
+    expect(paradeSpots(0)).toEqual([]);
+  });
 });

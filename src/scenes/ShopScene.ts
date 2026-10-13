@@ -21,7 +21,7 @@ import { resetSubjectProgress, subjectProgress } from '../save/saveTypes';
 import type { RoundSummary } from '../save/saveTypes';
 import { chosenShopkeeper, customerRoster } from '../shop/addedCharacters';
 import { lineFor, type CustomerDef } from '../shop/customerManager';
-import { OrderManager, type ActiveOrder } from '../shop/orderManager';
+import { OrderManager, type ActiveOrder, type RoundSticker } from '../shop/orderManager';
 import type { AttemptOutcome, ChallengePresentation } from '../learning/types';
 import { Button } from '../ui/Button';
 import { NumberKeypad } from '../ui/NumberKeypad';
@@ -29,11 +29,11 @@ import { OrderPanel, SpeechBubble } from '../ui/OrderPanel';
 import { ParentGate, type ParentAction } from '../ui/ParentGate';
 import { showProgress } from '../ui/ProgressScreen';
 import { StatusBar } from '../ui/StatusBar';
-import { COLORS, CSS, LAYOUT, text } from '../ui/theme';
+import { COLORS, CSS, LAYOUT, paradeSpots, text } from '../ui/theme';
 import { VisualAidView } from '../ui/VisualAidView';
 import { backupActions } from './backupActions';
 import { characterAction } from './characterActions';
-import { ResultsOverlay } from './ResultsOverlay';
+import { confetti, ResultsOverlay } from './ResultsOverlay';
 import { drawDecorations, drawShopRoom } from './shopArt';
 
 /** Test hooks (`window.__ssa`, `?fast`) exist in dev, and in a build only when opened with `?e2e`. */
@@ -313,23 +313,55 @@ export class ShopScene extends Phaser.Scene {
   private nextOrder(): void {
     const outcomes = this.roundOutcomes(); // the round is cleared once it finishes
     const finish = this.manager.finishOrder();
-    if (finish.kind === 'round-complete') this.showResults(finish.summary, outcomes);
+    if (finish.kind === 'round-complete') void this.showResults(finish.summary, finish.stickers, outcomes);
     else void this.runOrder();
   }
 
-  private showResults(summary: RoundSummary, outcomes: (AttemptOutcome | null)[]): void {
+  private async showResults(
+    summary: RoundSummary,
+    served: RoundSticker[],
+    outcomes: (AttemptOutcome | null)[],
+  ): Promise<void> {
     this.status.setProgress(outcomes.length - 1, outcomes);
     this.status.setSprinkles(this.manager.profile.sprinkles, true);
     this.shopkeeper.setExpression('happy');
+    const stickers = served.map((s) => ({ look: this.customerLook(s.customer), firstTry: s.firstTry }));
+    // A perfect round brings every customer back for a parade before the card.
+    const parade = summary.perfect ? await this.parade(stickers.map((s) => s.look)) : [];
     let closed = false;
-    const overlay = new ResultsOverlay(this, summary, () => {
+    const overlay = new ResultsOverlay(this, summary, stickers, () => {
       if (closed) return;
       closed = true;
       overlay.destroy();
+      parade.forEach((c) => c.destroy());
       this.shopkeeper.setExpression('neutral');
       this.manager.ensureRound();
       void this.runOrder();
     });
+  }
+
+  /** Customers walk in from the door one after another, line up on the floor and cheer. */
+  private async parade(looks: AnyLook[]): Promise<CharacterView[]> {
+    const spots = paradeSpots(looks.length);
+    const { paradeStepMs, paradeCheerMs } = GAME_CONFIG.timing;
+    const views = looks.map((look, i) => {
+      const spot = spots[i]!;
+      const view = new CharacterView(this, LAYOUT.doorSpot.x, spot.y, look).setDepth(spot.y / 10).setAlpha(0);
+      return view.setScale(view.scaleX * spot.scale);
+    });
+    await Promise.all(
+      views.map(async (view, i) => {
+        await this.wait(i * paradeStepMs);
+        this.tweens.add({ targets: view, alpha: 1, duration: 200 });
+        await view.walkTo(spots[i]!.x, 2);
+        view.setExpression('happy');
+        await view.hop();
+      }),
+    );
+    confetti(this, true);
+    views.forEach((v) => void v.hop());
+    await this.wait(paradeCheerMs);
+    return views;
   }
 
   // -------------------------------------------------------------------------

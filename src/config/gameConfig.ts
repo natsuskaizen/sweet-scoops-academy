@@ -112,6 +112,10 @@ export interface GameConfig {
     aidFillMs: number;
     /** ...and between dealing rounds when sharing scoops into cups. */
     aidDealMs: number;
+    /** Perfect-round parade: time between customers setting off from the door... */
+    paradeStepMs: number;
+    /** ...and how long they cheer before the results card appears. */
+    paradeCheerMs: number;
   };
 }
 
@@ -168,5 +172,12 @@ export const GAME_CONFIG: GameConfig = {
     practiceLookbackRounds: 5,
     practiceFacts: 8,
   },
-  timing: { parentHoldMs: 1200, greetingMs: 900, aidFillMs: 450, aidDealMs: 650 },
+  timing: {
+    parentHoldMs: 1200,
+    greetingMs: 900,
+    aidFillMs: 450,
+    aidDealMs: 650,
+    paradeStepMs: 220,
+    paradeCheerMs: 2600,
+  },
 };
