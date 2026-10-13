@@ -79,17 +79,28 @@ src/
     saveTypes.ts             persisted shapes + SAVE_SCHEMA_VERSION
     saveValidation.ts        structural validation of save files
     saveManager.ts           localStorage with backup slot and quarantine
+    backup.ts                backup files: export, validated import, summary
+  pwa/
+    sw.js                    service worker template (offline play, fresh page on each deploy)
+    registerServiceWorker.ts registers it and checks for updates on launch and resume
+  game/
+    services.ts              wires the save system and subject for the scenes
+    backupTransfer.ts        share sheet / download and file picker for backup files
   characters/
     sprites.ts               original placeholder pixel art as text grids
     characterManager.ts      layered character rendering (body + outfit/hat/bow/handheld)
   scenes/
     BootScene.ts             builds textures, loads the save
     ShopScene.ts             the persistent shop: animates what OrderManager decides
+    backupActions.ts         grown-ups area actions for saving and loading backup files
     ResultsOverlay.ts        end-of-round card drawn over the shop
     shopArt.ts               procedural room, props, decorations
   ui/                        NumberKeypad, OrderPanel (+ SpeechBubble), VisualAidView,
                              StatusBar, ParentGate, Button, theme
   tests/                     Vitest suites
+e2e/                         Playwright: smoke test, offline and backup, redeploy
+scripts/                     offline-plugin.mjs (writes dist/sw.js), make-icons.mjs, check-live-site.mjs
+public/                      favicon, manifest.webmanifest, Home Screen icons
 ```
 
 ### Changing settings

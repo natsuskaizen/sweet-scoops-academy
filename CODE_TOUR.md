@@ -168,12 +168,28 @@ write(save: SaveFile): WriteResult {
   const problems = validateSaveFile(save);
   if (problems.length > 0) return { ok: false, error: ... };   // never write bad data
   const previous = this.read(SAVE_KEYS.primary);
-  if (previous !== null && parse(previous).ok) this.storage.setItem(SAVE_KEYS.backup, previous);
+  if (previous !== null && parseSave(previous).ok) this.storage.setItem(SAVE_KEYS.backup, previous);
   this.storage.setItem(SAVE_KEYS.primary, JSON.stringify(save));
 }
 ```
 
 On load, a bad primary is copied to `sweet-scoops-academy.save.quarantine.<time>` first, then the backup is tried. Bump `SAVE_SCHEMA_VERSION` in `saveTypes.ts` and add a step in `migrate()` when the format changes.
+
+Backup files (`src/save/backup.ts`) reuse the same path. An imported file goes through `parseSave` (parse, migrate, validate) like a storage load, and only a valid one reaches the confirmation step. `replaceWith` then quarantines the live save before writing:
+
+```ts
+export function readBackup(raw: string): Parsed {
+  return parseSave(raw);
+}
+
+replaceWith(save: SaveFile): WriteResult {
+  const problems = validateSaveFile(save);
+  if (problems.length > 0) return { ok: false, error: `refusing to import invalid save: ${problems[0]}` };
+  const current = this.read(SAVE_KEYS.primary);
+  if (current !== null) this.quarantine(current);   // (wrapped in try/catch)
+  return this.write(save);
+}
+```
 
 ## 6. The scene: `src/scenes/ShopScene.ts`
 
