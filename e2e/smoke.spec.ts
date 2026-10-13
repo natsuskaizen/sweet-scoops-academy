@@ -9,8 +9,14 @@ interface ShopHook {
     scale: { gameSize: { width: number; height: number } };
     aid: { visible: boolean };
     gotIt: { x: number; y: number } | null;
+    skipButton: { x: number; y: number } | null;
+    busy: boolean;
+    results: object | null;
+    handleSubmit: (value: string) => Promise<void>;
   };
-  manager: () => { current: () => { index: number; presentation: { correctAnswer: string } } | null };
+  manager: () => {
+    current: () => { index: number; phase: string; presentation: { correctAnswer: string } } | null;
+  };
 }
 type HookWindow = Window & { __ssa?: ShopHook };
 
@@ -98,6 +104,34 @@ test('two misses show the hint, then the explanation, and the order still comple
   await page.waitForFunction(() => (window as HookWindow).__ssa!.manager().current()?.index === 1, null, {
     timeout: 30_000,
   });
+  expect(errors).toEqual([]);
+});
+
+test('a perfect round brings the customers back, and Skip goes straight to the results', async ({ page }, testInfo) => {
+  const errors: string[] = [];
+  await startFresh(page, errors);
+  for (let i = 0; i < 10; i++) {
+    await page.waitForFunction(
+      (i) => {
+        const { scene, manager } = (window as HookWindow).__ssa!;
+        return !scene.busy && scene.keypad.isEnabled && manager().current()?.index === i;
+      },
+      i,
+      { timeout: 30_000 },
+    );
+    await page.evaluate(() => {
+      const ssa = (window as HookWindow).__ssa!;
+      void ssa.scene.handleSubmit(ssa.manager().current()!.presentation.correctAnswer);
+    });
+  }
+  await page.waitForFunction(() => (window as HookWindow).__ssa!.scene.skipButton !== null, null, { timeout: 30_000 });
+  const skip = await page.evaluate(() => {
+    const { x, y } = (window as HookWindow).__ssa!.scene.skipButton!;
+    return { x, y };
+  });
+  await tapAt(page, skip.x, skip.y);
+  await page.waitForFunction(() => (window as HookWindow).__ssa!.scene.results !== null, null, { timeout: 5_000 });
+  await page.screenshot({ path: testInfo.outputPath('perfect-round.png') });
   expect(errors).toEqual([]);
 });
 

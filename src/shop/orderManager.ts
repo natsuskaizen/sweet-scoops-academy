@@ -40,8 +40,16 @@ export type SubmitResult =
   | { kind: 'try-again'; presentation: ChallengePresentation }
   | { kind: 'resolved'; outcome: AttemptOutcome; sprinkles: number; presentation: ChallengePresentation };
 
+/** One customer served this round, for the results card: a gold star for a first-try answer. */
+export interface RoundSticker {
+  customer: CustomerDef;
+  firstTry: boolean;
+}
+
 export type FinishResult =
-  { kind: 'ignored' } | { kind: 'next-order' } | { kind: 'round-complete'; summary: RoundSummary };
+  | { kind: 'ignored' }
+  | { kind: 'next-order' }
+  | { kind: 'round-complete'; summary: RoundSummary; stickers: RoundSticker[] };
 
 export interface Persister {
   write(save: SaveFile): { ok: true } | { ok: false; error: string };
@@ -191,10 +199,13 @@ export class OrderManager {
 
     const bonus = payRoundBonus(this.profile, round) ?? round.bonus ?? { completion: 0, perfect: 0 };
     const summary = summarizeRound(round, bonus, this.now(), (o) => this.expression(o));
+    const stickers = round.orders
+      .filter((o) => o.outcome !== null)
+      .map((o) => ({ customer: customerById(o.customerId, this.roster), firstTry: o.outcome === 'first' }));
     this.profile.roundHistory = [...this.profile.roundHistory, summary].slice(-MAX_HISTORY);
     this.profile.currentRound = null;
     this.persist();
-    return { kind: 'round-complete', summary };
+    return { kind: 'round-complete', summary, stickers };
   }
 
   /** Adds the time since the last step, capped so a long pause counts as a short one. */

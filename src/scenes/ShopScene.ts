@@ -21,7 +21,7 @@ import { resetSubjectProgress, subjectProgress } from '../save/saveTypes';
 import type { RoundSummary } from '../save/saveTypes';
 import { chosenShopkeeper, customerRoster } from '../shop/addedCharacters';
 import { lineFor, type CustomerDef } from '../shop/customerManager';
-import { OrderManager, type ActiveOrder } from '../shop/orderManager';
+import { OrderManager, type ActiveOrder, type RoundSticker } from '../shop/orderManager';
 import type { AttemptOutcome, ChallengePresentation } from '../learning/types';
 import { Button } from '../ui/Button';
 import { NumberKeypad } from '../ui/NumberKeypad';
@@ -29,11 +29,11 @@ import { OrderPanel, SpeechBubble } from '../ui/OrderPanel';
 import { ParentGate, type ParentAction } from '../ui/ParentGate';
 import { showProgress } from '../ui/ProgressScreen';
 import { StatusBar } from '../ui/StatusBar';
-import { COLORS, CSS, LAYOUT, text } from '../ui/theme';
+import { COLORS, CSS, LAYOUT, paradeSpots, SHOP_W, text } from '../ui/theme';
 import { VisualAidView } from '../ui/VisualAidView';
 import { backupActions } from './backupActions';
 import { characterAction } from './characterActions';
-import { ResultsOverlay } from './ResultsOverlay';
+import { confetti, ResultsOverlay } from './ResultsOverlay';
 import { drawDecorations, drawShopRoom } from './shopArt';
 
 /** Test hooks (`window.__ssa`, `?fast`) exist in dev, and in a build only when opened with `?e2e`. */
@@ -57,6 +57,9 @@ export class ShopScene extends Phaser.Scene {
   private busy = false;
   /** The open grown-ups area, if any (the e2e test drives it through `__ssa`). */
   private gate: ParentGate | null = null;
+  /** Shown while a perfect round's parade plays (the e2e test taps it through `__ssa`). */
+  private skipButton: Button | null = null;
+  private results: ResultsOverlay | null = null;
 
   constructor() {
     super('Shop');
@@ -313,23 +316,85 @@ export class ShopScene extends Phaser.Scene {
   private nextOrder(): void {
     const outcomes = this.roundOutcomes(); // the round is cleared once it finishes
     const finish = this.manager.finishOrder();
-    if (finish.kind === 'round-complete') this.showResults(finish.summary, outcomes);
+    if (finish.kind === 'round-complete') void this.showResults(finish.summary, finish.stickers, outcomes);
     else void this.runOrder();
   }
 
-  private showResults(summary: RoundSummary, outcomes: (AttemptOutcome | null)[]): void {
+  private async showResults(
+    summary: RoundSummary,
+    served: RoundSticker[],
+    outcomes: (AttemptOutcome | null)[],
+  ): Promise<void> {
+    if (this.results) return; // one card at a time
     this.status.setProgress(outcomes.length - 1, outcomes);
     this.status.setSprinkles(this.manager.profile.sprinkles, true);
     this.shopkeeper.setExpression('happy');
+    const stickers = served.map((s) => ({ look: this.customerLook(s.customer), firstTry: s.firstTry }));
+    // A perfect round brings every customer back for a parade before the card.
+    const parade = summary.perfect ? await this.parade(stickers.map((s) => s.look)) : [];
     let closed = false;
-    const overlay = new ResultsOverlay(this, summary, () => {
+    const overlay = new ResultsOverlay(this, summary, stickers, () => {
       if (closed) return;
       closed = true;
       overlay.destroy();
+      this.results = null;
+      parade.forEach((c) => c.destroy());
       this.shopkeeper.setExpression('neutral');
       this.manager.ensureRound();
       void this.runOrder();
     });
+    this.results = overlay;
+  }
+
+  /**
+   * Customers walk in from the door one after another, line up on the floor
+   * and cheer. Skip puts everyone in place at once and goes straight to the card.
+   */
+  private async parade(looks: AnyLook[]): Promise<CharacterView[]> {
+    const spots = paradeSpots(looks.length);
+    const views = looks.map((look, i) => {
+      const spot = spots[i]!;
+      const view = new CharacterView(this, LAYOUT.doorSpot.x, spot.y, look).setDepth(spot.y / 10).setAlpha(0);
+      return view.setScale(view.scaleX * spot.scale);
+    });
+    let skipped = false;
+    const skip = new Promise<void>((resolve) => {
+      this.skipButton = new Button(this, SHOP_W - 110, LAYOUT.shop.y + 56, {
+        width: 180,
+        height: 72,
+        label: 'Skip ▸',
+        fontSize: 28,
+        onTap: () => {
+          skipped = true;
+          resolve();
+        },
+      }).setDepth(600);
+    });
+    await Promise.race([this.marchIn(views, spots, () => skipped), skip]);
+    this.skipButton?.destroy();
+    this.skipButton = null;
+    if (skipped) views.forEach((v, i) => v.arriveAt(spots[i]!.x, spots[i]!.y).setAlpha(1).setExpression('happy'));
+    return views;
+  }
+
+  /** The parade itself; each step checks whether Skip was tapped meanwhile. */
+  private async marchIn(views: CharacterView[], spots: { x: number }[], skipped: () => boolean): Promise<void> {
+    const { paradeStepMs, paradeCheerMs } = GAME_CONFIG.timing;
+    await Promise.all(
+      views.map(async (view, i) => {
+        await this.wait(i * paradeStepMs);
+        if (skipped()) return;
+        this.tweens.add({ targets: view, alpha: 1, duration: 200 });
+        await view.walkTo(spots[i]!.x, 2);
+        if (skipped()) return;
+        view.setExpression('happy');
+        await view.hop();
+      }),
+    );
+    if (skipped()) return;
+    confetti(this, true);
+    views.forEach((v) => void v.hop());
+    await this.wait(paradeCheerMs);
   }
 
   // -------------------------------------------------------------------------

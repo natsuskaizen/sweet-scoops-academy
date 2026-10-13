@@ -150,6 +150,7 @@ export class CharacterView extends Phaser.GameObjects.Container {
   private layerImages = new Map<CharacterLayerSlot, Phaser.GameObjects.Image>();
   private bobTween?: Phaser.Tweens.Tween;
   private expression: Expression = 'neutral';
+  private stopStepping: (() => void) | null = null;
 
   constructor(
     scene: Phaser.Scene,
@@ -246,6 +247,7 @@ export class CharacterView extends Phaser.GameObjects.Container {
     this.setFlipX(x < this.x);
     return new Promise((resolve) => {
       const stop = this.startStepping();
+      this.stopStepping = stop;
       this.scene.tweens.add({
         targets: this,
         x,
@@ -253,6 +255,7 @@ export class CharacterView extends Phaser.GameObjects.Container {
         ease: 'Linear',
         onComplete: () => {
           stop();
+          this.stopStepping = null;
           this.setFlipX(false);
           resolve();
         },
@@ -261,6 +264,16 @@ export class CharacterView extends Phaser.GameObjects.Container {
   }
 
   /** Walk frames when the picture has them, otherwise a little waddle. Returns a stop function. */
+  /** Ends any walk or hop at once, standing at (x, y). A walk cut short this way never resolves its promise. */
+  arriveAt(x: number, y: number): this {
+    this.scene.tweens.killTweensOf(this);
+    this.stopStepping?.();
+    this.stopStepping = null;
+    this.angle = 0;
+    this.setFlipX(false);
+    return this.setPosition(x, y);
+  }
+
   private startStepping(): () => void {
     if (isSheet(this.look) && hasWalkFrames(this.look.sheet.frames)) {
       let step = 0;

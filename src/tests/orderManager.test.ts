@@ -181,4 +181,21 @@ describe('OrderManager', () => {
     const reloaded = new OrderManager({ save: saves.load().save, persister: saves, subject: mathSubject, now });
     expect(reloaded.current()!.customer.addedId).toBeUndefined();
   });
+
+  it('hands the results card one sticker per customer served, starred for first tries', () => {
+    const { manager } = boot();
+    manager.ensureRound();
+    let done;
+    for (let i = 0; i < 10; i++) {
+      const active = manager.current()!;
+      if (i === 3) manager.submit(wrong(active.presentation.correctAnswer));
+      manager.submit(active.presentation.correctAnswer);
+      done = manager.finishOrder();
+    }
+    expect(done).toMatchObject({ kind: 'round-complete' });
+    const stickers = done!.kind === 'round-complete' ? done!.stickers : [];
+    expect(stickers).toHaveLength(10);
+    expect(stickers.map((s) => s.firstTry)).toEqual([true, true, true, false, true, true, true, true, true, true]);
+    expect(stickers.every((s) => s.customer.name.length > 0)).toBe(true);
+  });
 });
