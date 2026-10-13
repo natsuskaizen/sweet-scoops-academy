@@ -3,7 +3,7 @@ import { GAME_CONFIG } from '../config/gameConfig';
 import type { ChallengeSpec } from '../learning/types';
 import { MemoryStorage, SAVE_KEYS, SaveManager, createSaveFile, parseSave } from '../save/saveManager';
 import { migrateToVersion } from '../save/migrations';
-import { SAVE_SCHEMA_VERSION } from '../save/saveTypes';
+import { SAVE_SCHEMA_VERSION, type SaveFile } from '../save/saveTypes';
 import { validateSaveFile } from '../save/saveValidation';
 
 let clock = 1_700_000_000_000;
@@ -225,6 +225,31 @@ describe('SaveManager', () => {
     ]);
     p.dailyLog = [] as never;
     expect(validateSaveFile(save).join()).toContain('dailyLog invalid');
+  });
+
+  it('upgrades a version 3 save: each player keeps Sweet Scoops with Momo and last played at their last round', () => {
+    const v3 = createSaveFile(1000) as unknown as Record<string, unknown> & SaveFile;
+    v3.schemaVersion = 3;
+    const p = v3.profiles[v3.activeProfileId]! as unknown as Record<string, unknown>;
+    delete p.shop;
+    delete p.lastPlayedAt;
+    p.roundHistory = [3000, 9000].map((finishedAt, i) => ({
+      ...{ roundNumber: i + 1, startedAt: null, playMs: null, ordersCompleted: 10, firstTryCorrect: 10 },
+      ...{ retryCorrect: 0, missed: 0, orderSprinkles: 100, completionBonus: 10, perfectBonus: 5, total: 115 },
+      ...{ perfect: true, retryFacts: [], missFacts: [], finishedAt },
+    }));
+
+    const parsed = parseSave(JSON.stringify(v3));
+    if (!parsed.ok) throw new Error(parsed.problems.join());
+    const profile = parsed.save.profiles[parsed.save.activeProfileId]!;
+    expect(profile.shop).toEqual({ name: 'Sweet Scoops', keeper: 'momo' });
+    expect(profile.lastPlayedAt).toBe(9000);
+  });
+
+  it('rejects a player whose shop has no name', () => {
+    const save = createSaveFile(1);
+    save.profiles[save.activeProfileId]!.shop.name = '  ';
+    expect(validateSaveFile(save).join()).toMatch(/shop invalid/);
   });
 
   it('refuses a save whose version has no migration step', () => {

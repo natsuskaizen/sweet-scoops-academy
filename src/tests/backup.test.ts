@@ -47,7 +47,7 @@ describe('backup files', () => {
   it('names files by date and describes what a backup holds', () => {
     expect(backupFileName(Date.UTC(2026, 9, 13, 12))).toBe('sweet-scoops-backup-2026-10-13.json');
     const { save } = savedGame(70);
-    expect(describeBackup(save)).toMatch(/^Player 1, saved .+: 70 Sprinkles, 0 rounds finished\.$/);
+    expect(describeBackup(save)).toMatch(/^Saved .+\. Player 1: 70 Sprinkles, 0 rounds finished\.$/);
   });
 });
 

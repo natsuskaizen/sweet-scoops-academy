@@ -7,6 +7,7 @@
  */
 import type { AddedCharacter } from '../shop/addedCharacters';
 import { readCharacterList } from './characterLibrary';
+import { playersInOrder } from './profileActions';
 import { parseSave } from './saveManager';
 import type { SaveFile } from './saveTypes';
 
@@ -42,7 +43,6 @@ export function readBackup(raw: string): BackupContents {
 
 /** What the restore confirmation shows, so a parent can tell backups apart. */
 export function describeBackup(save: SaveFile, characters: readonly AddedCharacter[] = []): string {
-  const p = save.profiles[save.activeProfileId]!;
   const saved = new Date(save.savedAt).toLocaleDateString(undefined, {
     year: 'numeric',
     month: 'short',
@@ -50,5 +50,8 @@ export function describeBackup(save: SaveFile, characters: readonly AddedCharact
   });
   const added =
     characters.length > 0 ? ` ${characters.length} added character${characters.length === 1 ? '' : 's'}.` : '';
-  return `${p.displayName}, saved ${saved}: ${p.sprinkles} Sprinkles, ${p.roundHistory.length} rounds finished.${added}`;
+  const players = playersInOrder(save).map(
+    (p) => `${p.displayName}: ${p.sprinkles} Sprinkles, ${p.roundHistory.length} rounds finished.`,
+  );
+  return `Saved ${saved}. ${players.join(' ')}${added}`;
 }

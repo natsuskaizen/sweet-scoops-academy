@@ -227,6 +227,15 @@ for (const summary of history) {
 }
 ```
 
+Each player has their own shop, so several children can share a device. The player actions in the same file never leave the save invalid: blank names are ignored, and the last player can't be removed:
+
+```ts
+addPlayer(save, { name: 'Ava', shop: { name: "Ava's Rainbow Scoops", keeper: 'bonbon' } }, Date.now()); // becomes the one playing
+choosePlayer(save, id, Date.now()); // marks them as just played, so they come first in playersInOrder(save)
+updatePlayer(profile, { shopName: 'Sugar Cloud', keeper: 'kiki' });
+removePlayer(save, id); // false for the last player
+```
+
 Backup files (`src/save/backup.ts`) reuse the same path. An imported file goes through `parseSave` (parse, migrate, validate) like a storage load, and only a valid one reaches the confirmation step. `replaceWith` then quarantines the live save before writing:
 
 ```ts
@@ -287,7 +296,7 @@ The grown-ups area's content lives in `src/scenes/parentArea.ts`, so the scene o
 ```ts
 // services.save is the live save; services.loadNotice is how it was found at startup, shown once
 resetLearning(profile, services.subject); // src/save/profileActions.ts
-resetProfile(services.save, Date.now()); // replaces only the active player
+resetProfile(services.save, Date.now()); // replaces only the active player, keeping their shop
 const result = services.saves.write(services.save);
 if (!result.ok) return gate.notice('Not saved', `The change could not be saved: ${result.error}`);
 scene.scene.restart();
