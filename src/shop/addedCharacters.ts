@@ -205,7 +205,6 @@ export function toCustomerDef(c: AddedCharacter): CustomerDef {
   return {
     id: c.id,
     name: c.name,
-    species: 'bunny', // not drawn: `addedId` tells the scene to use the picture
     addedId: c.id,
     favoriteFlavor: c.favoriteFlavor,
     greetings: c.greetings.length > 0 ? c.greetings : DEFAULT_GREETINGS,

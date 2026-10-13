@@ -7,14 +7,18 @@
  * only animates what the manager says and forwards what the player taps.
  */
 import Phaser from 'phaser';
-import { addedLook, CharacterView, registerAddedTextures, type AnyLook } from '../characters/characterManager';
-import type { LayerId } from '../characters/sprites';
+import {
+  addedLook,
+  CharacterView,
+  friendLook,
+  registerAddedTextures,
+  type AnyLook,
+} from '../characters/characterManager';
 import { SERVICES_KEY, type GameServices } from '../game/services';
 import { GAME_CONFIG } from '../config/gameConfig';
 import { createProfile } from '../save/saveManager';
 import { resetSubjectProgress, subjectProgress } from '../save/saveTypes';
 import type { RoundSummary } from '../save/saveTypes';
-import { itemById } from '../shop/catalog';
 import { chosenShopkeeper, customerRoster } from '../shop/addedCharacters';
 import { lineFor, type CustomerDef } from '../shop/customerManager';
 import { OrderManager, type ActiveOrder } from '../shop/orderManager';
@@ -150,18 +154,15 @@ export class ShopScene extends Phaser.Scene {
     return customer;
   }
 
-  /** The newest added shopkeeper, else the puppy in an apron and chef's hat. */
+  /** The newest added shopkeeper, else Momo. */
   private shopkeeperLook(): AnyLook {
     const added = chosenShopkeeper(this.services.characters.list());
-    const look = added && addedLook(this, added);
-    if (look) return look;
-    const equippedBow = itemById(this.manager.profile.equipped.bow ?? '')?.asset as LayerId | undefined;
-    return { species: 'puppy', layers: { outfit: 'apron', hat: 'chef-hat', bow: equippedBow } };
+    return (added && addedLook(this, added)) || friendLook('momo');
   }
 
   private customerLook(def: CustomerDef): AnyLook {
     const added = def.addedId ? this.services.characters.list().find((c) => c.id === def.addedId) : undefined;
-    return (added && addedLook(this, added)) || { species: def.species, palette: def.palette };
+    return (added && addedLook(this, added)) || friendLook(def.art ?? 'mallow');
   }
 
   private async placeOrder(active: ActiveOrder, customer: CharacterView): Promise<void> {

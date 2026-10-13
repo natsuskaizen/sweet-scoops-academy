@@ -1,66 +1,47 @@
 /**
  * Customer roster and lineup. Customers are pure data here (who they are,
- * what they say, which sprite they use); the scene animates them. Adding a
- * customer is one entry in CUSTOMERS plus a sprite in characters/sprites.ts.
+ * what they say, which art they use); the scene animates them. Adding a
+ * customer is one entry in CUSTOMERS plus its art in characters/friendArt.ts.
  */
 import type { Rng } from '../core/rng';
-import type { Palette, SpeciesId } from '../characters/sprites';
+import type { FriendId } from '../characters/friendArt';
 
 export interface CustomerDef {
   id: string;
   name: string;
-  species: SpeciesId;
-  /** Optional recolour so one species can make several customers. */
-  palette?: Partial<Palette>;
-  /** Set for characters a grown-up added: drawn from their picture instead of `species`. */
+  /** Built-in characters' art in characters/friendArt.ts. */
+  art?: FriendId;
+  /** Set for characters a grown-up added: drawn from their picture. */
   addedId?: string;
   favoriteFlavor: string;
   greetings: readonly string[];
   thanks: readonly string[];
 }
 
+const friend = (art: FriendId, favoriteFlavor: string, greetings: string[], thanks: string[]): CustomerDef => ({
+  id: art,
+  name: art[0]!.toUpperCase() + art.slice(1),
+  art,
+  favoriteFlavor,
+  greetings,
+  thanks,
+});
+
+/** Everyone who visits the shop. Momo isn't here: she runs it. */
 export const CUSTOMERS: readonly CustomerDef[] = [
-  {
-    id: 'berry',
-    name: 'Berry',
-    species: 'bunny',
-    favoriteFlavor: 'strawberry',
-    greetings: ['Hi hi!', 'Hello, friend!'],
-    thanks: ['Yummy! Thank you!', 'So pink! I love it!'],
-  },
-  {
-    id: 'miso',
-    name: 'Miso',
-    species: 'kitten',
-    favoriteFlavor: 'honey-lavender',
-    greetings: ['Mew! Hello!', 'Hi there!'],
-    thanks: ['Purr-fect!', 'New flavor idea! Thanks!'],
-  },
-  {
-    id: 'puff',
-    name: 'Puff',
-    species: 'puppy',
-    favoriteFlavor: 'blueberry',
-    palette: { B: '#f6e3c8', A: '#e0b48a', b: '#ff9ec0', n: '#7a5240' },
-    greetings: ['Woof! Hi!', 'Hello hello!'],
-    thanks: ['Wag wag! Thank you!', 'Best shop ever!'],
-  },
-  {
-    id: 'pip',
-    name: 'Pip',
-    species: 'duckling',
-    favoriteFlavor: 'lemon',
-    greetings: ['Quack! Hi!', 'Hello!'],
-    thanks: ['Quack-tastic!', 'Thank you so much!'],
-  },
-  {
-    id: 'mochi',
-    name: 'Mochi',
-    species: 'bear',
-    favoriteFlavor: 'chocolate',
-    greetings: ['Hi! I am hungry!', 'Hello!'],
-    thanks: ['Mmm! Thank you!', 'Big bear hug!'],
-  },
+  friend('mallow', 'chocolate', ['Woof! Hello!', 'Hi hi!'], ['Wag wag! Thank you!', 'Yummy!']),
+  friend('bonbon', 'strawberry', ['Hop hop! Hello!', 'Hi, friend!'], ['So pink! Thank you!', 'Hoppy happy!']),
+  friend('kiki', 'lemon', ['Mew! Hello!', 'Hi there!'], ['Purr-fect!', 'Sunny and sweet! Thanks!']),
+  friend('pom', 'blueberry', ['Hello from the sea!', 'Hi hi!'], ['Splish! Thank you!', 'Cool and yummy!']),
+  friend('lulu', 'honey-lavender', ['Baa! Good day!', 'Hello!'], ['Dreamy! Thank you!', 'Soft and sweet!']),
+  friend('pickle', 'mint', ['Ribbit! Hi!', 'Hello hello!'], ['Ribbit-tastic!', 'Thank you so much!']),
+  friend('pebble', 'vanilla', ['Waddle waddle! Hi!', 'Hello!'], ['Brrr-illiant! Thanks!', 'Just how I like it!']),
+  friend('bao', 'strawberry', ['Hello! I am hungry!', 'Hi there!'], ['Mmm! Thank you!', 'Big panda hug!']),
+  friend('maple', 'chocolate', ['Hi! Something smells yummy!', 'Hello!'], ['Fox-tastic!', 'Thank you, friend!']),
+  friend('koko', 'honey-lavender', ["G'day! Hello!", 'Hi hi!'], ['Sweet as! Thanks!', 'Yum yum!']),
+  friend('peep', 'lemon', ['Peep! Hello!', 'Hi hi hi!'], ['Peep peep! Thank you!', 'Tweet treat!']),
+  friend('hazel', 'vanilla', ['Squeak! Hello!', 'Hi there!'], ['Cheeks full! Thanks!', 'Squeak-tacular!']),
+  friend('olive', 'blueberry', ['Hoo! Hello!', 'Good evening! Hoo!'], ['Hoo-ray! Thank you!', 'A wise choice!']),
 ];
 
 /** A customer from the roster; one that has since been removed falls back to the first built-in customer. */

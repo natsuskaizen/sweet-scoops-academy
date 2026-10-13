@@ -250,17 +250,26 @@ The keypad disables itself the moment ✓ is tapped and the scene re-enables it 
 
 ## 7. Characters: `src/characters/`
 
-Sprites are text grids on a shared 16×20 frame, so clothing layers line up on any species:
+The shop's cast (Momo behind the counter and 13 customers) lives in `friendArt.ts`. Each one is its standing frame as a 32×40 text grid, and the happy and thinking faces are redrawn from it, so every character gets the same expressions:
 
 ```ts
-'chef-hat': grid({
-  0: '.....oooooo.....',
-  1: '....owwwwwwo....',
-  ...
-}),
+momo: {
+  palette: { a: '#ffffff', b: '#ffc9a8', ... },   // 'o' is the shared outline, '.' is clear
+  rows: ['...ooooooo...', ...],
+},
 
+friendFrames(FRIEND_ART.momo); // [stand, happy (^ ^ eyes), thinking (eyes up)]
+registerFriendTextures(scene); // BootScene: one 3-frame sprite sheet per character
+new CharacterView(scene, x, y, friendLook('momo')).setExpression('happy');
+```
+
+A customer is one entry in `CUSTOMERS` (`src/shop/customerManager.ts`) naming its art, favourite flavour and lines. Walking is a gentle hop, since the cast has no walk frames.
+
+The older 16×20 species in `sprites.ts` share one grid so clothing layers line up on any of them, which is how Milestone 3 equipment will plug in:
+
+```ts
 new CharacterView(scene, x, y, { species: 'puppy', layers: { outfit: 'apron', hat: 'chef-hat' } });
-view.setLayer('bow', 'bow-strawberry');   // how Milestone 3 equipment will plug in
+view.setLayer('bow', 'bow-strawberry');
 ```
 
 Grown-ups can add characters from their own pictures (`src/shop/addedCharacters.ts`). A picture is a row of frames on the same grid times 1-4, and it becomes a normal customer for the order flow:
@@ -274,7 +283,7 @@ const roster = customerRoster(services.characters.list()); // built-ins + switch
 new OrderManager({ save, persister, subject, roster });
 
 // BootScene registers each picture as a sprite sheet; expressions pick frames
-const look = addedLook(scene, character) ?? { species: 'bunny' }; // null if the picture didn't load
+const look = addedLook(scene, character) ?? friendLook('mallow'); // null if the picture didn't load
 new CharacterView(scene, x, y, look).setExpression('happy'); // frame 1, or standing
 ```
 
