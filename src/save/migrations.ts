@@ -53,9 +53,24 @@ function addDailyLog(data: Obj): void {
   }
 }
 
+/**
+ * Version 4 gives every player their own shop. Players from before then
+ * keep the shop they knew (Sweet Scoops, with Momo) and count as last
+ * playing when they last finished a round.
+ */
+function addShops(data: Obj): void {
+  for (const profile of profilesOf(data)) {
+    profile.shop ??= { ...GAME_CONFIG.players.defaultShop };
+    const history = Array.isArray(profile.roundHistory) ? profile.roundHistory.filter(isObj) : [];
+    const finished = history.map((s) => s.finishedAt).filter((t): t is number => typeof t === 'number');
+    profile.lastPlayedAt ??= Math.max(Number(profile.createdAt) || 0, ...finished);
+  }
+}
+
 export const MIGRATIONS: Readonly<Record<number, (data: Obj) => void>> = {
   1: addRoundTiming,
   2: addDailyLog,
+  3: addShops,
 };
 
 /** Runs every step from the save's version up to `target`. Returns false if a step is missing. */

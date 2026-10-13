@@ -12,7 +12,7 @@ import { GAME_CONFIG } from '../config/gameConfig';
 import { mathSubject } from '../learning/mathSubject';
 import { randomSeed } from '../core/rng';
 import { migrateToVersion } from './migrations';
-import { SAVE_SCHEMA_VERSION, type Profile, type SaveFile } from './saveTypes';
+import { SAVE_SCHEMA_VERSION, type Profile, type SaveFile, type ShopDetails } from './saveTypes';
 import { dropUnplayableRounds, validateSaveFile } from './saveValidation';
 
 export interface StorageLike {
@@ -45,11 +45,18 @@ export type WriteResult = { ok: true } | { ok: false; error: string };
 
 export type Parsed = { ok: true; save: SaveFile } | { ok: false; problems: string[] };
 
-export function createProfile(displayName: string, now: number, seed = randomSeed()): Profile {
+export function createProfile(
+  displayName: string,
+  now: number,
+  seed = randomSeed(),
+  shop: ShopDetails = GAME_CONFIG.players.defaultShop,
+): Profile {
   return {
     id: `p-${now.toString(36)}-${(seed % 46656).toString(36)}`,
     displayName,
     createdAt: now,
+    lastPlayedAt: now,
+    shop: { ...shop },
     sprinkles: 0,
     lifetimeSprinkles: 0,
     ownedItems: [],

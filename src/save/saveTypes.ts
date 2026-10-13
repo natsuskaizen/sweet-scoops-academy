@@ -7,7 +7,7 @@ import type { AttemptOutcome, ChallengeSpec, LearningSubject } from '../learning
 import type { EquipSlot, ShopSpot } from '../shop/catalog';
 import type { RoundBonus } from '../shop/rewards';
 
-export const SAVE_SCHEMA_VERSION = 3;
+export const SAVE_SCHEMA_VERSION = 4;
 
 export interface OrderState {
   /** Checked by the owning subject's isValidSpec on load. */
@@ -81,10 +81,20 @@ export interface DayRecord {
   heart: boolean;
 }
 
+/** The child's own ice cream shop: the name on its sign and who works behind the counter. */
+export interface ShopDetails {
+  name: string;
+  /** A built-in friend's id (friendArt.ts); the scene falls back to Momo for one it doesn't know. */
+  keeper: string;
+}
+
 export interface Profile {
   id: string;
   displayName: string;
   createdAt: number;
+  /** When this child last chose to play, so the start screen can put them first. */
+  lastPlayedAt: number;
+  shop: ShopDetails;
   sprinkles: number;
   lifetimeSprinkles: number;
   ownedItems: string[];

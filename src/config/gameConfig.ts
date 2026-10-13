@@ -89,6 +89,14 @@ export interface GameConfig {
     maxLines: number;
     maxLineLength: number;
   };
+  /** The children who play on this device, each with their own shop. */
+  players: {
+    maxPlayers: number;
+    maxNameLength: number;
+    maxShopNameLength: number;
+    /** The shop a player has before choosing their own (and every save from before players chose). */
+    defaultShop: { name: string; keeper: string };
+  };
   parentArea: {
     /** Round cards per page in the grown-ups "Rounds" view (a 2x2 grid). */
     roundCardsPerPage: number;
@@ -195,6 +203,12 @@ export const GAME_CONFIG: GameConfig = {
     maxNameLength: 12,
     maxLines: 3,
     maxLineLength: 24,
+  },
+  players: {
+    maxPlayers: 6,
+    maxNameLength: 12,
+    maxShopNameLength: 28,
+    defaultShop: { name: 'Sweet Scoops', keeper: 'momo' },
   },
   parentArea: {
     roundCardsPerPage: 4,

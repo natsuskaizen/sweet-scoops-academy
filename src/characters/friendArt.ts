@@ -662,6 +662,9 @@ export const FRIEND_ART = {
 export type FriendId = keyof typeof FRIEND_ART;
 export const FRIEND_IDS = Object.keys(FRIEND_ART) as FriendId[];
 
+/** True for a built-in character's id, so saved ids can be trusted before drawing them. */
+export const isFriendId = (id: string): id is FriendId => Object.hasOwn(FRIEND_ART, id);
+
 /** Colour for a grid letter, or null for clear. */
 export function friendColor(art: FriendArt, ch: string): string | null {
   if (ch === 'o') return FRIEND_OUTLINE;

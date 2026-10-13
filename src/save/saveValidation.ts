@@ -13,6 +13,8 @@ const isNonNegInt = (v: unknown): v is number => typeof v === 'number' && Number
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 const isStr = (v: unknown): v is string => typeof v === 'string';
 const isStrArray = (v: unknown): v is string[] => Array.isArray(v) && v.every(isStr);
+const isText = (v: unknown): v is string => isStr(v) && v.trim().length > 0;
+const isShop = (v: unknown): boolean => isObj(v) && isText(v.name) && isText(v.keeper);
 const isNonNegIntOrNull = (v: unknown): boolean => v === null || isNonNegInt(v);
 
 const STATES = new Set(['learning', 'practicing', 'mastered']);
@@ -143,6 +145,8 @@ function checkSettings(v: unknown, path: string, out: string[]): void {
 /** Simple per-field shape checks for a profile. */
 const PROFILE_FIELDS: Record<string, (v: unknown) => boolean> = {
   createdAt: isNonNegInt,
+  lastPlayedAt: isNonNegInt,
+  shop: isShop,
   sprinkles: isNonNegInt,
   lifetimeSprinkles: isNonNegInt,
   ownedItems: isStrArray,

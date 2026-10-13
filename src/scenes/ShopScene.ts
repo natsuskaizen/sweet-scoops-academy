@@ -8,6 +8,7 @@
  */
 import Phaser from 'phaser';
 import { addedLook, CharacterView, friendLook, MOMO_SHEETS, type AnyLook } from '../characters/characterManager';
+import { isFriendId } from '../characters/friendArt';
 import type { ScooperId } from '../characters/scooperArt';
 import { dressMomo } from '../characters/wearArt';
 import { SERVICES_KEY, type GameServices } from '../game/services';
@@ -101,7 +102,7 @@ export class ShopScene extends Phaser.Scene {
 
     this.parentArea = parentArea({ scene: this, services: this.services, profile: () => this.manager.profile });
 
-    this.placed = new PlacedDecorations(this, drawShopRoom(this));
+    this.placed = new PlacedDecorations(this, drawShopRoom(this, this.manager.profile.shop.name));
     this.placed.draw(this.manager.profile.decorations);
     this.wallCalendar = new WallCalendar(this, () => this.openCalendar());
     this.wallCalendar.refresh(this.manager.profile, Date.now());
@@ -178,12 +179,14 @@ export class ShopScene extends Phaser.Scene {
     return customer;
   }
 
-  /** The newest added shopkeeper, else Momo in what she has on from her Closet. */
+  /** The newest added shopkeeper, else the player's own, with Momo in what she has on from her Closet. */
   private makeShopkeeper(): CharacterView {
     const added = chosenShopkeeper(this.services.characters.list());
-    const look = added && addedLook(this, added);
-    const view = new CharacterView(this, LAYOUT.shopkeeper.x, 530, look || friendLook('momo')).setDepth(20);
-    if (!look) dressMomo(view, equippedItems(this.manager.profile), MOMO_SHEETS);
+    const { keeper: id } = this.manager.profile.shop;
+    const keeper = isFriendId(id) ? id : 'momo';
+    const look = (added && addedLook(this, added)) || friendLook(keeper);
+    const view = new CharacterView(this, LAYOUT.shopkeeper.x, 530, look).setDepth(20);
+    if (!added && keeper === 'momo') dressMomo(view, equippedItems(this.manager.profile), MOMO_SHEETS);
     return view.idle(true);
   }
 
