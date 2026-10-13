@@ -24,6 +24,12 @@ Before pushing, run everything CI runs: `typecheck`, `test:coverage`, `lint`, `f
 - Functions at most 45 lines, cyclomatic complexity at most 12, nesting depth at most 3, at most 5 parameters. Split into small named helpers instead of disabling a rule.
 - No unused code, `import type` for type-only imports, `===` only, no `console.log` (`warn` and `error` are fine).
 - Tests are exempt from the length and complexity limits.
+
+## Testing
+
+- Every meaningful logic change comes with a unit test in `src/tests/` (one suite per module). Skip tests for trivial or low-priority logic: no tests just for the sake of tests.
+- Target at least 90% coverage of game logic. The CI floors in `vite.config.ts` are lower today (statements 85, branches 80, functions 88, lines 90); don't let a change push coverage down, and raise a floor when coverage clears it.
+- Scenes and UI are covered by the Playwright smoke test (`e2e/smoke.spec.ts`), not unit tests.
 - Don't repeat yourself: look for an existing helper (for example in `src/learning/math/operation.ts`) before writing a new one.
 
 ## Architecture rules
@@ -48,5 +54,6 @@ Before pushing, run everything CI runs: `typecheck`, `test:coverage`, `lint`, `f
 
 - GitHub Pages deploys **only** through GitHub Actions (`.github/workflows/deploy.yml`) on push to `main`. Don't switch Pages to a branch source or commit `dist/`: that caused the blank-purple-screen bug. Keep the relative Vite `base: './'`.
 - `ci.yml` runs on every PR: Typecheck, test, build; Lint and format; Browser smoke test. After deploy, "Check live site" verifies the published page.
-- Claude works on a branch and opens a PR; Stan reviews and merges. Never push to `main`.
-- Keep README.md and CODE_TOUR.md in step when a change alters commands, structure or the snippets they show.
+- Stan is the only developer. Claude works on a branch and opens a PR; Stan reviews and merges. Never push to `main`.
+- Commit messages and PR titles are plain sentences describing the change (for example "Play in portrait: shop on top, ticket and keypad below"). No prefixes or ticket numbers.
+- Every PR that changes structure, commands, or code that README.md or CODE_TOUR.md shows must update those docs in the same PR.
