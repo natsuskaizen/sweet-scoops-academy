@@ -12,7 +12,7 @@ import { mathSubject } from '../learning/mathSubject';
 import { randomSeed } from '../core/rng';
 import { migrateToVersion } from './migrations';
 import { SAVE_SCHEMA_VERSION, type Profile, type SaveFile } from './saveTypes';
-import { validateSaveFile } from './saveValidation';
+import { dropUnplayableRounds, validateSaveFile } from './saveValidation';
 
 export interface StorageLike {
   getItem(key: string): string | null;
@@ -71,7 +71,7 @@ export function createSaveFile(now: number, profile = createProfile('Player 1', 
   };
 }
 
-/** Upgrades older saves in place (steps live in migrations.ts), then validates. */
+/** Upgrades older saves in place (steps live in migrations.ts), drops rounds that can't be resumed, then validates. */
 function migrate(data: Record<string, unknown>): Parsed {
   const version = data.schemaVersion;
   if (typeof version !== 'number') return { ok: false, problems: ['schemaVersion missing'] };
@@ -81,6 +81,7 @@ function migrate(data: Record<string, unknown>): Parsed {
   if (!migrateToVersion(data, SAVE_SCHEMA_VERSION)) {
     return { ok: false, problems: [`no migration from save version ${version}`] };
   }
+  dropUnplayableRounds(data);
   const problems = validateSaveFile(data);
   return problems.length === 0 ? { ok: true, save: data as unknown as SaveFile } : { ok: false, problems };
 }

@@ -13,6 +13,7 @@ interface ShopHook {
     busy: boolean;
     results: object | null;
     handleSubmit: (value: string) => Promise<void>;
+    scene: { restart: () => void };
   };
   manager: () => {
     current: () => { index: number; phase: string; presentation: { correctAnswer: string } } | null;
@@ -132,6 +133,43 @@ test('a perfect round brings the customers back, and Skip goes straight to the r
   await tapAt(page, skip.x, skip.y);
   await page.waitForFunction(() => (window as HookWindow).__ssa!.scene.results !== null, null, { timeout: 5_000 });
   await page.screenshot({ path: testInfo.outputPath('perfect-round.png') });
+  expect(errors).toEqual([]);
+});
+
+test('opening and closing the grown-ups area while a customer walks in leaves the keypad usable', async ({ page }) => {
+  const errors: string[] = [];
+  await startFresh(page, errors);
+  await page.evaluate(() => {
+    const scene = (window as HookWindow).__ssa!.scene as unknown as { openParentGate: () => void };
+    scene.openParentGate();
+  });
+  // Close it once the customer has arrived and the order is waiting for an answer.
+  await page.waitForFunction(() => !(window as HookWindow).__ssa!.scene.busy, null, { timeout: 30_000 });
+  await page.evaluate(() => {
+    const scene = (window as HookWindow).__ssa!.scene as unknown as { gate: { close: () => void } };
+    scene.gate.close();
+  });
+  await keypadReady(page);
+  expect(errors).toEqual([]);
+});
+
+test('restarting while the results card is open (as rotating does) starts clean', async ({ page }) => {
+  const errors: string[] = [];
+  await startFresh(page, errors);
+  await keypadReady(page);
+  await page.evaluate(() => {
+    const scene = (window as HookWindow).__ssa!.scene as unknown as {
+      showResults: (summary: object, stickers: [], outcomes: []) => Promise<void>;
+    };
+    const summary = { perfect: false, ordersCompleted: 10, firstTryCorrect: 8, total: 120 };
+    void scene.showResults({ ...summary, orderSprinkles: 90, completionBonus: 30, perfectBonus: 0 }, [], []);
+  });
+  await page.waitForFunction(() => (window as HookWindow).__ssa!.scene.results !== null);
+  await page.evaluate(() => {
+    (window as HookWindow).__ssa!.scene.scene.restart();
+  });
+  await page.waitForFunction(() => (window as HookWindow).__ssa!.scene.results === null, null, { timeout: 10_000 });
+  await keypadReady(page);
   expect(errors).toEqual([]);
 });
 

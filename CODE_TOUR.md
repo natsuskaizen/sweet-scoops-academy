@@ -194,7 +194,7 @@ write(save: SaveFile): WriteResult {
 }
 ```
 
-On load, a bad primary is copied to `sweet-scoops-academy.save.quarantine.<time>` first, then the backup is tried. Bump `SAVE_SCHEMA_VERSION` in `saveTypes.ts` and add a step to `MIGRATIONS` in `src/save/migrations.ts` when the format changes. Each step upgrades one version and only fills in what is missing; older data gets "unknown" rather than a guess:
+On load, an unfinished round that no longer passes validation (its questions fall outside today's rules, for example) is dropped first (`dropUnplayableRounds`), so only a damaged save as a whole counts as bad. A bad primary is copied to `sweet-scoops-academy.save.quarantine.<time>`, then the backup is tried. Bump `SAVE_SCHEMA_VERSION` in `saveTypes.ts` and add a step to `MIGRATIONS` in `src/save/migrations.ts` when the format changes. Each step upgrades one version and only fills in what is missing; older data gets "unknown" rather than a guess:
 
 ```ts
 // v1 -> v2: rounds gain timing and the questions that needed help.

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { GAME_CONFIG } from '../config/gameConfig';
 import { computeRoundBonus, orderReward, payOrder, payRoundBonus, type PayableOrder } from '../shop/rewards';
 import type { AttemptOutcome } from '../learning/types';
 
@@ -27,6 +28,15 @@ describe('rewards', () => {
 
   it('gives no bonus for an unfinished round', () => {
     expect(computeRoundBonus(orders('first', 'first', null))).toEqual({ completion: 0, perfect: 0 });
+  });
+
+  it('pays the bonuses for a shorter round once all of its own orders are served', () => {
+    const { completionBonus, perfectBonus } = GAME_CONFIG.rewards;
+    expect(computeRoundBonus(orders('first', 'first', 'first'))).toEqual({
+      completion: completionBonus,
+      perfect: perfectBonus,
+    });
+    expect(computeRoundBonus([])).toEqual({ completion: 0, perfect: 0 });
   });
 
   it('pays each order and each round bonus exactly once', () => {

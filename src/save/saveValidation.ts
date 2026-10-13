@@ -156,6 +156,26 @@ function checkLearning(learning: unknown, path: string, out: string[]): void {
   for (const [skillId, skill] of Object.entries(learning.math)) checkSkill(skill, `${path}.math.${skillId}`, out);
 }
 
+/**
+ * A saved round the game can no longer play (its questions fall outside
+ * today's rules, or it is damaged) is dropped so the rest of the save still
+ * loads: losing an unfinished round is better than losing the child's
+ * Sprinkles and progress. Returns how many rounds were dropped.
+ */
+export function dropUnplayableRounds(data: unknown): number {
+  if (!isObj(data) || !isObj(data.profiles)) return 0;
+  let dropped = 0;
+  for (const profile of Object.values(data.profiles)) {
+    if (!isObj(profile) || profile.currentRound === null || profile.currentRound === undefined) continue;
+    const problems: string[] = [];
+    checkRound(profile.currentRound, 'currentRound', problems);
+    if (problems.length === 0) continue;
+    profile.currentRound = null;
+    dropped++;
+  }
+  return dropped;
+}
+
 export function validateSaveFile(data: unknown): string[] {
   const out: string[] = [];
   if (!isObj(data)) return ['save is not an object'];
