@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  validateDivision,
-  validateMathSpec,
-  validateMultiplication,
-} from '../learning/mathValidator';
+import { validateDivision, validateMathSpec, validateMultiplication } from '../learning/mathValidator';
 
 describe('validateMultiplication', () => {
   it.each([
@@ -73,7 +69,8 @@ describe('validateMathSpec', () => {
 
   it('rejects mismatched fact keys and junk', () => {
     expect(
-      validateMathSpec({ subjectId: 'math', skillId: 'division', factKey: 'div:30/6', left: 30, right: 5, answer: 6 }).ok,
+      validateMathSpec({ subjectId: 'math', skillId: 'division', factKey: 'div:30/6', left: 30, right: 5, answer: 6 })
+        .ok,
     ).toBe(false);
     expect(validateMathSpec(null).ok).toBe(false);
     expect(validateMathSpec({ subjectId: 'math', skillId: 'subtraction', left: 1, right: 1 }).ok).toBe(false);

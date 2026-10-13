@@ -12,7 +12,23 @@ npm run dev        # dev server at http://localhost:5173 (add ?fast to speed up 
 npm test           # run the automated tests (Vitest)
 npm run build      # typecheck + production build into dist/
 npm run preview    # serve the production build locally
+npm run lint       # ESLint, including function-size and complexity limits
+npm run format     # Prettier (format:check is what CI runs)
+npm run test:coverage  # unit tests with the coverage floor
+npm run e2e        # browser smoke test against the build (run npm run build first)
 ```
+
+## CI gates
+
+Every pull request and every push to `main` runs `.github/workflows/ci.yml`:
+
+| Check                      | What fails it                                                                                                                                                |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Typecheck, test, build** | type errors, a failing unit test, game-logic coverage below the floors in `vite.config.ts`, a broken build                                                   |
+| **Lint and format**        | ESLint errors (functions over 45 lines, complexity over 12, nesting deeper than 3, more than 5 parameters, unused code) or files not formatted with Prettier |
+| **Browser smoke test**     | the built game failing to boot, or to serve one order, at iPhone portrait, iPad portrait and iPad landscape sizes, or any page error                         |
+
+After each deploy, **Check live site** in `deploy.yml` fetches the published page and fails if it is the unbuilt source or any of its script files do not load. To block merging on a check, add its name to the branch ruleset under **Settings → Rules**.
 
 To try it on an iPad on the same Wi-Fi: `npm run dev -- --host`, then open the printed network URL in Safari. It plays upright or sideways.
 

@@ -24,10 +24,22 @@ function checkSkill(v: unknown, path: string, out: string[]): void {
   }
   for (const [key, rec] of Object.entries(v.facts)) {
     const p = `${path}.facts[${key}]`;
-    if (!isObj(rec)) { out.push(`${p} not an object`); continue; }
+    if (!isObj(rec)) {
+      out.push(`${p} not an object`);
+      continue;
+    }
     if (rec.key !== key) out.push(`${p}.key mismatch`);
     if (!STATES.has(rec.state as string)) out.push(`${p}.state invalid`);
-    for (const f of ['presentations', 'firstTryCorrect', 'retryCorrect', 'missed', 'lastPresentedRound', 'nextDueRound', 'successStreak', 'introducedRound']) {
+    for (const f of [
+      'presentations',
+      'firstTryCorrect',
+      'retryCorrect',
+      'missed',
+      'lastPresentedRound',
+      'nextDueRound',
+      'successStreak',
+      'introducedRound',
+    ]) {
       if (!isNonNegInt(rec[f])) out.push(`${p}.${f} invalid`);
     }
     if (!isNum(rec.lastPresentedAt)) out.push(`${p}.lastPresentedAt invalid`);
@@ -39,17 +51,26 @@ function checkSkill(v: unknown, path: string, out: string[]): void {
 
 function checkRound(v: unknown, path: string, out: string[]): void {
   if (v === null) return;
-  if (!isObj(v)) { out.push(`${path} not an object`); return; }
+  if (!isObj(v)) {
+    out.push(`${path} not an object`);
+    return;
+  }
   if (!isStr(v.id)) out.push(`${path}.id invalid`);
   for (const f of ['roundNumber', 'seed', 'startedAt', 'currentIndex']) {
     if (!isNonNegInt(v[f])) out.push(`${path}.${f} invalid`);
   }
   if (typeof v.bonusPaid !== 'boolean') out.push(`${path}.bonusPaid invalid`);
-  if (!Array.isArray(v.orders) || v.orders.length === 0) { out.push(`${path}.orders invalid`); return; }
+  if (!Array.isArray(v.orders) || v.orders.length === 0) {
+    out.push(`${path}.orders invalid`);
+    return;
+  }
   if (isNonNegInt(v.currentIndex) && v.currentIndex >= v.orders.length) out.push(`${path}.currentIndex out of range`);
   v.orders.forEach((o, i) => {
     const p = `${path}.orders[${i}]`;
-    if (!isObj(o)) { out.push(`${p} not an object`); return; }
+    if (!isObj(o)) {
+      out.push(`${p} not an object`);
+      return;
+    }
     if (!mathSubject.isValidSpec(o.spec)) out.push(`${p}.spec invalid`);
     if (!isStr(o.customerId)) out.push(`${p}.customerId invalid`);
     if (!isNonNegInt(o.attempts) || o.attempts > GAME_CONFIG.round.attemptsPerOrder) out.push(`${p}.attempts invalid`);
@@ -60,19 +81,31 @@ function checkRound(v: unknown, path: string, out: string[]): void {
   });
 }
 
+/** Simple per-field shape checks for a profile. */
+const PROFILE_FIELDS: Record<string, (v: unknown) => boolean> = {
+  createdAt: isNonNegInt,
+  sprinkles: isNonNegInt,
+  lifetimeSprinkles: isNonNegInt,
+  ownedItems: isStrArray,
+  achievements: isStrArray,
+  equipped: isObj,
+  decorations: Array.isArray,
+  roundHistory: Array.isArray,
+};
+
+function checkFields(v: Obj, path: string, out: string[], fields: Record<string, (v: unknown) => boolean>): void {
+  for (const [field, ok] of Object.entries(fields)) if (!ok(v[field])) out.push(`${path}.${field} invalid`);
+}
+
 function checkProfile(v: unknown, id: string, out: string[]): void {
   const path = `profiles[${id}]`;
-  if (!isObj(v)) { out.push(`${path} not an object`); return; }
+  if (!isObj(v)) {
+    out.push(`${path} not an object`);
+    return;
+  }
   if (v.id !== id) out.push(`${path}.id mismatch`);
   if (!isStr(v.displayName) || v.displayName.length === 0) out.push(`${path}.displayName invalid`);
-  for (const f of ['createdAt', 'sprinkles', 'lifetimeSprinkles']) {
-    if (!isNonNegInt(v[f])) out.push(`${path}.${f} invalid`);
-  }
-  if (!isStrArray(v.ownedItems)) out.push(`${path}.ownedItems invalid`);
-  if (!isStrArray(v.achievements)) out.push(`${path}.achievements invalid`);
-  if (!isObj(v.equipped)) out.push(`${path}.equipped invalid`);
-  if (!Array.isArray(v.decorations)) out.push(`${path}.decorations invalid`);
-  if (!Array.isArray(v.roundHistory)) out.push(`${path}.roundHistory invalid`);
+  checkFields(v, path, out, PROFILE_FIELDS);
   if (!isObj(v.settings) || typeof v.settings.showHints !== 'boolean' || typeof v.settings.reduceMotion !== 'boolean') {
     out.push(`${path}.settings invalid`);
   }
@@ -81,10 +114,16 @@ function checkProfile(v: unknown, id: string, out: string[]): void {
 }
 
 function checkLearning(learning: unknown, path: string, out: string[]): void {
-  if (!isObj(learning)) { out.push(`${path} missing`); return; }
+  if (!isObj(learning)) {
+    out.push(`${path} missing`);
+    return;
+  }
   if (!isNonNegInt(learning.seed)) out.push(`${path}.seed invalid`);
   if (!isNonNegInt(learning.roundsStarted)) out.push(`${path}.roundsStarted invalid`);
-  if (!isObj(learning.math)) { out.push(`${path}.math missing`); return; }
+  if (!isObj(learning.math)) {
+    out.push(`${path}.math missing`);
+    return;
+  }
   // One record per operation; operations switched on later simply have none yet.
   for (const [skillId, skill] of Object.entries(learning.math)) checkSkill(skill, `${path}.math.${skillId}`, out);
 }

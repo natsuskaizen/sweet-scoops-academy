@@ -37,7 +37,9 @@ function browserStorage(): StorageLike | null {
 function chooseSubject(): LearningSubject<ChallengeSpec, unknown> {
   const ops = import.meta.env.DEV ? new URLSearchParams(window.location.search).get('ops') : null;
   if (!ops) return mathSubject;
-  return createMathSubject({ operations: createOperations({ ...GAME_CONFIG.math, enabledOperations: ops.split(',') }) });
+  return createMathSubject({
+    operations: createOperations({ ...GAME_CONFIG.math, enabledOperations: ops.split(',') }),
+  });
 }
 
 export function createServices(): GameServices {

@@ -6,7 +6,7 @@
  */
 import { GAME_CONFIG, type AdaptiveConfig } from '../config/gameConfig';
 import { planRound, recordOutcome, summarizeSkill, type SkillPool, type SkillSummary } from './adaptiveEngine';
-import type { MathChallengeSpec } from './math/operation';
+import type { MathChallengeSpec, MathOperation } from './math/operation';
 import { OPERATIONS, type OperationRegistry } from './math/registry';
 import { validateMathSpec } from './mathValidator';
 import { buildQuestion, factByKey } from './questionGenerator';
@@ -46,22 +46,19 @@ export function createMathSubject(options: MathSubjectOptions = {}): MathSubject
     createProgress: () => Object.fromEntries(operations.enabled.map((op) => [op.id, { facts: {} }])),
 
     planRound(progress: MathProgress, ctx: PlanContext): MathChallengeSpec[] {
-      const plan = planRound(pools(progress), { roundNumber: ctx.roundNumber, rng: ctx.rng, count: ctx.count, config: adaptive });
+      const plan = planRound(pools(progress), {
+        roundNumber: ctx.roundNumber,
+        rng: ctx.rng,
+        count: ctx.count,
+        config: adaptive,
+      });
       // buildQuestion validates every question and throws on anything invalid.
       return plan.map((item) => buildQuestion(item.factKey, ctx.rng, operations));
     },
 
     isValidSpec: (spec: unknown): spec is MathChallengeSpec => validateMathSpec(spec, operations).ok,
 
-    present(spec: MathChallengeSpec, ctx: OrderContext): ChallengePresentation {
-      const op = operation(spec.skillId);
-      return {
-        expression: `${spec.left} ${op.symbol} ${spec.right}`,
-        answerInput: { kind: 'integer', maxDigits: op.maxDigits },
-        correctAnswer: String(spec.answer),
-        ...op.word(spec, ctx.flavor),
-      };
-    },
+    present: (spec: MathChallengeSpec, ctx: OrderContext) => present(operation(spec.skillId), spec, ctx),
 
     checkAnswer(spec: MathChallengeSpec, input: string): boolean {
       const trimmed = input.trim();
@@ -82,6 +79,15 @@ export function createMathSubject(options: MathSubjectOptions = {}): MathSubject
       });
       return [...lines, `Facts to practice: ${tricky.length ? tricky.join(', ') : 'none yet'}`];
     },
+  };
+}
+
+function present(op: MathOperation, spec: MathChallengeSpec, ctx: OrderContext): ChallengePresentation {
+  return {
+    expression: `${spec.left} ${op.symbol} ${spec.right}`,
+    answerInput: { kind: 'integer', maxDigits: op.maxDigits },
+    correctAnswer: String(spec.answer),
+    ...op.word(spec, ctx.flavor),
   };
 }
 

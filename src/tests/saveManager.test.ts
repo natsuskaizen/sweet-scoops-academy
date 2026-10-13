@@ -81,11 +81,30 @@ describe('SaveManager', () => {
     const save = createSaveFile(1);
     const p = save.profiles[save.activeProfileId]!;
     p.currentRound = {
-      id: 'r1', roundNumber: 1, seed: 1, startedAt: 1, currentIndex: 0, bonusPaid: false, bonus: null,
-      orders: [{
-        spec: { subjectId: 'math', skillId: 'division', factKey: 'div:99/9', left: 99, right: 9, answer: 11 } as ChallengeSpec,
-        customerId: 'berry', attempts: 0, outcome: null, paid: false, sprinklesPaid: 0,
-      }],
+      id: 'r1',
+      roundNumber: 1,
+      seed: 1,
+      startedAt: 1,
+      currentIndex: 0,
+      bonusPaid: false,
+      bonus: null,
+      orders: [
+        {
+          spec: {
+            subjectId: 'math',
+            skillId: 'division',
+            factKey: 'div:99/9',
+            left: 99,
+            right: 9,
+            answer: 11,
+          } as ChallengeSpec,
+          customerId: 'berry',
+          attempts: 0,
+          outcome: null,
+          paid: false,
+          sprinklesPaid: 0,
+        },
+      ],
     };
     storage.setItem(SAVE_KEYS.primary, JSON.stringify(save));
     expect(saves.load().status).toBe('reset-after-corrupt');

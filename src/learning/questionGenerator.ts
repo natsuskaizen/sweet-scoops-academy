@@ -42,7 +42,11 @@ export function factByKey(key: string, operations: OperationRegistry = OPERATION
  * Builds a displayable question for a fact.
  * Throws QuestionGenerationError rather than ever returning an invalid question.
  */
-export function buildQuestion(factKey: string, rng: Rng, operations: OperationRegistry = OPERATIONS): MathChallengeSpec {
+export function buildQuestion(
+  factKey: string,
+  rng: Rng,
+  operations: OperationRegistry = OPERATIONS,
+): MathChallengeSpec {
   const fact = factByKey(factKey, operations);
   const op = fact && operations.get(fact.operation);
   if (!fact || !op) throw new QuestionGenerationError(`Unknown fact "${factKey}"`);
@@ -50,7 +54,12 @@ export function buildQuestion(factKey: string, rng: Rng, operations: OperationRe
   const [left, right] = op.orient(fact, rng);
   // Recompute rather than trusting the table.
   const spec: MathChallengeSpec = {
-    subjectId: 'math', skillId: op.id, factKey: fact.key, left, right, answer: op.compute(left, right),
+    subjectId: 'math',
+    skillId: op.id,
+    factKey: fact.key,
+    left,
+    right,
+    answer: op.compute(left, right),
   };
   const result = validateMathSpec(spec, operations);
   if (!result.ok) throw new QuestionGenerationError(`Invalid question ${factKey}: ${result.reason}`);

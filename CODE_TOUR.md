@@ -70,10 +70,10 @@ rec.nextDueRound = round + nextInterval(rec, outcome, config); // a miss is due 
 
 ```ts
 const FALLBACKS: Record<SlotKind, SlotKind[]> = {
-  learning:   ['learning', 'new', 'practicing', 'mastered'],  // keeping up? introduce something new
+  learning: ['learning', 'new', 'practicing', 'mastered'], // keeping up? introduce something new
   practicing: ['practicing', 'learning', 'new', 'mastered'],
-  mastered:   ['mastered', 'practicing', 'learning', 'new'],
-  new:        ['new', 'learning', 'practicing', 'mastered'],
+  mastered: ['mastered', 'practicing', 'learning', 'new'],
+  new: ['new', 'learning', 'practicing', 'mastered'],
 };
 ```
 
@@ -81,7 +81,7 @@ New facts normally come from the easiest unseen ones, but `skillPace()` lets a f
 
 ```ts
 // in pickNewFact():
-const pace = skillPace(pool, round, config);          // recent first-try accuracy + hardest known fact
+const pace = skillPace(pool, round, config); // recent first-try accuracy + hardest known fact
 const target = pace.fluent ? pace.frontier + config.stretch.step : -Infinity;
 const stretched = unseen.filter((f) => f.difficulty >= target);
 ```
@@ -101,14 +101,14 @@ export interface LearningSubject<S extends ChallengeSpec, P> {
   present(spec: S, ctx: OrderContext): ChallengePresentation; // expression, order line, hint, explanation
   checkAnswer(spec: S, input: string): boolean;
   recordOutcome(progress: P, spec: S, outcome: AttemptOutcome, ctx: OutcomeContext): void;
-  progressReport(progress: P): string[];                       // lines for the grown-ups area
+  progressReport(progress: P): string[]; // lines for the grown-ups area
 }
 
 export type VisualAid =
   | { kind: 'groups'; groups: number; perGroup: number; showTotal: boolean; caption: string }
   | { kind: 'share'; total: number; groups: number; perGroup: number | null; caption: string }
-  | { kind: 'combine'; parts: number[]; showTotal: boolean; caption: string }      // addition
-  | { kind: 'takeAway'; total: number; remove: number; showResult: boolean; caption: string }  // subtraction
+  | { kind: 'combine'; parts: number[]; showTotal: boolean; caption: string } // addition
+  | { kind: 'takeAway'; total: number; remove: number; showResult: boolean; caption: string } // subtraction
   | { kind: 'text'; caption: string };
 ```
 
@@ -153,7 +153,7 @@ submit(input: string): SubmitResult {
 ```ts
 export function payOrder(wallet: Wallet, order: PayableOrder): number {
   if (order.paid || order.outcome === null) return 0;
-  const amount = orderReward(order.outcome);   // 10 / 5 / 2
+  const amount = orderReward(order.outcome); // 10 / 5 / 2
   order.paid = true;
   order.sprinklesPaid = amount;
   credit(wallet, amount);

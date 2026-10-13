@@ -17,7 +17,13 @@ export class OrderPanel extends Phaser.GameObjects.Container {
   private feedback: Phaser.GameObjects.Text;
   private caret: Phaser.GameObjects.Rectangle;
 
-  constructor(scene: Phaser.Scene, x: number, y: number, private boxW: number, private boxH: number) {
+  constructor(
+    scene: Phaser.Scene,
+    x: number,
+    y: number,
+    private boxW: number,
+    private boxH: number,
+  ) {
     super(scene, x, y);
     const w = boxW;
     const h = boxH;
@@ -87,7 +93,13 @@ export class OrderPanel extends Phaser.GameObjects.Container {
   private draw(mood: TicketMood): void {
     const g = this.bg;
     const border =
-      mood === 'happy' ? COLORS.mintDark : mood === 'explain' ? COLORS.strawberry : mood === 'gentle' ? COLORS.peach : COLORS.lavenderDark;
+      mood === 'happy'
+        ? COLORS.mintDark
+        : mood === 'explain'
+          ? COLORS.strawberry
+          : mood === 'gentle'
+            ? COLORS.peach
+            : COLORS.lavenderDark;
     g.clear();
     g.fillStyle(COLORS.shadow, 0.12).fillRoundedRect(6, 10, this.boxW, this.boxH, 24);
     g.fillStyle(COLORS.cream, 1).fillRoundedRect(0, 0, this.boxW, this.boxH, 24);
@@ -104,7 +116,13 @@ export class SpeechBubble extends Phaser.GameObjects.Container {
   private bg: Phaser.GameObjects.Graphics;
   private label: Phaser.GameObjects.Text;
 
-  constructor(scene: Phaser.Scene, x: number, y: number, private boxW: number, private boxH: number) {
+  constructor(
+    scene: Phaser.Scene,
+    x: number,
+    y: number,
+    private boxW: number,
+    private boxH: number,
+  ) {
     super(scene, x, y);
     const w = boxW;
     const h = boxH;

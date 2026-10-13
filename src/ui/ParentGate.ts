@@ -32,9 +32,15 @@ export class ParentGate {
   private keypad?: NumberKeypad;
   private target = 0;
 
-  constructor(private scene: Phaser.Scene, private opts: ParentGateOptions) {
+  constructor(
+    private scene: Phaser.Scene,
+    private opts: ParentGateOptions,
+  ) {
     this.root = scene.add.container(0, 0).setDepth(1000);
-    const shade = scene.add.rectangle(0, 0, LAYOUT.width, LAYOUT.height, COLORS.ink, 0.45).setOrigin(0).setInteractive();
+    const shade = scene.add
+      .rectangle(0, 0, LAYOUT.width, LAYOUT.height, COLORS.ink, 0.45)
+      .setOrigin(0)
+      .setInteractive();
     // Everything below is laid out on a 1280x880 canvas, centred on (640, 440),
     // then scaled to fit narrower screens.
     const scale = Math.min(1, (LAYOUT.width - 24) / 940);
@@ -60,7 +66,9 @@ export class ParentGate {
   }
 
   private closeButton(label = 'Close'): void {
-    this.add(new Button(this.scene, 1000, 110, { width: 160, height: 70, label, fontSize: 28, onTap: () => this.close() }));
+    this.add(
+      new Button(this.scene, 1000, 110, { width: 160, height: 70, label, fontSize: 28, onTap: () => this.close() }),
+    );
   }
 
   private showChallenge(): void {
@@ -134,14 +142,27 @@ export class ParentGate {
     );
     this.add(
       new Button(this.scene, 500, 560, {
-        width: 240, height: 90, label: 'Yes, do it', fontSize: 30, fill: COLORS.strawberry, shade: COLORS.strawberryDark,
+        width: 240,
+        height: 90,
+        label: 'Yes, do it',
+        fontSize: 30,
+        fill: COLORS.strawberry,
+        shade: COLORS.strawberryDark,
         onTap: () => {
           action.run();
           this.close();
         },
       }),
     );
-    this.add(new Button(this.scene, 780, 560, { width: 240, height: 90, label: 'Go back', fontSize: 30, onTap: () => this.showMenu() }));
+    this.add(
+      new Button(this.scene, 780, 560, {
+        width: 240,
+        height: 90,
+        label: 'Go back',
+        fontSize: 30,
+        onTap: () => this.showMenu(),
+      }),
+    );
   }
 
   close(): void {

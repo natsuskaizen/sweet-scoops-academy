@@ -82,7 +82,12 @@ export class CharacterView extends Phaser.GameObjects.Container {
   private bobTween?: Phaser.Tweens.Tween;
   private expression: Expression = 'neutral';
 
-  constructor(scene: Phaser.Scene, x: number, y: number, private look: CharacterLook) {
+  constructor(
+    scene: Phaser.Scene,
+    x: number,
+    y: number,
+    private look: CharacterLook,
+  ) {
     super(scene, x, y);
     // Origin at the feet so y is "where they stand".
     this.base = scene.add.image(0, 0, bodyTextureKey(scene, look, 'neutral')).setOrigin(0.5, 1);

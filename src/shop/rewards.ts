@@ -38,7 +38,10 @@ export function orderReward(outcome: AttemptOutcome): number {
   return REWARDS.perOrder[outcome];
 }
 
-export function computeRoundBonus(orders: readonly PayableOrder[], ordersPerRound = REWARDS.ordersPerRound): RoundBonus {
+export function computeRoundBonus(
+  orders: readonly PayableOrder[],
+  ordersPerRound = REWARDS.ordersPerRound,
+): RoundBonus {
   const completed = orders.filter((o) => o.outcome !== null).length;
   const allDone = completed === ordersPerRound;
   const perfect = allDone && orders.every((o) => o.outcome === 'first');
