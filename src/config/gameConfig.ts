@@ -71,8 +71,23 @@ export interface GameConfig {
   adaptive: AdaptiveConfig;
   math: MathConfig;
   backup: {
-    /** Larger files are refused before reading; a real backup is a few KB. */
+    /** Larger files are refused before reading; a real backup is a few KB (more with added characters). */
     maxImportBytes: number;
+  };
+  /** Characters a grown-up adds from their own pictures (see README, "Adding your own characters"). */
+  addedCharacters: {
+    maxCharacters: number;
+    /** Picture files larger than this are refused before reading. */
+    maxFileBytes: number;
+    /** The picture is re-encoded on import; larger results are refused, which keeps saves and backups small. */
+    maxStoredBytes: number;
+    /** Allowed frame sizes are the built-in 16x20 grid times one of these. */
+    frameMultiples: readonly number[];
+    /** Frame counts a picture may have: standing, happy, thinking, walk A, walk B. */
+    frameCounts: readonly number[];
+    maxNameLength: number;
+    maxLines: number;
+    maxLineLength: number;
   };
   parentArea: {
     /** Round cards per page in the grown-ups "Rounds" view (a 2x2 grid). */
@@ -134,7 +149,17 @@ export const GAME_CONFIG: GameConfig = {
     // ×1, ×2, ×10 are easiest, then ×5 ×11, then ×3 ×4, then ×9, then ×6 ×7 ×8 ×12.
     factorTiers: { 1: 0, 2: 1, 10: 1, 5: 2, 11: 2, 3: 3, 4: 3, 9: 4, 6: 5, 7: 5, 8: 5, 12: 5 },
   },
-  backup: { maxImportBytes: 1_000_000 },
+  backup: { maxImportBytes: 2_000_000 },
+  addedCharacters: {
+    maxCharacters: 12,
+    maxFileBytes: 300_000,
+    maxStoredBytes: 100_000,
+    frameMultiples: [1, 2, 3, 4],
+    frameCounts: [1, 2, 3, 5],
+    maxNameLength: 12,
+    maxLines: 3,
+    maxLineLength: 24,
+  },
   parentArea: {
     roundCardsPerPage: 4,
     cardPracticeFacts: 3,

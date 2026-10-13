@@ -76,6 +76,7 @@ src/
     rewards.ts               the only place Sprinkles are calculated and paid
     progressReport.ts        numbers and words for the grown-ups Progress screen
     customerManager.ts       customer roster and lineup
+    addedCharacters.ts       checks for grown-up-added characters; adds them to the roster
     catalog.ts               item catalog (prices live only here)
   save/
     saveTypes.ts             persisted shapes + SAVE_SCHEMA_VERSION
@@ -83,6 +84,7 @@ src/
     migrations.ts            one upgrade step per save format version
     saveManager.ts           localStorage with backup slot and quarantine
     backup.ts                backup files: export, validated import, summary
+    characterLibrary.ts      added characters, kept in their own storage key
   pwa/
     sw.js                    service worker template (offline play, fresh page on each deploy)
     registerServiceWorker.ts registers it and checks for updates on launch and resume
@@ -91,17 +93,19 @@ src/
     backupTransfer.ts        share sheet / download and file picker for backup files
   characters/
     sprites.ts               original placeholder pixel art as text grids
-    characterManager.ts      layered character rendering (body + outfit/hat/bow/handheld)
+    characterManager.ts      layered character rendering (body + outfit/hat/bow/handheld), added-character sheets
   scenes/
     BootScene.ts             builds textures, loads the save
     ShopScene.ts             the persistent shop: animates what OrderManager decides
     backupActions.ts         grown-ups area actions for saving and loading backup files
+    characterActions.ts      grown-ups area action that opens the Characters dialog
     ResultsOverlay.ts        end-of-round card drawn over the shop
     shopArt.ts               prop textures, draws the room, places decorations
     shopRoom.ts              the pixel-art room and counter (strawberry parlour)
     roomPixels.ts            tiny pixel painter the room is drawn with
   ui/                        NumberKeypad, OrderPanel (+ SpeechBubble), VisualAidView,
-                             StatusBar, ParentGate, ProgressScreen, Button, theme;
+                             StatusBar, ParentGate, ProgressScreen, Button, theme,
+                             CharacterDialog (a DOM form for adding characters);
                              aidLayout.ts sizes the hint board's scoops and cups (unit tested)
   tests/                     Vitest suites
 e2e/                         Playwright: smoke test, offline and backup, redeploy
@@ -154,9 +158,22 @@ Press and hold the ⚙ button in the top-right corner for about a second, then t
 - **Progress**: a switch in the top-left corner (mirroring Close) flips between two views. **Rounds** shows totals (rounds played, time playing, % right first try) over a 2x2 grid of cards, newest first with Newer/Older pages. Each card has when the round was played, how long it took, the first-try count, one dot per order (green first try, blue 2nd try, pink answer shown) and up to three questions to practise. **Overview** shows the last 7 days (rounds, time playing, average round length), a bar for each of the last 10 rounds, and the questions that needed help most in the last 5 rounds. Time is active play: any gap between taps counts as 2 minutes at most (`GAME_CONFIG.round.playTimeIdleCapMs`), so a round left open overnight still shows minutes. Rounds finished before timing was added show a dash. Page sizes and look-backs are in `GAME_CONFIG.parentArea`. None of this appears outside the grown-ups area.
 - **Save a backup file**: the whole save as JSON, through the share sheet on iPad and iPhone (Save to Files, AirDrop, Mail) or as a download elsewhere.
 - **Load a backup file**: picks a file, checks it the same way a save is checked on load, shows whose progress it holds, and replaces the current progress only after a confirmation. The replaced progress is kept aside in storage, not deleted.
+- **Characters**: add your own characters from a picture, switch them on or off, or remove them. See below.
 - **Restore previous save**, **Reset learning progress**, **Reset whole profile**, each with a confirmation step.
 
 This is a safeguard against accidental taps, not security.
+
+### Adding your own characters
+
+In the grown-ups area, **Characters** then **Add a character** picks a picture and asks for a name, a role and a favourite flavour. The picture stays in the browser on that device (never uploaded) and is included in backup files.
+
+- **Picture**: a PNG with a transparent background, at most 300 KB. One row of equal frames, left to right: standing, happy, thinking, walk A, walk B. A sheet has 1, 2, 3 or 5 frames; missing poses use the standing frame, and without walk frames the character hops.
+- **Frame size**: the built-in 16×20 grid times 1 to 4 (16×20, 32×40, 48×60 or 64×80), so shop accessories can scale onto it. Draw the character facing the player, centred, feet on the bottom edge. For example, 5 frames of 32×40 is a 160×40 PNG.
+- **Role**: a customer joins the line of visitors from the next round; a shopkeeper replaces the puppy (the newest switched-on one is used).
+- **Head and neck**: tap the picture at the top of the head, then the neck. Optional; it records where hats and bows will sit (Milestone 3).
+- **Lines**: up to 3 hello and 3 thank-you lines, 24 characters each; built-in ones are used if empty.
+
+Up to 12 characters per device. The limits are in `GAME_CONFIG.addedCharacters`. A wrong-sized picture is refused with the size it should be.
 
 ## Milestone 1 status
 

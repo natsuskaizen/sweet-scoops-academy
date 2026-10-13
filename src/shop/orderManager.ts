@@ -18,7 +18,7 @@ import {
   type RoundSummary,
   type SaveFile,
 } from '../save/saveTypes';
-import { customerById, lineup, type CustomerDef } from './customerManager';
+import { CUSTOMERS, customerById, lineup, type CustomerDef } from './customerManager';
 import { payOrder, payRoundBonus, type RoundBonus } from './rewards';
 
 export type OrderPhase =
@@ -56,6 +56,8 @@ export interface OrderManagerOptions {
   ordersPerRound?: number;
   attemptsPerOrder?: number;
   playTimeIdleCapMs?: number;
+  /** Who can visit: the built-in customers plus any a grown-up added. */
+  roster?: readonly CustomerDef[];
   /** Called when a write fails, so the UI can warn a parent. */
   onSaveError?: (error: string) => void;
 }
@@ -67,12 +69,14 @@ export class OrderManager {
   private readonly ordersPerRound: number;
   private readonly attemptsPerOrder: number;
   private readonly idleCapMs: number;
+  private readonly roster: readonly CustomerDef[];
 
   constructor(private readonly opts: OrderManagerOptions) {
     this.now = opts.now ?? (() => Date.now());
     this.ordersPerRound = opts.ordersPerRound ?? GAME_CONFIG.round.ordersPerRound;
     this.attemptsPerOrder = opts.attemptsPerOrder ?? GAME_CONFIG.round.attemptsPerOrder;
     this.idleCapMs = opts.playTimeIdleCapMs ?? GAME_CONFIG.round.playTimeIdleCapMs;
+    this.roster = opts.roster ?? CUSTOMERS;
   }
 
   /** This subject's progress in the active profile. */
@@ -111,7 +115,7 @@ export class OrderManager {
       now: this.now(),
       count: this.ordersPerRound,
     });
-    const customers = lineup(rng, specs.length);
+    const customers = lineup(rng, specs.length, this.roster);
     const startedAt = this.now();
     return {
       id: `r${roundNumber}-${seed.toString(36)}`,
@@ -132,7 +136,7 @@ export class OrderManager {
     if (!round) return null;
     const order = round.orders[round.currentIndex];
     if (!order) return null;
-    const customer = customerById(order.customerId);
+    const customer = customerById(order.customerId, this.roster);
     return {
       index: round.currentIndex,
       total: round.orders.length,
@@ -202,7 +206,7 @@ export class OrderManager {
 
   /** The question as the ticket showed it, for the grown-ups report. */
   private expression(order: OrderState): string {
-    const flavor = customerById(order.customerId).favoriteFlavor;
+    const flavor = customerById(order.customerId, this.roster).favoriteFlavor;
     return this.opts.subject.present(order.spec, { flavor }).expression;
   }
 

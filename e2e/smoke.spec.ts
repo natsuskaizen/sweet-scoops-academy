@@ -100,3 +100,46 @@ test('two misses show the hint, then the explanation, and the order still comple
   });
   expect(errors).toEqual([]);
 });
+
+/** A mint blob drawn for this test: 5 frames of 32x40. */
+const TEST_CHARACTER_PNG =
+  'iVBORw0KGgoAAAANSUhEUgAAAKAAAAAoCAYAAAB5LPGYAAABpUlEQVR4nO3bvU0DMRjG8RdEQxOxAwtQhYYJmCACegokJCgYggIkpBQMEIkJmIAGqixAwQaIJmUo0BXnyOeP8/HA+f+r7fdJJPu9Mw5mAAAAAADUYit34vrzdt0qtHeTXYv8evO3y3wcIE/yqnVX/kbBgXci+ePKpwNCigUIKRYgpHZSJ5ydfAzxOcivNJ8OCKlgBzw9vmidei6frrsnzKw1fvE873UqI3/c+XRASAV3x+vXe+fffUIOJ/u9diD5486nA0LK+w7oPvtzNXVS30XIryOfDgipjVXZrNjgaSfRw+zOzMI7kfy68umAkIq+Cbk6Ojczs/uXxyLjUv2V/Iavfuy43Hz19y+dTweEVPJd8G9zd5Rvh8WOyxVbp3TnGTs6IKSiO6CqA7j1fPVjx/1X6g48VD4dEFLBBThdrmy6XCUXzp1Hfl35dEBIBd8B3w52swrnziO/rnw6IKS894Kl7gRj7yDJrzOfDggpfhFNvjSfDgip4Cm4eYY3Qu8E7vi+yB93Ph0QUsm/hgk900v9LwH5P9zT42Iy7xyv/v6p6ICQ+gabR3VcDI1eewAAAABJRU5ErkJggg==';
+
+test('a grown-up can add a character from a picture', async ({ page }) => {
+  const errors: string[] = [];
+  await startFresh(page, errors);
+  await keypadReady(page);
+  await page.evaluate(() => {
+    type Gate = { showMenu: () => void };
+    const scene = (window as HookWindow).__ssa!.scene as unknown as {
+      gate: Gate;
+      openParentGate: () => void;
+      parentActions: () => { label: string; run: (gate: Gate) => void }[];
+    };
+    scene.openParentGate();
+    scene.gate.showMenu();
+    scene
+      .parentActions()
+      .find((a) => a.label === 'Characters')!
+      .run(scene.gate);
+  });
+  const chooser = page.waitForEvent('filechooser');
+  await page.getByText('Add a character').click();
+  await (
+    await chooser
+  ).setFiles({
+    name: 'minty.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from(TEST_CHARACTER_PNG, 'base64'),
+  });
+  await expect(page.getByText('5 frames of 32×40', { exact: false })).toBeVisible();
+  await page.locator('.ssa-chars input').fill('Minty');
+  await page.getByRole('button', { name: 'Add character' }).click();
+  await expect(page.locator('.ssa-chars').getByText('Minty')).toBeVisible();
+  await page.getByRole('button', { name: 'Close' }).click();
+  await keypadReady(page);
+
+  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('sweet-scoops-academy.characters')!));
+  expect(stored.characters).toMatchObject([{ name: 'Minty', role: 'customer', frames: 5, frameW: 32 }]);
+  expect(errors).toEqual([]);
+});

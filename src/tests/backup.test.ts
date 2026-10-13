@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { backupFileName, describeBackup, exportBackup, readBackup } from '../save/backup';
 import { MemoryStorage, SAVE_KEYS, SaveManager, createSaveFile } from '../save/saveManager';
+import { createCharacter } from '../shop/addedCharacters';
+import { draft } from './characterFixtures';
 
 let clock = 1_700_000_000_000;
 const now = () => ++clock;
@@ -19,7 +21,15 @@ describe('backup files', () => {
   it('round-trips a save through export and import', () => {
     const { save } = savedGame(42);
     const parsed = readBackup(exportBackup(save));
-    expect(parsed).toEqual({ ok: true, save });
+    expect(parsed).toEqual({ ok: true, save, characters: [] });
+  });
+
+  it('carries added characters and leaves out broken ones', () => {
+    const { save } = savedGame(3);
+    const minty = createCharacter(draft(), 1, []);
+    const file = exportBackup(save, [minty, { ...minty, id: 'added-x', frames: 4 }]);
+    expect(readBackup(file)).toEqual({ ok: true, save, characters: [minty] });
+    expect(describeBackup(save, [minty])).toMatch(/rounds finished\. 1 added character\.$/);
   });
 
   it('refuses files that are not a valid save', () => {
