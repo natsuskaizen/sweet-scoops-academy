@@ -23,44 +23,10 @@
         -webkit-touch-callout: none;
       }
       #game { position: fixed; inset: 0; }
-      #rotate {
-        display: none;
-        position: fixed;
-        inset: 0;
-        z-index: 10;
-        background: #fff6e8;
-        color: #4a3a58;
-        font: bold 28px "Trebuchet MS", system-ui, sans-serif;
-        text-align: center;
-        align-items: center;
-        justify-content: center;
-        flex-direction: column;
-        gap: 24px;
-        padding: 24px;
-      }
-      #rotate .phone {
-        width: 90px;
-        height: 150px;
-        border: 8px solid #ff8fb3;
-        border-radius: 18px;
-        animation: turn 2s ease-in-out infinite;
-      }
-      @keyframes turn {
-        0%, 20% { transform: rotate(0deg); }
-        60%, 100% { transform: rotate(-90deg); }
-      }
-      @media (orientation: portrait) {
-        #rotate { display: flex; }
-        #game { visibility: hidden; }
-      }
     </style>
   </head>
   <body>
     <div id="game"></div>
-    <div id="rotate" role="alert">
-      <div class="phone"></div>
-      <div>Please turn your device sideways<br />to open the ice cream shop!</div>
-    </div>
     <script>
       // After a redeploy, a cached copy of this page can point at script files
       // that no longer exist, leaving a blank screen until the player reloads.

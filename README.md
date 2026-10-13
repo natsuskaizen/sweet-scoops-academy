@@ -14,7 +14,7 @@ npm run build      # typecheck + production build into dist/
 npm run preview    # serve the production build locally
 ```
 
-To try it on an iPad on the same Wi-Fi: `npm run dev -- --host`, then open the printed network URL in Safari and turn the iPad sideways.
+To try it on an iPad on the same Wi-Fi: `npm run dev -- --host`, then open the printed network URL in Safari. It plays upright or sideways.
 
 ## Deploying to GitHub Pages
 
@@ -30,7 +30,7 @@ The rule from the spec is that **the shop never goes away**: there is one gamepl
 
 ```
 src/
-  main.ts                    Phaser config (1280x880, Scale.FIT, pixelArt)
+  main.ts                    Phaser config (Scale.FIT, pixelArt), picks the layout and switches it on rotation
   core/rng.ts                seeded RNG (mulberry32) used by all game logic
   learning/
     types.ts                 subject-agnostic LearningSubject / FactRecord / VisualAid types
@@ -68,17 +68,26 @@ Each child has separate `multiplication` and `division` records. A fact starts i
 
 Every meaningful change (a new round, each answer, each payout, moving to the next customer) is written immediately. Each write first copies the previous valid save into a backup slot. On load, invalid or newer-version data is copied to a `quarantine.<timestamp>` key before anything else happens, then the backup is used if it is valid. Saved rounds are re-validated question by question. Payouts are guarded by a persisted `paid` flag, so double taps and reloads cannot pay twice.
 
+### Screen layouts
+
+The shop room is always the same 800x880 drawing. Only the register (order ticket and keypad) moves:
+
+- **Landscape** (iPad sideways, phones sideways): 1280x880 with the register on the right.
+- **Portrait** (iPhone, iPad upright): 800 wide by 1360-1600 tall, depending on the screen's shape, with the shop on top and the register on the bottom half.
+
+All positions come from `LAYOUT` in `src/ui/theme.ts`, built by `layoutFor(screenW, screenH)`. When the screen turns, `main.ts` resizes the game and restarts the shop scene, which rebuilds from the save exactly like a reload, so nothing is lost mid-order. This replaces the spec's "please rotate" screen.
+
 ### Grown-ups area
 
 Press and hold the ⚙ button in the top-right corner for about a second, then type the number shown in words. Inside: progress per operation, facts that need practice, and three actions (reset learning progress, reset the whole profile, restore the previous save), each with a confirmation step. This is a safeguard against accidental taps, not security.
 
 ## Milestone 1 status
 
-All items in the spec's acceptance checklist are implemented. Verified automatically: 89 unit tests, the production build, a scripted Chromium playthrough of a full 10-order round with touch input (including a wrong answer, a retry, a revealed answer, triple-tapped submit, a reload mid-order, a corrupted save, and the parent reset), the build served from a `/<repo>/` sub-path, and the portrait rotate message.
+All items in the spec's acceptance checklist are implemented. Verified automatically: 95 unit tests, the production build, a scripted Chromium playthrough of a full 10-order round with touch input (including a wrong answer, a retry, a revealed answer, triple-tapped submit, a reload mid-order, a corrupted save, and the parent reset), the build served from a `/<repo>/` sub-path, and portrait play on iPhone and iPad sizes including rotating mid-order.
 
 ## Known limitations
 
-- **Not yet tested on a real iPad.** It was checked in desktop Chromium at iPad viewport sizes with touch emulation. Safari on a real device still needs a look.
+- **Not yet tested on a real iPad or iPhone.** It was checked in desktop Chromium at iPad and iPhone viewport sizes with touch emulation. Safari on a real device still needs a look.
 - Art is original placeholder pixel art and flat procedural shapes. Animation is simple tweens (walk, hop, scoop stacking). Milestone 2 covers polish.
 - There is one profile ("Player 1"). Multiple profiles, profile names, and JSON export/import are Milestone 4. The save format already supports several profiles.
 - The item catalog exists with a few sample items and decorations render if owned, but there is no shop or customization screen yet (Milestone 3). The results card only offers "Keep scooping!".

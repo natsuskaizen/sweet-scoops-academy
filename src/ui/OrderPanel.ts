@@ -27,9 +27,10 @@ export class OrderPanel extends Phaser.GameObjects.Container {
     this.answerBox = scene.add.graphics();
     this.answer = scene.add.text(w / 2, 186, '', text(60, CSS.sky)).setOrigin(0.5);
     this.caret = scene.add.rectangle(w / 2, 186, 6, 50, COLORS.skyDark).setOrigin(0.5);
+    // Anchored at the bottom so longer messages grow upwards, away from the edge.
     this.feedback = scene.add
-      .text(w / 2, h - 36, '', text(25, CSS.ink, { align: 'center', wordWrap: { width: w - 36 } }))
-      .setOrigin(0.5);
+      .text(w / 2, h - 16, '', text(w < 380 ? 23 : 25, CSS.ink, { align: 'center', wordWrap: { width: w - 36 } }))
+      .setOrigin(0.5, 1);
     this.add([this.bg, this.title, this.expression, this.answerBox, this.answer, this.caret, this.feedback]);
     scene.tweens.add({ targets: this.caret, alpha: 0, duration: 500, yoyo: true, repeat: -1 });
     this.draw('neutral');
@@ -39,7 +40,9 @@ export class OrderPanel extends Phaser.GameObjects.Container {
 
   showOrder(title: string, expression: string): void {
     this.title.setText(title);
-    this.expression.setText(`${expression} =`);
+    this.expression.setText(`${expression} =`).setFontSize(68);
+    const room = this.boxW - 32;
+    if (this.expression.width > room) this.expression.setFontSize(Math.floor((68 * room) / this.expression.width));
     this.setAnswer('');
     this.setFeedback('', 'neutral');
     this.expression.setScale(0.6).setAlpha(0);
