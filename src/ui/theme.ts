@@ -1,7 +1,4 @@
-/** Shared look-and-feel constants: palette, type, and the fixed 1280x880 layout. */
-
-export const GAME_W = 1280;
-export const GAME_H = 880;
+/** Shared look-and-feel constants: palette, type, and the screen layouts. */
 
 export const COLORS = {
   strawberry: 0xff8fb3,
@@ -44,9 +41,53 @@ export const text = (size: number, color: string = CSS.ink, extra: Phaser.Types.
 /** Pixel scale for character sprites (16x20 art -> 112x140 on screen). */
 export const CHAR_SCALE = 7;
 
-export const LAYOUT = {
-  statusBar: { x: 0, y: 0, w: GAME_W, h: 72 },
-  shop: { x: 0, y: 72, w: 800, h: GAME_H - 72 },
+/**
+ * The shop room is always drawn in the same 800x880 area at the top left. What
+ * changes with the screen is where the register (ticket + keypad) goes:
+ *
+ *   landscape (iPad, 1280x880)      portrait (iPhone/iPad, 800 x 1360-1600)
+ *   +--------------+--------+       +--------------+
+ *   |              | ticket |       |     shop     |
+ *   |     shop     |        |       |              |
+ *   |              | keypad |       +--------------+
+ *   +--------------+--------+       | ticket keypad|
+ *                                   +--------------+
+ */
+export const SHOP_W = 800;
+export const SHOP_H = 880;
+
+export type Orientation = 'landscape' | 'portrait';
+
+export interface Rect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+export interface Layout {
+  orientation: Orientation;
+  width: number;
+  height: number;
+  statusBar: Rect & { orderFont: number; dotsX: number; dotStep: number; dotR: number; pillX: number; pillW: number; gearX: number };
+  shop: Rect;
+  wallBottom: number;
+  door: Rect;
+  counter: Rect;
+  shopkeeper: { x: number; y: number };
+  customerSpot: { x: number; y: number };
+  doorSpot: { x: number; y: number };
+  bubble: Rect;
+  board: Rect;
+  /** Brown backdrop behind the register. */
+  registerArea: Rect;
+  panel: Rect;
+  ticket: Rect;
+  keypad: { x: number; y: number; cellW: number; cellH: number; gap: number };
+}
+
+const SHOP_PARTS = {
+  shop: { x: 0, y: 72, w: SHOP_W, h: SHOP_H - 72 },
   wallBottom: 560,
   door: { x: 40, y: 300, w: 130, h: 260 },
   counter: { x: 470, y: 520, w: 330, h: 190 },
@@ -55,7 +96,64 @@ export const LAYOUT = {
   doorSpot: { x: 105, y: 600 },
   bubble: { x: 140, y: 400, w: 440, h: 150 },
   board: { x: 180, y: 86, w: 610, h: 290 },
-  panel: { x: 812, y: 80, w: 458, h: 790 },
-  ticket: { x: 832, y: 92, w: 418, h: 300 },
-  keypad: { x: 834, y: 412, cellW: 128, cellH: 100, gap: 14 },
-} as const;
+};
+
+function landscapeLayout(): Layout {
+  const width = 1280;
+  const height = SHOP_H;
+  return {
+    orientation: 'landscape',
+    width,
+    height,
+    statusBar: { x: 0, y: 0, w: width, h: 72, orderFont: 30, dotsX: 290, dotStep: 52, dotR: 16, pillX: 910, pillW: 230, gearX: 1214 },
+    ...SHOP_PARTS,
+    registerArea: { x: SHOP_W, y: 72, w: width - SHOP_W, h: height - 72 },
+    panel: { x: 812, y: 80, w: 458, h: 790 },
+    ticket: { x: 832, y: 92, w: 418, h: 300 },
+    keypad: { x: 834, y: 412, cellW: 128, cellH: 100, gap: 14 },
+  };
+}
+
+/** Portrait game heights: iPad portrait is ~1.44 tall, iPhones ~2.16. */
+export const PORTRAIT_MIN_H = 1360;
+export const PORTRAIT_MAX_H = 1600;
+
+function portraitLayout(screenAspect: number): Layout {
+  const width = SHOP_W;
+  const height = Math.round(Math.min(PORTRAIT_MAX_H, Math.max(PORTRAIT_MIN_H, width * screenAspect)));
+  const area = { x: 0, y: SHOP_H, w: width, h: height - SHOP_H };
+  const panel = { x: 12, y: area.y + 10, w: width - 24, h: area.h - 20 };
+  const gap = 12;
+  const cellW = 120;
+  const pad = 18;
+  const cellH = Math.min(120, Math.floor((panel.h - 2 * pad - 3 * gap) / 4));
+  const keypadW = 3 * cellW + 2 * gap;
+  const keypadH = 4 * cellH + 3 * gap;
+  const keypadX = panel.x + panel.w - pad - keypadW;
+  const ticketH = Math.min(panel.h - 2 * pad, 420);
+  return {
+    orientation: 'portrait',
+    width,
+    height,
+    statusBar: { x: 0, y: 0, w: width, h: 72, orderFont: 26, dotsX: 226, dotStep: 32, dotR: 12, pillX: 552, pillW: 160, gearX: 762 },
+    ...SHOP_PARTS,
+    registerArea: area,
+    panel,
+    ticket: { x: panel.x + pad, y: panel.y + (panel.h - ticketH) / 2, w: keypadX - panel.x - 2 * pad, h: ticketH },
+    keypad: { x: keypadX, y: panel.y + (panel.h - keypadH) / 2, cellW, cellH, gap },
+  };
+}
+
+export function layoutFor(screenW: number, screenH: number): Layout {
+  return screenH > screenW ? portraitLayout(screenH / screenW) : landscapeLayout();
+}
+
+/**
+ * The active layout. Set once before the shop is built (and again when the
+ * screen rotates, followed by a scene restart); modules read it live.
+ */
+export let LAYOUT: Layout = landscapeLayout();
+
+export function setLayout(layout: Layout): void {
+  LAYOUT = layout;
+}

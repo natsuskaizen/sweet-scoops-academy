@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { Button } from './Button';
 import { NumberKeypad } from './NumberKeypad';
 import { numberToWords } from './numberWords';
-import { COLORS, CSS, GAME_H, GAME_W, text } from './theme';
+import { COLORS, CSS, LAYOUT, text } from './theme';
 
 export interface ParentAction {
   label: string;
@@ -34,12 +34,17 @@ export class ParentGate {
 
   constructor(private scene: Phaser.Scene, private opts: ParentGateOptions) {
     this.root = scene.add.container(0, 0).setDepth(1000);
-    const shade = scene.add.rectangle(0, 0, GAME_W, GAME_H, COLORS.ink, 0.45).setOrigin(0).setInteractive();
+    const shade = scene.add.rectangle(0, 0, LAYOUT.width, LAYOUT.height, COLORS.ink, 0.45).setOrigin(0).setInteractive();
+    // Everything below is laid out on a 1280x880 canvas, centred on (640, 440),
+    // then scaled to fit narrower screens.
+    const scale = Math.min(1, (LAYOUT.width - 24) / 940);
+    const box = scene.add.container(LAYOUT.width / 2 - 640 * scale, LAYOUT.height / 2 - 440 * scale).setScale(scale);
     const panel = scene.add.graphics();
     panel.fillStyle(COLORS.cream, 1).fillRoundedRect(170, 60, 940, 760, 30);
     panel.lineStyle(6, COLORS.lavenderDark, 1).strokeRoundedRect(170, 60, 940, 760, 30);
     this.content = scene.add.container(0, 0);
-    this.root.add([shade, panel, this.content]);
+    box.add([panel, this.content]);
+    this.root.add([shade, box]);
     this.showChallenge();
   }
 

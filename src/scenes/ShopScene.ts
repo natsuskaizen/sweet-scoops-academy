@@ -388,8 +388,10 @@ export class ShopScene extends Phaser.Scene {
 
   private drawRegisterPanel(): void {
     const { x, y, w, h } = LAYOUT.panel;
+    const area = LAYOUT.registerArea;
     const g = this.add.graphics().setDepth(5);
-    g.fillStyle(COLORS.brown, 1).fillRect(800, LAYOUT.statusBar.h, 480, 880 - LAYOUT.statusBar.h);
+    g.fillStyle(COLORS.brown, 1).fillRect(area.x, area.y, area.w, area.h);
+    if (LAYOUT.orientation === 'portrait') g.fillStyle(COLORS.brownDark, 1).fillRect(area.x, area.y, area.w, 8);
     g.fillStyle(0xffe9d6, 1).fillRoundedRect(x, y, w, h - 10, 26);
     g.lineStyle(5, COLORS.brownDark, 1).strokeRoundedRect(x, y, w, h - 10, 26);
   }

@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import type { RoundSummary } from '../save/saveTypes';
 import { Button } from '../ui/Button';
-import { COLORS, CSS, GAME_H, text } from '../ui/theme';
+import { COLORS, CSS, LAYOUT, SHOP_W, text } from '../ui/theme';
 
 /**
  * End-of-round card drawn over the shop (the shop stays visible around it;
@@ -12,8 +12,9 @@ export class ResultsOverlay extends Phaser.GameObjects.Container {
   constructor(scene: Phaser.Scene, summary: RoundSummary, onContinue: () => void) {
     const w = 640;
     const h = 600;
-    const x = 400 - w / 2 + 40;
-    const y = (GAME_H - h) / 2 + 20;
+    // Centred over the shop room in landscape, over the whole screen in portrait.
+    const x = LAYOUT.orientation === 'landscape' ? SHOP_W / 2 - w / 2 + 40 : (LAYOUT.width - w) / 2;
+    const y = (LAYOUT.height - h) / 2 + 20;
     super(scene, x, y);
 
     const g = scene.add.graphics();
@@ -66,7 +67,7 @@ export class ResultsOverlay extends Phaser.GameObjects.Container {
         .setAngle(Phaser.Math.Between(0, 180));
       this.scene.tweens.add({
         targets: piece,
-        y: GAME_H + 30,
+        y: LAYOUT.height + 30,
         angle: piece.angle + 360,
         duration: Phaser.Math.Between(1600, 2800),
         delay: Phaser.Math.Between(0, 900),
