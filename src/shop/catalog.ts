@@ -1,83 +1,132 @@
 /**
- * Item catalog: the one place prices live. Items sit on one of three shelves
- * in the Sprinkle Shop: things Momo wears, her scoopers, and decorations for
- * the room.
+ * Item catalog: the one place prices live.
+ *
+ * Each design (a beret, a café set) comes in six tiers: three plain colours
+ * at the design's base price, then Silver, Golden and Sparkly Rainbow, each
+ * dearer than the last. Every tier is its own item to buy and own, with an
+ * id like `hat-beret.golden`.
+ *
+ * Wearables and scoopers are sold in Momo's Closet; decorations in Decorate.
  */
 export type ItemCategory =
   'outfit' | 'hat' | 'bow' | 'handheld' | 'decoration' | 'furniture' | 'wallpaper' | 'sign' | 'collectible';
 
 export type EquipSlot = 'outfit' | 'hat' | 'bow' | 'handheld';
 
-export type ShopSpot = 'wall-left' | 'wall-right' | 'floor-left' | 'floor-center' | 'counter-top' | 'window';
+export type ShopSpot =
+  'wall-left' | 'wall-right' | 'floor-left' | 'floor-center' | 'floor-right' | 'counter-top' | 'window';
 
+export type Placement = { kind: 'equip'; slot: EquipSlot } | { kind: 'shop'; spot: ShopSpot };
+
+export const TIERS = ['pink', 'mint', 'sky', 'silver', 'golden', 'rainbow'] as const;
+export type TierId = (typeof TIERS)[number];
+
+export const TIER_INFO: Readonly<Record<TierId, { name: string; priceFactor: number }>> = {
+  pink: { name: 'Pink', priceFactor: 1 },
+  mint: { name: 'Mint', priceFactor: 1 },
+  sky: { name: 'Sky', priceFactor: 1 },
+  silver: { name: 'Silver', priceFactor: 2.5 },
+  golden: { name: 'Golden', priceFactor: 5 },
+  rainbow: { name: 'Sparkly Rainbow', priceFactor: 10 },
+};
+
+export interface CatalogDesign {
+  id: string;
+  name: string;
+  /** Price of the plain colours; the other tiers scale from it. */
+  basePrice: number;
+  category: ItemCategory;
+  /** Art key for the design; the tier picks its colours. */
+  asset: string;
+  /** Character layer for wearables, or a named spot in the shop for decorations. */
+  placement: Placement;
+}
+
+/** One tier of a design: the thing that is bought and owned. */
 export interface CatalogItem {
   id: string;
+  designId: string;
+  tier: TierId;
   name: string;
   price: number;
   category: ItemCategory;
-  /** Art key: a layer or decoration texture, or a scooper look for handheld items. */
   asset: string;
-  /** Character layer for wearables, or a named spot in the shop for decorations. */
-  placement: { kind: 'equip'; slot: EquipSlot } | { kind: 'shop'; spot: ShopSpot };
+  placement: Placement;
 }
 
-/** The Sprinkle Shop's tabs, in the order they are shown. */
-export const SHELVES = ['wear', 'scoop', 'room'] as const;
-export type ShelfId = (typeof SHELVES)[number];
+export type ShopId = 'closet' | 'decorate';
 
-const wear = (id: string, name: string, price: number, slot: 'hat' | 'bow'): CatalogItem => ({
+const wear = (id: string, name: string, basePrice: number, slot: 'hat' | 'bow'): CatalogDesign => ({
   id,
   name,
-  price,
+  basePrice,
   category: slot,
   asset: id,
   placement: { kind: 'equip', slot },
 });
 
-const scooper = (look: string, name: string, price: number): CatalogItem => ({
-  id: `scooper-${look}`,
-  name,
-  price,
-  category: 'handheld',
-  asset: look,
-  placement: { kind: 'equip', slot: 'handheld' },
-});
-
-const decoration = (id: string, name: string, price: number, spot: ShopSpot): CatalogItem => ({
+const decoration = (id: string, name: string, basePrice: number, spot: ShopSpot): CatalogDesign => ({
   id,
   name,
-  price,
+  basePrice,
   category: 'decoration',
   asset: id,
   placement: { kind: 'shop', spot },
 });
 
-export const CATALOG: readonly CatalogItem[] = [
-  wear('bow-strawberry', 'Strawberry Bow', 50, 'bow'),
-  wear('hat-beret', 'Lavender Beret', 80, 'hat'),
+export const DESIGNS: readonly CatalogDesign[] = [
+  wear('bow-strawberry', 'Bow', 50, 'bow'),
+  wear('hat-beret', 'Beret', 80, 'hat'),
   wear('hat-berry', 'Berry Hat', 120, 'hat'),
   wear('hat-flowers', 'Flower Crown', 150, 'hat'),
-  wear('hat-crown', 'Little Crown', 400, 'hat'),
-  scooper('silver', 'Silver Scooper', 200),
-  scooper('golden', 'Golden Scooper', 500),
-  scooper('rainbow', 'Rainbow Scooper', 1000),
-  decoration('deco-plant', 'Mint Plant', 60, 'floor-left'),
+  wear('hat-crown', 'Little Crown', 200, 'hat'),
+  {
+    id: 'scooper',
+    name: 'Scooper',
+    basePrice: 100,
+    category: 'handheld',
+    asset: 'scooper',
+    placement: { kind: 'equip', slot: 'handheld' },
+  },
+  decoration('deco-plant', 'Plant', 60, 'floor-left'),
   decoration('deco-flags', 'Party Flags', 70, 'window'),
   decoration('deco-lamp', 'Cloud Lamp', 90, 'counter-top'),
   decoration('deco-rug', 'Heart Rug', 100, 'floor-center'),
+  decoration('deco-cafe', 'Café Set', 100, 'floor-right'),
   decoration('deco-frame', 'Cone Picture', 120, 'wall-right'),
 ];
+
+export const itemId = (designId: string, tier: TierId): string => `${designId}.${tier}`;
+
+export function tierPrice(design: CatalogDesign, tier: TierId): number {
+  return Math.round(design.basePrice * TIER_INFO[tier].priceFactor);
+}
+
+/** A design in every tier, plain colours first. */
+export function variantsOf(design: CatalogDesign): CatalogItem[] {
+  return TIERS.map((tier) => ({
+    id: itemId(design.id, tier),
+    designId: design.id,
+    tier,
+    name: `${TIER_INFO[tier].name} ${design.name}`,
+    price: tierPrice(design, tier),
+    category: design.category,
+    asset: design.asset,
+    placement: design.placement,
+  }));
+}
+
+export const CATALOG: readonly CatalogItem[] = DESIGNS.flatMap(variantsOf);
 
 export function itemById(id: string, catalog: readonly CatalogItem[] = CATALOG): CatalogItem | undefined {
   return catalog.find((item) => item.id === id);
 }
 
-export function shelfOf(item: CatalogItem): ShelfId {
-  if (item.placement.kind === 'shop') return 'room';
-  return item.placement.slot === 'handheld' ? 'scoop' : 'wear';
+export function shopOf(design: Pick<CatalogDesign, 'placement'>): ShopId {
+  return design.placement.kind === 'equip' ? 'closet' : 'decorate';
 }
 
-/** A shelf's items, cheapest first. */
-export function itemsOnShelf(shelf: ShelfId, catalog: readonly CatalogItem[] = CATALOG): CatalogItem[] {
-  return catalog.filter((item) => shelfOf(item) === shelf).sort((a, b) => a.price - b.price);
+/** The designs one shop sells, cheapest first. */
+export function designsIn(shop: ShopId, designs: readonly CatalogDesign[] = DESIGNS): CatalogDesign[] {
+  return designs.filter((d) => shopOf(d) === shop).sort((a, b) => a.basePrice - b.basePrice);
 }

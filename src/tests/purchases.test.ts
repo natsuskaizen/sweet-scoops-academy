@@ -1,6 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { CATALOG, itemById, itemsOnShelf, SHELVES, shelfOf, type CatalogItem } from '../shop/catalog';
-import { buyItem, isInUse, owns, sprinklesShort, stopUsing, useItem } from '../shop/purchases';
+import {
+  CATALOG,
+  DESIGNS,
+  designsIn,
+  itemById,
+  itemId,
+  shopOf,
+  TIERS,
+  tierPrice,
+  variantsOf,
+  type CatalogItem,
+} from '../shop/catalog';
+import { buyItem, isInUse, owns, ownedTiers, sprinklesShort, stopUsing, useItem } from '../shop/purchases';
 import { spend } from '../shop/rewards';
 import { createSaveFile } from '../save/saveManager';
 import { validateSaveFile } from '../save/saveValidation';
@@ -14,21 +25,39 @@ function player(sprinkles: number) {
 }
 
 const item = (id: string): CatalogItem => itemById(id)!;
+const design = (id: string) => DESIGNS.find((d) => d.id === id)!;
 
-describe('catalog shelves', () => {
-  it('puts every item on exactly one shelf, cheapest first', () => {
-    const shelved = SHELVES.flatMap((s) => itemsOnShelf(s));
-    expect(shelved).toHaveLength(CATALOG.length);
-    for (const shelf of SHELVES) {
-      const prices = itemsOnShelf(shelf).map((i) => i.price);
-      expect(prices).toEqual([...prices].sort((a, b) => a - b));
-    }
+describe('catalog', () => {
+  it('has unique design and item ids with positive prices', () => {
+    expect(new Set(DESIGNS.map((d) => d.id)).size).toBe(DESIGNS.length);
+    expect(new Set(CATALOG.map((i) => i.id)).size).toBe(CATALOG.length);
+    expect(CATALOG).toHaveLength(DESIGNS.length * TIERS.length);
+    for (const i of CATALOG) expect(Number.isInteger(i.price) && i.price > 0).toBe(true);
   });
 
-  it('sorts hats and bows, scoopers and decorations onto their own shelves', () => {
-    expect(shelfOf(item('hat-beret'))).toBe('wear');
-    expect(shelfOf(item('scooper-golden'))).toBe('scoop');
-    expect(shelfOf(item('deco-lamp'))).toBe('room');
+  it('prices plain colours at the base price and each later tier higher, rainbow highest', () => {
+    for (const d of DESIGNS) {
+      const prices = variantsOf(d).map((v) => v.price);
+      expect(prices.slice(0, 3)).toEqual([d.basePrice, d.basePrice, d.basePrice]);
+      for (let i = 3; i < prices.length; i++) expect(prices[i]).toBeGreaterThan(prices[i - 1]!);
+    }
+    expect(variantsOf(design('hat-beret')).map((v) => v.price)).toEqual([80, 80, 80, 200, 400, 800]);
+  });
+
+  it('names each item after its tier and design', () => {
+    expect(item('hat-beret.golden').name).toBe('Golden Beret');
+    expect(item('deco-rug.rainbow').name).toBe('Sparkly Rainbow Heart Rug');
+    expect(tierPrice(design('bow-strawberry'), 'silver')).toBe(125);
+  });
+
+  it('sells wearables and scoopers in the closet and decorations in Decorate, cheapest first', () => {
+    expect(shopOf(design('hat-crown'))).toBe('closet');
+    expect(shopOf(design('scooper'))).toBe('closet');
+    expect(shopOf(design('deco-lamp'))).toBe('decorate');
+    const sold = [...designsIn('closet'), ...designsIn('decorate')];
+    expect(sold).toHaveLength(DESIGNS.length);
+    const prices = designsIn('decorate').map((d) => d.basePrice);
+    expect(prices).toEqual([...prices].sort((a, b) => a - b));
   });
 });
 
@@ -47,26 +76,35 @@ describe('spend', () => {
 describe('buyItem', () => {
   it('spends the price, keeps the item for good and puts it to use', () => {
     const { save, p } = player(100);
-    const result = buyItem(p, 'hat-beret');
-    expect(result).toEqual({ ok: true, item: item('hat-beret') });
+    const result = buyItem(p, 'hat-beret.mint');
+    expect(result).toEqual({ ok: true, item: item('hat-beret.mint') });
     expect(p.sprinkles).toBe(20);
     expect(p.lifetimeSprinkles).toBe(200);
-    expect(p.ownedItems).toEqual(['hat-beret']);
-    expect(p.equipped.hat).toBe('hat-beret');
+    expect(p.ownedItems).toEqual(['hat-beret.mint']);
+    expect(p.equipped.hat).toBe('hat-beret.mint');
     expect(validateSaveFile(save)).toEqual([]);
   });
 
   it('charges only once when tapped again', () => {
     const { p } = player(200);
-    buyItem(p, 'hat-beret');
-    expect(buyItem(p, 'hat-beret')).toEqual({ ok: false, reason: 'owned' });
+    buyItem(p, 'hat-beret.pink');
+    expect(buyItem(p, 'hat-beret.pink')).toEqual({ ok: false, reason: 'owned' });
     expect(p.sprinkles).toBe(120);
-    expect(p.ownedItems).toEqual(['hat-beret']);
+    expect(p.ownedItems).toEqual(['hat-beret.pink']);
+  });
+
+  it('sells each tier on its own', () => {
+    const { p } = player(500);
+    buyItem(p, 'hat-beret.pink');
+    buyItem(p, 'hat-beret.golden');
+    expect(p.sprinkles).toBe(20);
+    expect(ownedTiers(p, design('hat-beret'))).toEqual(['pink', 'golden']);
+    expect(p.equipped.hat).toBe('hat-beret.golden');
   });
 
   it('says how many more Sprinkles are needed and changes nothing', () => {
     const { p } = player(340);
-    expect(buyItem(p, 'scooper-golden')).toEqual({ ok: false, reason: 'short', short: 160 });
+    expect(buyItem(p, 'hat-beret.rainbow')).toEqual({ ok: false, reason: 'short', short: 460 });
     expect(p.sprinkles).toBe(340);
     expect(p.ownedItems).toEqual([]);
     expect(p.equipped).toEqual({});
@@ -74,33 +112,26 @@ describe('buyItem', () => {
 
   it('ignores ids that are not in the catalog', () => {
     const { p } = player(1000);
-    expect(buyItem(p, 'hat-nope')).toEqual({ ok: false, reason: 'unknown' });
+    expect(buyItem(p, 'hat-nope.pink')).toEqual({ ok: false, reason: 'unknown' });
     expect(p.sprinkles).toBe(1000);
   });
 
   it('accepts another catalog, for trying other prices', () => {
     const { p } = player(10);
-    const cheap = [{ ...item('hat-crown'), price: 5 }];
-    expect(buyItem(p, 'hat-crown', cheap).ok).toBe(true);
+    const cheap = [{ ...item('hat-crown.rainbow'), price: 5 }];
+    expect(buyItem(p, 'hat-crown.rainbow', cheap).ok).toBe(true);
     expect(p.sprinkles).toBe(5);
   });
 
   it('places a decoration in its spot, replacing what stood there', () => {
-    const { save, p } = player(500);
-    buyItem(p, 'deco-plant');
-    buyItem(p, 'deco-lamp');
+    const { save, p } = player(1000);
+    buyItem(p, 'deco-plant.pink');
+    buyItem(p, 'deco-lamp.sky');
+    buyItem(p, 'deco-plant.silver');
     expect(p.decorations).toEqual([
-      { itemId: 'deco-plant', spot: 'floor-left' },
-      { itemId: 'deco-lamp', spot: 'counter-top' },
+      { itemId: 'deco-lamp.sky', spot: 'counter-top' },
+      { itemId: 'deco-plant.silver', spot: 'floor-left' },
     ]);
-    const otherPlant = {
-      ...item('deco-rug'),
-      id: 'deco-fern',
-      placement: { kind: 'shop' as const, spot: 'floor-left' as const },
-    };
-    p.ownedItems.push(otherPlant.id);
-    useItem(p, otherPlant);
-    expect(p.decorations.map((d) => d.itemId)).toEqual(['deco-lamp', 'deco-fern']);
     expect(validateSaveFile(save)).toEqual([]);
   });
 });
@@ -108,40 +139,41 @@ describe('buyItem', () => {
 describe('using owned items', () => {
   it('swaps a worn item for another in the same slot', () => {
     const { p } = player(500);
-    buyItem(p, 'hat-beret');
-    buyItem(p, 'hat-berry');
-    expect(p.equipped.hat).toBe('hat-berry');
-    useItem(p, item('hat-beret'));
-    expect(isInUse(p, item('hat-beret'))).toBe(true);
-    expect(isInUse(p, item('hat-berry'))).toBe(false);
+    buyItem(p, 'hat-beret.pink');
+    buyItem(p, 'hat-berry.pink');
+    expect(p.equipped.hat).toBe('hat-berry.pink');
+    useItem(p, item('hat-beret.pink'));
+    expect(isInUse(p, item('hat-beret.pink'))).toBe(true);
+    expect(isInUse(p, item('hat-berry.pink'))).toBe(false);
   });
 
   it('only uses items the player owns', () => {
     const { p } = player(0);
-    useItem(p, item('hat-crown'));
-    useItem(p, item('deco-rug'));
+    useItem(p, item('hat-crown.pink'));
+    useItem(p, item('deco-rug.pink'));
     expect(p.equipped).toEqual({});
     expect(p.decorations).toEqual([]);
   });
 
   it('takes items off without giving them up', () => {
     const { p } = player(500);
-    buyItem(p, 'bow-strawberry');
-    buyItem(p, 'deco-frame');
-    stopUsing(p, item('bow-strawberry'));
-    stopUsing(p, item('deco-frame'));
-    stopUsing(p, item('hat-beret')); // not worn: nothing to do
+    buyItem(p, 'bow-strawberry.pink');
+    buyItem(p, 'deco-frame.pink');
+    stopUsing(p, item('bow-strawberry.pink'));
+    stopUsing(p, item('deco-frame.pink'));
+    stopUsing(p, item('hat-beret.pink')); // not worn: nothing to do
     expect(p.equipped).toEqual({});
     expect(p.decorations).toEqual([]);
-    expect(owns(p, item('bow-strawberry'))).toBe(true);
-    expect(owns(p, item('deco-frame'))).toBe(true);
+    expect(owns(p, item('bow-strawberry.pink'))).toBe(true);
+    expect(owns(p, item('deco-frame.pink'))).toBe(true);
   });
 
   it('counts nothing short for owned or affordable items', () => {
     const { p } = player(100);
-    expect(sprinklesShort(p, item('hat-beret'))).toBe(0);
-    expect(sprinklesShort(p, item('hat-crown'))).toBe(300);
-    buyItem(p, 'hat-beret');
-    expect(sprinklesShort(p, item('hat-beret'))).toBe(0);
+    expect(sprinklesShort(p, item('hat-beret.pink'))).toBe(0);
+    expect(sprinklesShort(p, item('hat-crown.pink'))).toBe(100);
+    buyItem(p, 'hat-beret.pink');
+    expect(sprinklesShort(p, item('hat-beret.pink'))).toBe(0);
+    expect(itemId('scooper', 'golden')).toBe('scooper.golden');
   });
 });

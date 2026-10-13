@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { LAYER_ART, SPECIES_ART, SPRITE_H, SPRITE_W } from '../characters/sprites';
-import { CATALOG } from '../shop/catalog';
 import { CUSTOMERS, lineup } from '../shop/customerManager';
 import { createRng } from '../core/rng';
 import { numberToWords } from '../ui/numberWords';
@@ -15,11 +14,6 @@ describe('pixel art', () => {
 });
 
 describe('catalog and customers', () => {
-  it('has unique item ids with positive prices', () => {
-    expect(new Set(CATALOG.map((i) => i.id)).size).toBe(CATALOG.length);
-    for (const item of CATALOG) expect(item.price).toBeGreaterThan(0);
-  });
-
   it('never sends the same customer twice in a row', () => {
     const ids = lineup(createRng(4), 50);
     for (let i = 1; i < ids.length; i++) expect(ids[i]).not.toBe(ids[i - 1]);

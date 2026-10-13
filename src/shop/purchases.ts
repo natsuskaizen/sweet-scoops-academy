@@ -4,7 +4,7 @@
  * item is put to use straight away (worn, held or placed in the room).
  */
 import type { Profile } from '../save/saveTypes';
-import { CATALOG, itemById, type CatalogItem } from './catalog';
+import { CATALOG, itemById, TIERS, itemId, type CatalogDesign, type CatalogItem, type TierId } from './catalog';
 import { spend } from './rewards';
 
 export type BuyResult =
@@ -57,4 +57,9 @@ export function isInUse(profile: Profile, item: CatalogItem): boolean {
   const { placement } = item;
   if (placement.kind === 'equip') return profile.equipped[placement.slot] === item.id;
   return profile.decorations.some((d) => d.itemId === item.id);
+}
+
+/** The tiers of a design the player owns, in tier order. */
+export function ownedTiers(profile: Profile, design: CatalogDesign): TierId[] {
+  return TIERS.filter((tier) => profile.ownedItems.includes(itemId(design.id, tier)));
 }
