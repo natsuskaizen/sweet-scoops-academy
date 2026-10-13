@@ -39,6 +39,8 @@ describe('poses', () => {
     expect(frameFor(3, 'thinking')).toBe(2);
     expect(frameFor(3, 'walkA')).toBe(0);
     expect(frameFor(1, 'happy')).toBe(0);
+    expect(frameFor(6, 'blink')).toBe(5);
+    expect(frameFor(5, 'blink')).toBe(0);
   });
 
   it('only steps with both walk frames', () => {

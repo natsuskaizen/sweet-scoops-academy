@@ -260,7 +260,7 @@ if (finish.kind === 'round-complete') {
 
 ## 7. Characters: `src/characters/`
 
-The shop's cast (Momo behind the counter and 13 customers) lives in `friendArt.ts`. Each one is its standing frame as a 32×40 text grid, and the happy and thinking faces are redrawn from it, so every character gets the same expressions:
+The shop's cast (Momo behind the counter and 13 customers) lives in `friendArt.ts`. Each one is its standing frame as a 32×40 text grid, and every other frame is redrawn from it, so every character gets the same expressions and steps:
 
 ```ts
 momo: {
@@ -268,12 +268,21 @@ momo: {
   rows: ['...ooooooo...', ...],
 },
 
-friendFrames(FRIEND_ART.momo); // [stand, happy (^ ^ eyes), thinking (eyes up)]
-registerFriendTextures(scene); // BootScene: one 3-frame sprite sheet per character
+friendFrames(FRIEND_ART.momo); // [stand, happy (^ ^ eyes), thinking (eyes up), walkA, walkB (one foot lifted), blink]
+registerFriendTextures(scene); // BootScene: one 6-frame sprite sheet per character
 new CharacterView(scene, x, y, friendLook('momo')).setExpression('happy');
 ```
 
-A customer is one entry in `CUSTOMERS` (`src/shop/customerManager.ts`) naming its art, favourite flavour and lines. Walking is a gentle hop, since the cast has no walk frames.
+A customer is one entry in `CUSTOMERS` (`src/shop/customerManager.ts`) naming its art, favourite flavour and lines. `CharacterView` does the moving, with timings from `GAME_CONFIG.animation`:
+
+```ts
+await customer.walkTo(x); // sways, and swaps feet at each end of the sway (pictures without walk frames just sway)
+customer.idle(true); // slow breathing, and a blink now and then while the face is neutral
+void customer.cheer(); // right answer: a jump and three hearts (reactions.ts)
+customer.puzzled(); // first miss: thinking face, a head tilt and a "?" bubble
+```
+
+Serving is in `src/scenes/serveAnimation.ts`: a paw in the shopkeeper's body colour reaches into the flavour's tub (`tubSpot(flavor)` in `shopRoom.ts`), carries each scoop to the cone and drops it into the treat, then the shopkeeper cheers.
 
 The older 16×20 species in `sprites.ts` share one grid so clothing layers line up on any of them, which is how Milestone 3 equipment will plug in:
 

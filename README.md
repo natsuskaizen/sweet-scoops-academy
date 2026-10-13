@@ -92,7 +92,8 @@ src/
     services.ts              wires the save system and subject for the scenes
     backupTransfer.ts        share sheet / download and file picker for backup files
   characters/
-    friendArt.ts             the built-in cast (Momo and 13 customers): 32x40 text grids, faces drawn per pose
+    friendArt.ts             the built-in cast (Momo and 13 customers): 32x40 text grids; faces, walking steps and a blink drawn per pose
+    reactions.ts             hearts for a right answer, a "?" bubble for a first miss
     sprites.ts               16x20 species and clothing layers (Milestone 3 equipment)
     characterManager.ts      layered species rendering (body + outfit/hat/bow/handheld), sprite sheets for the cast and added characters
   scenes/
@@ -101,6 +102,7 @@ src/
     backupActions.ts         grown-ups area actions for saving and loading backup files
     characterActions.ts      grown-ups area action that opens the Characters dialog
     ResultsOverlay.ts        end-of-round sticker card (one sticker per customer, confetti); a perfect round starts with a parade
+    serveAnimation.ts        the shopkeeper's paw carries each scoop from its tub to the cone
     shopArt.ts               prop textures, draws the room, places decorations
     shopRoom.ts              the pixel-art room and counter (strawberry parlour)
     roomPixels.ts            tiny pixel painter the room is drawn with
@@ -168,7 +170,7 @@ This is a safeguard against accidental taps, not security.
 
 In the grown-ups area, **Characters** then **Add a character** picks a picture and asks for a name, a role and a favourite flavour. The picture stays in the browser on that device (never uploaded) and is included in backup files.
 
-- **Picture**: a PNG with a transparent background, at most 300 KB. One row of equal frames, left to right: standing, happy, thinking, walk A, walk B. A sheet has 1, 2, 3 or 5 frames; missing poses use the standing frame, and without walk frames the character hops.
+- **Picture**: a PNG with a transparent background, at most 300 KB. One row of equal frames, left to right: standing, happy, thinking, walk A, walk B. A sheet has 1, 2, 3 or 5 frames; missing poses use the standing frame, and without walk frames the character sways instead of stepping.
 - **Frame size**: the built-in 16×20 grid times 1 to 4 (16×20, 32×40, 48×60 or 64×80), so shop accessories can scale onto it. Draw the character facing the player, centred, feet on the bottom edge. For example, 5 frames of 32×40 is a 160×40 PNG.
 - **Role**: a customer joins the line of visitors from the next round; a shopkeeper replaces Momo (the newest switched-on one is used).
 - **Head and neck**: tap the picture at the top of the head, then the neck. Optional; it records where hats and bows will sit (Milestone 3).
@@ -183,7 +185,7 @@ All items in the spec's acceptance checklist are implemented. Verified automatic
 ## Known limitations
 
 - **Not yet tested on a real iPad or iPhone.** It was checked in desktop Chromium at iPad and iPhone viewport sizes with touch emulation. Safari on a real device still needs a look.
-- Art is original pixel art: the room is painted at 1/4 resolution and scaled up so it matches the characters; characters are still placeholder sprites. Animation is simple tweens (walk, hop, scoop stacking). Milestone 2 covers polish.
+- Art is original pixel art: the room is painted at 1/4 resolution and scaled up so it matches the characters; the built-in cast waddles on stepping feet, breathes and blinks while waiting, cheers or tilts their head at an answer, and Momo scoops from the tubs. Timings are in `GAME_CONFIG.animation`.
 - There is one profile ("Player 1"). Multiple profiles and profile names are Milestone 4; JSON backup files are already in the grown-ups area. The save format already supports several profiles.
 - The item catalog exists with a few sample items and decorations render if owned, but there is no shop or customization screen yet (Milestone 3). The results card only offers "Keep scooping!".
 - Division practice uses divisors 1-12 (`GAME_CONFIG.math.division.divisor`); the spec itself only requires a positive divisor.

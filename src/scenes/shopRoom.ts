@@ -202,12 +202,21 @@ const MOUND = [
 ];
 const TUBS = ['strawberry', 'honey-lavender', 'blueberry', 'lemon', 'chocolate', 'mint'];
 
+/** Top-left of a tub's mound in the display case (art pixels). */
+const tubArt = (i: number) => ({ x: CASE.x + 6 + (i % 3) * 25, y: CASE.y + 8 + Math.floor(i / 3) * 16 });
+
+/** Where the shopkeeper dips in for a flavour, in game pixels; flavours without a tub use the middle one. */
+export function tubSpot(flavor: string): { x: number; y: number } {
+  const i = TUBS.indexOf(flavor);
+  const tub = tubArt(i < 0 ? 1 : i);
+  return { x: (tub.x + 11) * ROOM_SCALE, y: LAYOUT.shop.y + (tub.y + 3) * ROOM_SCALE };
+}
+
 function paintDisplayCase(p: Pixels): void {
   const { x, y, w, h } = CASE;
   p.box(x, y, w, h, C.wood).box(x + 3, y + 3, w - 6, h - 6, C.glass);
   TUBS.forEach((flavor, i) => {
-    const tx = x + 6 + (i % 3) * 25;
-    const ty = y + 8 + Math.floor(i / 3) * 16;
+    const { x: tx, y: ty } = tubArt(i);
     p.rect(tx, ty + 6, 22, 5, C.tray).rect(tx, ty + 10, 22, 1, C.outline);
     p.stamp(MOUND, tx + 1, ty, { o: C.outline, S: FLAVOR_COLORS[flavor]!, W: C.white });
   });

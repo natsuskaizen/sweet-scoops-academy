@@ -20,6 +20,7 @@ import {
   type FriendId,
 } from './friendArt';
 import { makePixelTexture } from './pixelArt';
+import { hearts, questionBubble } from './reactions';
 import {
   EYES,
   EYES_PUPPY,
@@ -35,6 +36,7 @@ import {
   type SpeciesId,
 } from './sprites';
 import { frameFor, hasWalkFrames, type AddedCharacter, type Pose } from '../shop/addedCharacters';
+import { GAME_CONFIG } from '../config/gameConfig';
 import { CHAR_SCALE } from '../ui/theme';
 
 export type CharacterLayerSlot = 'outfit' | 'hat' | 'bow' | 'handheld';
@@ -86,6 +88,7 @@ export function addedLook(scene: Phaser.Scene, c: AddedCharacter): SheetLook | n
 }
 
 const friendTextureKey = (id: FriendId): string => `friend-${id}`;
+const FRIEND_FRAMES = 6;
 
 /** Draws each built-in friend's frames side by side into one sprite sheet. */
 export function registerFriendTextures(scene: Phaser.Scene): void {
@@ -101,7 +104,7 @@ export function registerFriendTextures(scene: Phaser.Scene): void {
 }
 
 export function friendLook(id: FriendId): SheetLook {
-  return { sheet: { key: friendTextureKey(id), frames: 3, frameW: FRIEND_W, frameH: FRIEND_H } };
+  return { sheet: { key: friendTextureKey(id), frames: FRIEND_FRAMES, frameW: FRIEND_W, frameH: FRIEND_H } };
 }
 
 function applyExpression(species: SpeciesId, rows: string[], expression: Expression): string[] {
@@ -149,6 +152,7 @@ export class CharacterView extends Phaser.GameObjects.Container {
   private base: Phaser.GameObjects.Image;
   private layerImages = new Map<CharacterLayerSlot, Phaser.GameObjects.Image>();
   private bobTween?: Phaser.Tweens.Tween;
+  private blinkTimer?: Phaser.Time.TimerEvent;
   private expression: Expression = 'neutral';
   private stopStepping: (() => void) | null = null;
 
@@ -175,6 +179,10 @@ export class CharacterView extends Phaser.GameObjects.Container {
     this.setScale((CHAR_SCALE * SPRITE_W) / frameW);
     this.setSize(frameW, isSheet(look) ? look.sheet.frameH : SPRITE_H);
     scene.add.existing(this);
+    this.once(Phaser.GameObjects.Events.DESTROY, () => {
+      this.bobTween?.stop();
+      this.blinkTimer?.remove();
+    });
   }
 
   setExpression(expression: Expression): this {
@@ -207,23 +215,85 @@ export class CharacterView extends Phaser.GameObjects.Container {
     return this;
   }
 
-  /** Gentle idle bounce. */
+  /** Waiting: slow breathing, and a blink now and then for characters that have the frame. */
   idle(on: boolean): this {
     this.bobTween?.stop();
     this.bobTween = undefined;
-    this.base.y = 0;
-    for (const img of this.layerImages.values()) img.y = 0;
+    this.blinkTimer?.remove();
+    this.blinkTimer = undefined;
+    const parts = [this.base, ...this.layerImages.values()];
+    for (const part of parts) part.setScale(1);
     if (on) {
       this.bobTween = this.scene.tweens.add({
-        targets: [this.base, ...this.layerImages.values()],
-        y: -1,
-        duration: 420,
+        targets: parts,
+        scaleX: 1.02,
+        scaleY: 0.97,
+        duration: GAME_CONFIG.animation.breatheMs,
         yoyo: true,
         repeat: -1,
         ease: 'Sine.easeInOut',
       });
+      this.scheduleBlink();
     }
     return this;
+  }
+
+  private scheduleBlink(): void {
+    const { blinkMs, blinkGapMs } = GAME_CONFIG.animation;
+    const canBlink = () => this.scene && this.expression === 'neutral' && !this.stopStepping;
+    this.blinkTimer = this.scene.time.delayedCall(Phaser.Math.Between(blinkGapMs.min, blinkGapMs.max), () => {
+      if (canBlink()) {
+        this.showPose('blink');
+        this.scene.time.delayedCall(blinkMs, () => {
+          if (canBlink()) this.showPose('stand');
+        });
+      }
+      this.scheduleBlink();
+    });
+  }
+
+  /** Jump for joy with a few hearts (a right answer). */
+  cheer(): Promise<void> {
+    hearts(this.scene, this.x, this.y - this.displayHeight - 10);
+    return new Promise((resolve) => {
+      this.scene.tweens.add({
+        targets: this,
+        y: this.y - 40,
+        duration: 180,
+        yoyo: true,
+        ease: 'Quad.easeOut',
+        onComplete: () => resolve(),
+      });
+    });
+  }
+
+  /** A kind, puzzled head tilt with a question bubble (a first miss). */
+  puzzled(): void {
+    this.setExpression('thinking');
+    questionBubble(this.scene, this.x + this.displayWidth * 0.75, this.y - this.displayHeight * 0.8);
+    this.scene.tweens.add({
+      targets: this,
+      angle: { from: -7, to: 7 },
+      duration: 320,
+      yoyo: true,
+      repeat: 1,
+      ease: 'Sine.easeInOut',
+      onComplete: () => {
+        this.angle = 0;
+      },
+    });
+  }
+
+  /** This character's body colour (sampled low on the left side), for a paw that reaches out. */
+  bodyColor(): number {
+    const { width, height, name } = this.base.frame;
+    const pixel = this.scene.textures.getPixel(
+      Math.floor(width * 0.3),
+      Math.floor(height * 0.75),
+      this.base.texture.key,
+      name,
+    );
+    return pixel && pixel.alpha > 0 ? pixel.color : 0xffffff;
   }
 
   /** Hop in place (happy reaction). */
@@ -263,7 +333,6 @@ export class CharacterView extends Phaser.GameObjects.Container {
     });
   }
 
-  /** Walk frames when the picture has them, otherwise a little waddle. Returns a stop function. */
   /** Ends any walk or hop at once, standing at (x, y). A walk cut short this way never resolves its promise. */
   arriveAt(x: number, y: number): this {
     this.scene.tweens.killTweensOf(this);
@@ -274,30 +343,33 @@ export class CharacterView extends Phaser.GameObjects.Container {
     return this.setPosition(x, y);
   }
 
+  /**
+   * A gentle sway, plus stepping feet when the picture has walk frames: the
+   * feet swap at each end of the sway, so the two always stay in step.
+   * Returns a stop function.
+   */
   private startStepping(): () => void {
-    if (isSheet(this.look) && hasWalkFrames(this.look.sheet.frames)) {
-      let step = 0;
-      const timer = this.scene.time.addEvent({
-        delay: 160,
-        loop: true,
-        callback: () => this.showPose(++step % 2 === 0 ? 'walkA' : 'walkB'),
-      });
-      this.showPose('walkA');
-      return () => {
-        timer.remove();
-        this.showPose(POSES[this.expression]);
-      };
-    }
-    const waddle = this.scene.tweens.add({
+    const feet = isSheet(this.look) && hasWalkFrames(this.look.sheet.frames);
+    let left = true;
+    const stepFoot = () => {
+      if (!feet) return;
+      left = !left;
+      this.showPose(left ? 'walkA' : 'walkB');
+    };
+    stepFoot();
+    const sway = this.scene.tweens.add({
       targets: this,
-      angle: { from: -4, to: 4 },
-      duration: 160,
+      angle: { from: -3, to: 3 },
+      duration: GAME_CONFIG.animation.stepMs,
       yoyo: true,
       repeat: -1,
+      onYoyo: stepFoot,
+      onRepeat: stepFoot,
     });
     return () => {
-      waddle.stop();
+      sway.stop();
       this.angle = 0;
+      if (feet) this.showPose(POSES[this.expression]);
     };
   }
 

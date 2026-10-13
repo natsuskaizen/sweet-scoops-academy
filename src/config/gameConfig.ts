@@ -117,6 +117,21 @@ export interface GameConfig {
     /** ...and how long they cheer before the results card appears. */
     paradeCheerMs: number;
   };
+  /** Character animation in the shop. */
+  animation: {
+    /** One walking step: a foot lifts and the body sways. */
+    stepMs: number;
+    /** Idle breathing: one breath in (or out). */
+    breatheMs: number;
+    /** How long a blink keeps the eyes closed... */
+    blinkMs: number;
+    /** ...and the gap between blinks, picked between these. */
+    blinkGapMs: { min: number; max: number };
+    /** Serving: the shopkeeper reaches into a tub... */
+    scoopReachMs: number;
+    /** ...then carries the scoop over to the cone. */
+    scoopCarryMs: number;
+  };
 }
 
 export const GAME_CONFIG: GameConfig = {
@@ -179,5 +194,13 @@ export const GAME_CONFIG: GameConfig = {
     aidDealMs: 650,
     paradeStepMs: 220,
     paradeCheerMs: 2600,
+  },
+  animation: {
+    stepMs: 160,
+    breatheMs: 1100,
+    blinkMs: 140,
+    blinkGapMs: { min: 2400, max: 5200 },
+    scoopReachMs: 150,
+    scoopCarryMs: 230,
   },
 };
