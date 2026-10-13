@@ -1,11 +1,13 @@
 /// <reference types="vitest/config" />
 import { defineConfig } from 'vite';
+import { offlinePlugin } from './scripts/offline-plugin.mjs';
 
 // Relative base so the build works under any GitHub Pages project URL
 // (https://<user>.github.io/<repo>/) without knowing the repo name.
 // Override with BASE_PATH=/my-repo/ if you prefer an absolute base.
 export default defineConfig({
   base: process.env.BASE_PATH ?? './',
+  plugins: [offlinePlugin()],
   build: {
     target: 'es2020',
     chunkSizeWarningLimit: 1600, // Phaser alone is ~1.2 MB minified

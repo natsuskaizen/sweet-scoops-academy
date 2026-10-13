@@ -25,6 +25,7 @@ import { ParentGate, type ParentAction } from '../ui/ParentGate';
 import { StatusBar } from '../ui/StatusBar';
 import { COLORS, CSS, LAYOUT, text } from '../ui/theme';
 import { VisualAidView } from '../ui/VisualAidView';
+import { backupActions } from './backupActions';
 import { ResultsOverlay } from './ResultsOverlay';
 import { drawDecorations, drawShopRoom, flavorColor } from './shopArt';
 
@@ -358,6 +359,17 @@ export class ShopScene extends Phaser.Scene {
     const saves = this.services.saves;
     const save = this.services.load.save;
     return [
+      ...backupActions(this.services, () => this.scene.restart()),
+      {
+        label: 'Restore previous save',
+        confirm: 'Goes back to the backup copy from the previous save. The current copy is kept aside, not deleted.',
+        enabled: saves.hasBackup(),
+        run: () => {
+          const restored = saves.restoreBackup();
+          if (restored) this.services.load = { save: restored, status: 'loaded', problems: [] };
+          this.scene.restart();
+        },
+      },
       {
         label: 'Reset learning progress',
         confirm: 'Clears all practice progress. Sprinkles and items are kept.',
@@ -379,16 +391,6 @@ export class ShopScene extends Phaser.Scene {
           save.profiles = { [fresh.id]: fresh };
           save.activeProfileId = fresh.id;
           this.saveAndRestart();
-        },
-      },
-      {
-        label: 'Restore previous save',
-        confirm: 'Goes back to the backup copy from the previous save. The current copy is kept aside, not deleted.',
-        enabled: saves.hasBackup(),
-        run: () => {
-          const restored = saves.restoreBackup();
-          if (restored) this.services.load = { save: restored, status: 'loaded', problems: [] };
-          this.scene.restart();
         },
       },
     ];

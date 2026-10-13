@@ -1,0 +1,16 @@
+{
+  "name": "Sweet Scoops Academy",
+  "short_name": "Sweet Scoops",
+  "description": "Cozy ice cream shop game that practices multiplication and division.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#c7b3f0",
+  "theme_color": "#c7b3f0",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

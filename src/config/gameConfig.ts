@@ -65,6 +65,10 @@ export interface GameConfig {
   rewards: RewardConfig;
   adaptive: AdaptiveConfig;
   math: MathConfig;
+  backup: {
+    /** Larger files are refused before reading; a real backup is a few KB. */
+    maxImportBytes: number;
+  };
   timing: {
     /** How long to hold the ⚙ button to open the grown-ups area. */
     parentHoldMs: number;
@@ -107,5 +111,6 @@ export const GAME_CONFIG: GameConfig = {
     // ×1, ×2, ×10 are easiest, then ×5 ×11, then ×3 ×4, then ×9, then ×6 ×7 ×8 ×12.
     factorTiers: { 1: 0, 2: 1, 10: 1, 5: 2, 11: 2, 3: 3, 4: 3, 9: 4, 6: 5, 7: 5, 8: 5, 12: 5 },
   },
+  backup: { maxImportBytes: 1_000_000 },
   timing: { parentHoldMs: 1200, greetingMs: 900 },
 };
