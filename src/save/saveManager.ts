@@ -41,7 +41,7 @@ export interface LoadResult {
 
 export type WriteResult = { ok: true } | { ok: false; error: string };
 
-type Parsed = { ok: true; save: SaveFile } | { ok: false; problems: string[] };
+export type Parsed = { ok: true; save: SaveFile } | { ok: false; problems: string[] };
 
 export function createProfile(displayName: string, now: number, seed = randomSeed()): Profile {
   return {
@@ -85,7 +85,8 @@ function migrate(data: Record<string, unknown>): Parsed {
   return problems.length === 0 ? { ok: true, save: data as unknown as SaveFile } : { ok: false, problems };
 }
 
-function parse(raw: string): Parsed {
+/** Reads save JSON from any source (storage or a backup file): parse, migrate, validate. */
+export function parseSave(raw: string): Parsed {
   let data: unknown;
   try {
     data = JSON.parse(raw);
@@ -112,7 +113,7 @@ export class SaveManager {
       return { save, status: 'fresh', problems: [] };
     }
 
-    const primary = parse(primaryRaw);
+    const primary = parseSave(primaryRaw);
     if (primary.ok) return { save: primary.save, status: 'loaded', problems: [] };
 
     // Keep the unreadable data before doing anything else.
@@ -137,7 +138,7 @@ export class SaveManager {
 
     try {
       const previous = this.read(SAVE_KEYS.primary);
-      if (previous !== null && parse(previous).ok) {
+      if (previous !== null && parseSave(previous).ok) {
         this.storage.setItem(SAVE_KEYS.backup, previous);
       }
       this.storage.setItem(SAVE_KEYS.primary, JSON.stringify(save));
@@ -157,6 +158,19 @@ export class SaveManager {
     return backup;
   }
 
+  /** Parent action: replace the live save with an imported one (live copy is quarantined first). */
+  replaceWith(save: SaveFile): WriteResult {
+    const problems = validateSaveFile(save);
+    if (problems.length > 0) return { ok: false, error: `refusing to import invalid save: ${problems[0]}` };
+    const current = this.read(SAVE_KEYS.primary);
+    try {
+      if (current !== null) this.quarantine(current);
+    } catch (err) {
+      return { ok: false, error: String(err) };
+    }
+    return this.write(save);
+  }
+
   hasBackup(): boolean {
     return this.tryBackup() !== null;
   }
@@ -173,7 +187,7 @@ export class SaveManager {
   private tryBackup(): SaveFile | null {
     const raw = this.read(SAVE_KEYS.backup);
     if (raw === null) return null;
-    const parsed = parse(raw);
+    const parsed = parseSave(raw);
     return parsed.ok ? parsed.save : null;
   }
 

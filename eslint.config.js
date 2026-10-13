@@ -27,6 +27,11 @@ export default tseslint.config(
     languageOptions: { globals: globals.node },
   },
   {
+    // Service worker template; the plugin in scripts/offline-plugin.mjs fills in the placeholder.
+    files: ['src/pwa/sw.js'],
+    languageOptions: { globals: { ...globals.serviceworker, __PRECACHE_FILES__: 'readonly' } },
+  },
+  {
     // Tests read best as one long scenario per `it`.
     files: ['src/tests/**/*.ts', 'e2e/**/*.ts'],
     rules: { 'max-lines-per-function': 'off', complexity: 'off' },

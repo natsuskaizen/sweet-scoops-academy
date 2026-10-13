@@ -40,6 +40,14 @@ To try it on an iPad on the same Wi-Fi: `npm run dev -- --host`, then open the p
 
 The site appears at `https://<user>.github.io/<repo>/`. The build uses a relative base (`./`), so it works under any repository name with no configuration. To use an absolute base instead, build with `BASE_PATH=/<repo>/ npm run build`.
 
+## Installing on an iPad or iPhone
+
+Open the site in Safari, tap **Share → Add to Home Screen**. The game then opens full screen from its own icon and plays offline once it has been opened online.
+
+Add it to the Home Screen rather than playing in a Safari tab: Safari can delete a website's saved data after about 7 days without a visit, but not a Home Screen app's. The Home Screen app keeps its own save, separate from Safari's, so to carry progress over, use **Save a backup file** in Safari's grown-ups area, then **Load a backup file** in the Home Screen app.
+
+Offline play comes from a service worker (`src/pwa/sw.js`). The build fills in the list of files to cache and a version (`scripts/offline-plugin.mjs`), so each deploy installs a fresh worker and drops the previous cache. The page is always fetched from the network first when online, so a deploy is never hidden behind a cached copy. Icons are drawn from `public/favicon.svg` by `node scripts/make-icons.mjs`.
+
 ## How it is put together
 
 The rule from the spec is that **the shop never goes away**: there is one gameplay scene, and the customer, ticket, keypad, hint board and results card are layered inside it. All game rules live in plain TypeScript modules with no Phaser imports, so they are unit tested directly.
@@ -124,7 +132,13 @@ All positions come from `LAYOUT` in `src/ui/theme.ts`, built by `layoutFor(scree
 
 ### Grown-ups area
 
-Press and hold the ⚙ button in the top-right corner for about a second, then type the number shown in words. Inside: progress per operation, facts that need practice, and three actions (reset learning progress, reset the whole profile, restore the previous save), each with a confirmation step. This is a safeguard against accidental taps, not security.
+Press and hold the ⚙ button in the top-right corner for about a second, then type the number shown in words. Inside: progress per operation, facts that need practice, and these actions:
+
+- **Save a backup file**: the whole save as JSON, through the share sheet on iPad and iPhone (Save to Files, AirDrop, Mail) or as a download elsewhere.
+- **Load a backup file**: picks a file, checks it the same way a save is checked on load, shows whose progress it holds, and replaces the current progress only after a confirmation. The replaced progress is kept aside in storage, not deleted.
+- **Restore previous save**, **Reset learning progress**, **Reset whole profile**, each with a confirmation step.
+
+This is a safeguard against accidental taps, not security.
 
 ## Milestone 1 status
 
@@ -134,8 +148,8 @@ All items in the spec's acceptance checklist are implemented. Verified automatic
 
 - **Not yet tested on a real iPad or iPhone.** It was checked in desktop Chromium at iPad and iPhone viewport sizes with touch emulation. Safari on a real device still needs a look.
 - Art is original placeholder pixel art and flat procedural shapes. Animation is simple tweens (walk, hop, scoop stacking). Milestone 2 covers polish.
-- There is one profile ("Player 1"). Multiple profiles, profile names, and JSON export/import are Milestone 4. The save format already supports several profiles.
+- There is one profile ("Player 1"). Multiple profiles and profile names are Milestone 4; JSON backup files are already in the grown-ups area. The save format already supports several profiles.
 - The item catalog exists with a few sample items and decorations render if owned, but there is no shop or customization screen yet (Milestone 3). The results card only offers "Keep scooping!".
 - Division practice uses divisors 1-12 (`GAME_CONFIG.math.division.divisor`); the spec itself only requires a positive divisor.
 - Addition and subtraction are built and tested but switched off, since Milestone 1 is multiplication and division. Their hints use simple piles of scoops; the difficulty curve for them is a first guess.
-- localStorage is per browser and per device. If the browser blocks storage (some private modes), the game still plays but warns that progress will not be kept.
+- localStorage is per browser and per device (and the Home Screen app has its own); backup files move progress between them. If the browser blocks storage (some private modes), the game still plays but warns that progress will not be kept.

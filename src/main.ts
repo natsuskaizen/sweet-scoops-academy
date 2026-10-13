@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { registerServiceWorker } from './pwa/registerServiceWorker';
 import { BootScene } from './scenes/BootScene';
 import { ShopScene } from './scenes/ShopScene';
 import { LAYOUT, layoutFor, setLayout } from './ui/theme';
@@ -46,3 +47,5 @@ window.addEventListener('orientationchange', onScreenChange);
 window.visualViewport?.addEventListener('resize', onScreenChange);
 window.addEventListener('pageshow', onScreenChange);
 game.events.once(Phaser.Core.Events.READY, onScreenChange);
+
+registerServiceWorker();

@@ -6,10 +6,11 @@ import { COLORS, CSS, LAYOUT, text } from './theme';
 
 export interface ParentAction {
   label: string;
-  /** Shown on the confirmation step. */
-  confirm: string;
+  /** Shown on a confirmation step before `run`, which then closes the area. Omit for harmless actions. */
+  confirm?: string;
   enabled: boolean;
-  run: () => void;
+  /** Receives the gate so harmless actions can follow up with `ask` or `notice`. */
+  run: (gate: ParentGate) => void;
 }
 
 export interface ParentGateOptions {
@@ -26,11 +27,19 @@ export interface ParentGateOptions {
  *
  * Every destructive action then needs a second "Yes" on a confirmation step.
  */
+const ACTION_COLUMNS = [420, 860];
+const ACTION_ROW_Y = 560;
+const ACTION_ROW_GAP = 90;
+
 export class ParentGate {
   private root: Phaser.GameObjects.Container;
   private content: Phaser.GameObjects.Container;
   private keypad?: NumberKeypad;
   private target = 0;
+  /** Backup file actions finish after the share sheet or file picker; by then the area may be closed. */
+  private closed = false;
+  /** Counts screen changes, so "Yes" can tell whether an action showed a notice. */
+  private screens = 0;
 
   constructor(
     private scene: Phaser.Scene,
@@ -55,6 +64,7 @@ export class ParentGate {
   }
 
   private reset(): void {
+    this.screens += 1;
     this.keypad?.destroy();
     this.keypad = undefined;
     this.content.removeAll(true);
@@ -116,30 +126,29 @@ export class ParentGate {
         .text(220, 160, this.opts.info().join('\n'), text(24, CSS.ink, { lineSpacing: 8, wordWrap: { width: 840 } }))
         .setOrigin(0, 0),
     );
-    this.opts.actions().forEach((action, i) => {
-      const b = this.add(
-        new Button(this.scene, 640, 540 + i * 88, {
-          width: 560,
-          height: 76,
-          label: action.label,
-          fontSize: 28,
-          fill: COLORS.peach,
-          shade: 0xe8a888,
-          onTap: () => this.showConfirm(action),
-        }),
-      );
-      b.setEnabled(action.enabled);
-    });
+    this.opts.actions().forEach((action, i) => this.actionButton(action, i));
   }
 
-  private showConfirm(action: ParentAction): void {
-    this.reset();
-    this.add(this.scene.add.text(640, 200, action.label, text(40)).setOrigin(0.5, 0));
-    this.add(
-      this.scene.add
-        .text(640, 280, action.confirm, text(28, CSS.inkSoft, { align: 'center', wordWrap: { width: 760 } }))
-        .setOrigin(0.5, 0),
+  /** Actions sit in two columns below the info text. */
+  private actionButton(action: ParentAction, i: number): void {
+    const b = this.add(
+      new Button(this.scene, ACTION_COLUMNS[i % 2]!, ACTION_ROW_Y + Math.floor(i / 2) * ACTION_ROW_GAP, {
+        width: 410,
+        height: 76,
+        label: action.label,
+        fontSize: 26,
+        fill: COLORS.peach,
+        shade: 0xe8a888,
+        onTap: () => (action.confirm === undefined ? action.run(this) : this.ask(action)),
+      }),
     );
+    b.setEnabled(action.enabled);
+  }
+
+  /** Shows the action's confirmation step; "Yes" runs it and closes the area unless it showed a notice. */
+  ask(action: ParentAction): void {
+    if (this.closed) return;
+    this.message(action.label, action.confirm ?? '');
     this.add(
       new Button(this.scene, 500, 560, {
         width: 240,
@@ -149,8 +158,9 @@ export class ParentGate {
         fill: COLORS.strawberry,
         shade: COLORS.strawberryDark,
         onTap: () => {
-          action.run();
-          this.close();
+          const screen = this.screens;
+          action.run(this);
+          if (this.screens === screen) this.close();
         },
       }),
     );
@@ -165,7 +175,33 @@ export class ParentGate {
     );
   }
 
+  /** A message with a way back to the menu, e.g. after saving a backup or refusing a file. */
+  notice(title: string, body: string): void {
+    if (this.closed) return;
+    this.message(title, body);
+    this.add(
+      new Button(this.scene, 640, 560, {
+        width: 240,
+        height: 90,
+        label: 'OK',
+        fontSize: 30,
+        onTap: () => this.showMenu(),
+      }),
+    );
+  }
+
+  private message(title: string, body: string): void {
+    this.reset();
+    this.add(this.scene.add.text(640, 200, title, text(40)).setOrigin(0.5, 0));
+    this.add(
+      this.scene.add
+        .text(640, 280, body, text(28, CSS.inkSoft, { align: 'center', wordWrap: { width: 760 } }))
+        .setOrigin(0.5, 0),
+    );
+  }
+
   close(): void {
+    this.closed = true;
     this.reset();
     this.root.destroy(true);
     this.opts.onClose();
