@@ -32,6 +32,15 @@ function buildVersion(outDir, entries) {
   return hash.digest('hex').slice(0, 12);
 }
 
+/** Writes sw.js into a built folder. Also used by the redeploy e2e test on a doctored copy of dist. */
+export function writeServiceWorker(outDir) {
+  const entries = precacheEntries(outDir);
+  const source = readFileSync(TEMPLATE, 'utf8')
+    .replace('__BUILD_VERSION__', buildVersion(outDir, entries))
+    .replace('__PRECACHE_FILES__', JSON.stringify(entries));
+  writeFileSync(join(outDir, 'sw.js'), source);
+}
+
 export function offlinePlugin() {
   let outDir = 'dist';
   return {
@@ -41,11 +50,7 @@ export function offlinePlugin() {
       outDir = resolve(config.root, config.build.outDir);
     },
     closeBundle() {
-      const entries = precacheEntries(outDir);
-      const source = readFileSync(TEMPLATE, 'utf8')
-        .replace('__BUILD_VERSION__', buildVersion(outDir, entries))
-        .replace('__PRECACHE_FILES__', JSON.stringify(entries));
-      writeFileSync(join(outDir, 'sw.js'), source);
+      writeServiceWorker(outDir);
     },
   };
 }
