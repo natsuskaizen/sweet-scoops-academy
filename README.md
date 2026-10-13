@@ -96,7 +96,8 @@ src/
   characters/
     friendArt.ts             the built-in cast (Momo and 13 customers): 32x40 text grids; faces, walking steps and a blink drawn per pose
     reactions.ts             hearts for a right answer, a "?" bubble for a first miss
-    scooperArt.ts            Momo's scooper held in her paw: wooden now, silver, golden and rainbow drawn for the Milestone 3 shop
+    scooperArt.ts            Momo's scooper held in her paw: wooden, plus one per item tier from her Closet
+    wearArt.ts               hats, bow, glasses and hearing aids on Momo's frame in tier colours; Momo without her chef hat
     tierColors.ts            the colours of each item tier (Sparkly Rainbow in bands)
     sprites.ts               16x20 species and clothing layers (Milestone 3 equipment)
     characterManager.ts      layered species rendering (body + outfit/hat/bow/handheld), sprite sheets for the cast and added characters
@@ -112,6 +113,8 @@ src/
     shopArt.ts               prop textures, draws the room
     decorArt.ts              decoration pixel art in tier colours, and the decorations placed in the room
     decorateMode.ts          Decorate: the whole room, a tray of decorations, try a colour then buy
+    closetMode.ts            Momo's Closet: try on hats, bows, glasses, hearing aids and scoopers, then buy
+    closetParts.ts           the Closet's backdrop, top bar, tabs and item tiles
     shopRoom.ts              the pixel-art room and counter (strawberry parlour)
     roomPixels.ts            tiny pixel painter the room is drawn with
   ui/                        NumberKeypad, OrderPanel (+ SpeechBubble), VisualAidView,
@@ -196,7 +199,7 @@ All items in the spec's acceptance checklist are implemented. Verified automatic
 - **Not yet tested on a real iPad or iPhone.** It was checked in desktop Chromium at iPad and iPhone viewport sizes with touch emulation. Safari on a real device still needs a look.
 - Art is original pixel art: the room is painted at 1/4 resolution and scaled up so it matches the characters; the built-in cast waddles on stepping feet, breathes and blinks while waiting, cheers or tilts their head at an answer, and Momo scoops from the tubs. Timings are in `GAME_CONFIG.animation`.
 - There is one profile ("Player 1"). Multiple profiles and profile names are Milestone 4; JSON backup files are already in the grown-ups area. The save format already supports several profiles.
-- Decorate (Milestone 3) opens from the results card. Momo's Closet, for hats, bows, glasses, hearing aids and scoopers, is still to come; those items are in the catalog but cannot be bought yet.
+- Decorate and Momo's Closet (Milestone 3) open from the results card. Only Momo wears Closet items; a shopkeeper added from a picture serves with the chosen scooper but does not wear hats or glasses.
 - Division practice uses divisors 1-12 (`GAME_CONFIG.math.division.divisor`); the spec itself only requires a positive divisor.
 - Addition and subtraction are built and tested but switched off, since Milestone 1 is multiplication and division. Their hints use simple piles of scoops; the difficulty curve for them is a first guess.
 - localStorage is per browser and per device (and the Home Screen app has its own); backup files move progress between them. If the browser blocks storage (some private modes), the game still plays but warns that progress will not be kept.

@@ -4,7 +4,16 @@
  * item is put to use straight away (worn, held or placed in the room).
  */
 import type { Profile } from '../save/saveTypes';
-import { CATALOG, itemById, TIERS, itemId, type CatalogDesign, type CatalogItem, type TierId } from './catalog';
+import {
+  CATALOG,
+  itemById,
+  TIERS,
+  itemId,
+  type CatalogDesign,
+  type CatalogItem,
+  type EquipSlot,
+  type TierId,
+} from './catalog';
 import { spend } from './rewards';
 
 export type BuyResult =
@@ -57,6 +66,18 @@ export function isInUse(profile: Profile, item: CatalogItem): boolean {
   const { placement } = item;
   if (placement.kind === 'equip') return profile.equipped[placement.slot] === item.id;
   return profile.decorations.some((d) => d.itemId === item.id);
+}
+
+/** Everything Momo has on, in no particular order. */
+export function equippedItems(profile: Profile): CatalogItem[] {
+  return Object.values(profile.equipped)
+    .map((id) => (id ? itemById(id) : undefined))
+    .filter((item): item is CatalogItem => item !== undefined);
+}
+
+export function equippedIn(profile: Profile, slot: EquipSlot): CatalogItem | undefined {
+  const id = profile.equipped[slot];
+  return id ? itemById(id) : undefined;
 }
 
 /** The tiers of a design the player owns, in tier order. */

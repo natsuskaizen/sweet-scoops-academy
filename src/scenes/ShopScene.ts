@@ -7,11 +7,14 @@
  * only animates what the manager says and forwards what the player taps.
  */
 import Phaser from 'phaser';
-import { addedLook, CharacterView, friendLook, type AnyLook } from '../characters/characterManager';
+import { addedLook, CharacterView, friendLook, MOMO_SHEETS, type AnyLook } from '../characters/characterManager';
+import type { ScooperId } from '../characters/scooperArt';
+import { dressMomo } from '../characters/wearArt';
 import { SERVICES_KEY, type GameServices } from '../game/services';
 import { GAME_CONFIG } from '../config/gameConfig';
 import type { RoundSummary } from '../save/saveTypes';
 import { chosenShopkeeper, customerRoster } from '../shop/addedCharacters';
+import { equippedIn, equippedItems } from '../shop/purchases';
 import { lineFor, type CustomerDef } from '../shop/customerManager';
 import { OrderManager, type ActiveOrder, type RoundSticker } from '../shop/orderManager';
 import type { AttemptOutcome, ChallengePresentation } from '../learning/types';
@@ -27,6 +30,7 @@ import { Parade } from './parade';
 import { parentArea } from './parentArea';
 import { ResultsOverlay } from './ResultsOverlay';
 import { scoopOntoCone } from './serveAnimation';
+import { ClosetMode } from './closetMode';
 import { PlacedDecorations } from './decorArt';
 import { DecorateMode } from './decorateMode';
 import { drawShopRoom } from './shopArt';
@@ -61,6 +65,8 @@ export class ShopScene extends Phaser.Scene {
   private registerPanel!: Phaser.GameObjects.Graphics;
   /** Decorate, while it is open (the e2e test drives it through `__ssa`). */
   private decorate: DecorateMode | null = null;
+  /** Momo's Closet, while it is open (the e2e test drives it through `__ssa`). */
+  private closet: ClosetMode | null = null;
 
   constructor() {
     super('Shop');
@@ -90,7 +96,7 @@ export class ShopScene extends Phaser.Scene {
     this.placed.draw(this.manager.profile.decorations);
     this.registerPanel = this.drawRegisterPanel();
 
-    this.shopkeeper = new CharacterView(this, LAYOUT.shopkeeper.x, 530, this.shopkeeperLook()).setDepth(20).idle(true);
+    this.shopkeeper = this.makeShopkeeper();
 
     this.status = new StatusBar(this, () => this.openParentGate());
     this.status.setSprinkles(this.manager.profile.sprinkles);
@@ -157,10 +163,13 @@ export class ShopScene extends Phaser.Scene {
     return customer;
   }
 
-  /** The newest added shopkeeper, else Momo. */
-  private shopkeeperLook(): AnyLook {
+  /** The newest added shopkeeper, else Momo in what she has on from her Closet. */
+  private makeShopkeeper(): CharacterView {
     const added = chosenShopkeeper(this.services.characters.list());
-    return (added && addedLook(this, added)) || friendLook('momo');
+    const look = added && addedLook(this, added);
+    const view = new CharacterView(this, LAYOUT.shopkeeper.x, 530, look || friendLook('momo')).setDepth(20);
+    if (!look) dressMomo(view, equippedItems(this.manager.profile), MOMO_SHEETS);
+    return view.idle(true);
   }
 
   private customerLook(def: CustomerDef): AnyLook {
@@ -304,7 +313,8 @@ export class ShopScene extends Phaser.Scene {
     const treat = this.add.container(LAYOUT.counter.x + 80, LAYOUT.counter.y - 40).setDepth(45);
     this.treat = treat;
     treat.add(this.add.image(0, 0, 'cone').setScale(6).setOrigin(0.5, 0));
-    const server = { keeper: this.shopkeeper, scooper: 'wooden' as const };
+    const scooper: ScooperId = equippedIn(this.manager.profile, 'handheld')?.tier ?? 'wooden';
+    const server = { keeper: this.shopkeeper, scooper };
     await scoopOntoCone(this, server, treat, flavor, Phaser.Math.Clamp(answer || 1, 1, 4));
     return treat;
   }
@@ -352,6 +362,7 @@ export class ShopScene extends Phaser.Scene {
     let closed = false;
     const overlay = new ResultsOverlay(this, summary, stickers, {
       onDecorate: () => this.openDecorate([overlay, ...parade]),
+      onCloset: () => this.openCloset(),
       onContinue: () => {
         if (closed) return;
         closed = true;
@@ -391,6 +402,22 @@ export class ShopScene extends Phaser.Scene {
       onClose: () => {
         this.decorate = null;
         show(true);
+        this.status.setSprinkles(this.manager.profile.sprinkles);
+      },
+    });
+  }
+
+  /** Opens Momo's Closet over everything; Momo comes back to the counter in what she chose. */
+  private openCloset(): void {
+    if (this.closet || this.decorate) return;
+    this.closet = new ClosetMode({
+      scene: this,
+      profile: () => this.manager.profile,
+      save: () => this.saveNow(),
+      onClose: () => {
+        this.closet = null;
+        this.shopkeeper.destroy();
+        this.shopkeeper = this.makeShopkeeper().setExpression('happy');
         this.status.setSprinkles(this.manager.profile.sprinkles);
       },
     });

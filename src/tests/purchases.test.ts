@@ -13,6 +13,8 @@ import {
 } from '../shop/catalog';
 import {
   buyItem,
+  equippedIn,
+  equippedItems,
   isInUse,
   offerFor,
   owns,
@@ -211,5 +213,24 @@ describe('offerFor and takeOffer', () => {
     expect(takeOffer(p, lamp)).toBe('used');
     expect(p.decorations).toEqual([{ itemId: 'deco-lamp.pink', spot: 'counter-top' }]);
     expect(p.sprinkles).toBe(0);
+  });
+});
+
+describe('what Momo has on', () => {
+  it('lists equipped items and finds the one in a slot', () => {
+    const { p } = player(2000);
+    expect(equippedItems(p)).toEqual([]);
+    expect(equippedIn(p, 'handheld')).toBeUndefined();
+    buyItem(p, 'scooper.golden');
+    buyItem(p, 'glasses-heart.mint');
+    buyItem(p, 'hearing-aids.rainbow');
+    expect(equippedIn(p, 'handheld')?.tier).toBe('golden');
+    expect(
+      equippedItems(p)
+        .map((i) => i.id)
+        .sort(),
+    ).toEqual(['glasses-heart.mint', 'hearing-aids.rainbow', 'scooper.golden']);
+    p.equipped.hat = 'hat-gone.pink'; // an id no longer in the catalog is skipped
+    expect(equippedItems(p)).toHaveLength(3);
   });
 });
