@@ -73,7 +73,7 @@ src/
   shop/
     orderManager.ts          round/order state machine; persists every step
     rewards.ts               the only place Sprinkles are calculated and paid
-    roundReport.ts           text for the grown-ups "Progress by round" pages
+    progressReport.ts        numbers and words for the grown-ups Progress screen
     customerManager.ts       customer roster and lineup
     catalog.ts               item catalog (prices live only here)
   save/
@@ -90,7 +90,7 @@ src/
     ResultsOverlay.ts        end-of-round card drawn over the shop
     shopArt.ts               procedural room, props, decorations
   ui/                        NumberKeypad, OrderPanel (+ SpeechBubble), VisualAidView,
-                             StatusBar, ParentGate, Button, theme
+                             StatusBar, ParentGate, ProgressScreen, Button, theme
   tests/                     Vitest suites
 ```
 
@@ -136,7 +136,7 @@ All positions come from `LAYOUT` in `src/ui/theme.ts`, built by `layoutFor(scree
 
 Press and hold the ⚙ button in the top-right corner for about a second, then type the number shown in words. Inside: progress per operation, facts that need practice, and these actions:
 
-- **Progress by round**: every finished round, newest first, a few per page. Each shows when it started, how long it took, first-try / second-try / shown counts, Sprinkles earned, and which questions needed a second try or had their answer shown. The time is active play: any gap between taps counts as 2 minutes at most (`GAME_CONFIG.round.playTimeIdleCapMs`), so a round left open overnight still shows minutes. Rounds finished before this was added say "time not recorded". None of this appears outside the grown-ups area.
+- **Progress**: a switch in the top-left corner (mirroring Close) flips between two views. **Rounds** shows totals (rounds played, time playing, % right first try) over a 2x2 grid of cards, newest first with Newer/Older pages. Each card has when the round was played, how long it took, the first-try count, one dot per order (green first try, blue 2nd try, pink answer shown) and up to three questions to practise. **Overview** shows the last 7 days (rounds, time playing, average round length), a bar for each of the last 10 rounds, and the questions that needed help most in the last 5 rounds. Time is active play: any gap between taps counts as 2 minutes at most (`GAME_CONFIG.round.playTimeIdleCapMs`), so a round left open overnight still shows minutes. Rounds finished before timing was added show a dash. Page sizes and look-backs are in `GAME_CONFIG.parentArea`. None of this appears outside the grown-ups area.
 - **Save a backup file**: the whole save as JSON, through the share sheet on iPad and iPhone (Save to Files, AirDrop, Mail) or as a download elsewhere.
 - **Load a backup file**: picks a file, checks it the same way a save is checked on load, shows whose progress it holds, and replaces the current progress only after a confirmation. The replaced progress is kept aside in storage, not deleted.
 - **Restore previous save**, **Reset learning progress**, **Reset whole profile**, each with a confirmation step.

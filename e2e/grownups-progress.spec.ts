@@ -1,14 +1,19 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
-interface TextObj {
+interface GameObj {
   type: string;
-  text: string;
+  text?: string;
+  x: number;
   y: number;
+  originX: number;
+  width: number;
   height: number;
+  list?: GameObj[];
+  emit: (event: string) => void;
 }
 interface Gate {
   showMenu: () => void;
-  content: { list: TextObj[] };
+  content: { list: GameObj[] };
 }
 interface Hook {
   scene: {
@@ -18,66 +23,110 @@ interface Hook {
   };
 }
 type HookWindow = Window & { __ssa?: Hook };
+interface Shown {
+  texts: string[];
+  /** Texts that spill past the panel's content area or into the bottom buttons. */
+  outside: string[];
+}
 
 const SAVE_KEY = 'sweet-scoops-academy.save';
 
-test('grown-ups see each round with its play time, on pages that fit the screen', async ({ page }, testInfo) => {
+/** One round from before timing existed, then timed rounds over the last few days. */
+async function seedHistory(page: Page): Promise<void> {
+  await page.evaluate((key) => {
+    const save = JSON.parse(localStorage.getItem(key)!);
+    const hour = 3_600_000;
+    const outcomes: [number, number, number][] = [
+      [9, 1, 0],
+      [7, 2, 1],
+      [8, 2, 0],
+      [6, 3, 1],
+      [10, 0, 0],
+      [5, 3, 2],
+    ];
+    const facts = ['12 × 12', '7 × 8', '96 ÷ 12', '6 × 7', '84 ÷ 12', '99 ÷ 11', '8 × 4'];
+    const round = ([first, retry, miss]: [number, number, number], n: number) => {
+      const startedAt = Date.now() - (outcomes.length - n) * 20 * hour;
+      return {
+        roundNumber: n + 1,
+        startedAt: n === 0 ? null : startedAt,
+        finishedAt: startedAt + 400_000,
+        playMs: n === 0 ? null : 300_000 + n * 60_000,
+        ordersCompleted: 10,
+        firstTryCorrect: first,
+        retryCorrect: retry,
+        missed: miss,
+        orderSprinkles: first * 10 + retry * 5 + miss * 2,
+        completionBonus: 10,
+        perfectBonus: first === 10 ? 50 : 0,
+        total: first * 10 + retry * 5 + miss * 2 + 10 + (first === 10 ? 50 : 0),
+        perfect: first === 10,
+        retryFacts: facts.slice(n % 3, (n % 3) + retry),
+        missFacts: facts.slice(4, 4 + miss),
+      };
+    };
+    save.profiles[save.activeProfileId].roundHistory = outcomes.map(round);
+    localStorage.setItem(key, JSON.stringify(save));
+  }, SAVE_KEY);
+}
+
+/** Texts on the gate's current screen, and any that spill outside the content area. */
+function readScreen(page: Page): Promise<Shown> {
+  return page.evaluate(() => {
+    const gate = (window as HookWindow).__ssa!.scene.gate!;
+    const texts = gate.content.list.filter((o) => o.type === 'Text');
+    const left = (t: GameObj) => t.x - t.originX * t.width;
+    const outside = texts.filter((t) => left(t) < 200 || left(t) + t.width > 1080 || t.y + t.height > 700);
+    return { texts: texts.map((t) => t.text!), outside: outside.map((t) => t.text!) };
+  });
+}
+
+function tapButton(page: Page, label: string): Promise<void> {
+  return page.evaluate((label) => {
+    const gate = (window as HookWindow).__ssa!.scene.gate!;
+    const button = gate.content.list.find((o) => o.list?.some((c) => c.text === label))!;
+    button.emit('pointerdown');
+    button.emit('pointerup');
+  }, label);
+}
+
+test('grown-ups see round cards and an overview, switched from the top left', async ({ page }, testInfo) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(String(e)));
   await page.goto('./?e2e&fast');
   await page.evaluate(() => localStorage.clear());
   await page.reload();
   await page.waitForFunction(() => (window as HookWindow).__ssa !== undefined);
-
-  // Give the save a history: one round from before timing existed, then several timed rounds that needed help.
-  await page.evaluate((key) => {
-    const save = JSON.parse(localStorage.getItem(key)!);
-    const base = { ordersCompleted: 10, firstTryCorrect: 1, retryCorrect: 5, missed: 4, orderSprinkles: 43 };
-    const round = (n: number, timed: boolean) => ({
-      ...base,
-      roundNumber: n,
-      startedAt: timed ? Date.now() - (8 - n) * 3_600_000 : null,
-      finishedAt: Date.now() - (8 - n) * 3_600_000 + 400_000,
-      playMs: timed ? 400_000 + n * 1000 : null,
-      completionBonus: 10,
-      perfectBonus: 0,
-      total: 53,
-      perfect: false,
-      retryFacts: ['12 × 12', '11 × 12', '96 ÷ 12', '84 ÷ 12', '7 × 8'],
-      missFacts: ['12 × 11', '99 ÷ 11', '6 × 7', '72 ÷ 12'],
-    });
-    const profile = save.profiles[save.activeProfileId];
-    profile.roundHistory = [round(1, false), ...[2, 3, 4, 5, 6].map((n) => round(n, true))];
-    localStorage.setItem(key, JSON.stringify(save));
-  }, SAVE_KEY);
+  await seedHistory(page);
   await page.reload();
   await page.waitForFunction(() => (window as HookWindow).__ssa !== undefined);
 
-  const shown = await page.evaluate(() => {
+  await page.evaluate(() => {
     const { scene } = (window as HookWindow).__ssa!;
     scene.openParentGate();
-    const gate = scene.gate!;
-    gate.showMenu(); // skip the number challenge
+    scene.gate!.showMenu(); // skip the number challenge
     scene
       .parentActions()
-      .find((a) => a.label === 'Progress by round')!
-      .run(gate);
-    const texts = gate.content.list.filter((o) => o.type === 'Text');
-    return {
-      title: texts[0]!.text,
-      body: texts[1]!.text,
-      bottom: texts[1]!.y + texts[1]!.height,
-      pageNote: texts[2]?.text,
-    };
+      .find((a) => a.label === 'Progress')!
+      .run(scene.gate!);
   });
 
-  expect(shown.title).toBe('Progress by round');
-  expect(shown.pageNote).toBe('Page 1 of 2');
-  expect(shown.body).toMatch(/^6 rounds finished {3}· {3}\d+ min \d+ s of play \(1 older round not timed\)/);
-  expect(shown.body).toMatch(/Round 6 {3}· {3}6 min 46 s/);
-  expect(shown.body).toContain('Answer shown: 12 × 11, 99 ÷ 11, 6 × 7, 72 ÷ 12');
-  expect(shown.bottom).toBeLessThan(680); // clear of the page number and the Newer / Back / Older buttons
+  const rounds = await readScreen(page);
+  expect(rounds.texts).toEqual(expect.arrayContaining(['Progress', '6', 'rounds played', '75%', '★ 5', '★ 10']));
+  expect(rounds.texts).toContain('Perfect round!');
+  expect(rounds.texts.filter((t) => t.startsWith('Practise:'))).toHaveLength(3);
+  expect(rounds.outside).toEqual([]);
+  await page.screenshot({ path: testInfo.outputPath('progress-rounds.png') });
 
-  await page.screenshot({ path: testInfo.outputPath('progress-report.png') });
+  await tapButton(page, 'Older');
+  const older = await readScreen(page);
+  expect(older.texts).toContain('–'); // the round from before timing existed
+  expect(older.outside).toEqual([]);
+
+  await tapButton(page, 'Overview');
+  const overview = await readScreen(page);
+  expect(overview.texts).toEqual(expect.arrayContaining(['Last 10 rounds', 'Needs practice', '84 ÷ 12']));
+  expect(overview.outside).toEqual([]);
+  await page.screenshot({ path: testInfo.outputPath('progress-overview.png') });
   expect(errors).toEqual([]);
 });

@@ -16,13 +16,13 @@ import { resetSubjectProgress, subjectProgress } from '../save/saveTypes';
 import type { RoundSummary } from '../save/saveTypes';
 import { itemById } from '../shop/catalog';
 import { lineFor, type CustomerDef } from '../shop/customerManager';
-import { roundReportPages } from '../shop/roundReport';
 import { OrderManager, type ActiveOrder } from '../shop/orderManager';
 import type { AttemptOutcome, ChallengePresentation } from '../learning/types';
 import { Button } from '../ui/Button';
 import { NumberKeypad } from '../ui/NumberKeypad';
 import { OrderPanel, SpeechBubble } from '../ui/OrderPanel';
 import { ParentGate, type ParentAction } from '../ui/ParentGate';
+import { showProgress } from '../ui/ProgressScreen';
 import { StatusBar } from '../ui/StatusBar';
 import { COLORS, CSS, LAYOUT, text } from '../ui/theme';
 import { VisualAidView } from '../ui/VisualAidView';
@@ -361,9 +361,9 @@ export class ShopScene extends Phaser.Scene {
     const save = this.services.load.save;
     return [
       {
-        label: 'Progress by round',
+        label: 'Progress',
         enabled: true,
-        run: (gate) => gate.report('Progress by round', roundReportPages(this.manager.profile.roundHistory)),
+        run: (gate) => showProgress(gate, this, this.manager.profile.roundHistory),
       },
       ...backupActions(this.services, () => this.scene.restart()),
       {
