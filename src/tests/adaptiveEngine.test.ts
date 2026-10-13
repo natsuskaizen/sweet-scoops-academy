@@ -7,12 +7,15 @@ import type { SkillProgress } from '../learning/types';
 
 const ctx = (roundNumber: number) => ({ roundNumber, now: 1_000 * roundNumber });
 
-function freshProgress(): MathProgress {
-  return mathSubject.createProgress();
+/** Default config enables multiplication and division, so both records exist. */
+type TwoOps = MathProgress & Record<'multiplication' | 'division', SkillProgress>;
+
+function freshProgress(): TwoOps {
+  return mathSubject.createProgress() as TwoOps;
 }
 
 /** Plays `rounds` rounds where `answer(key)` decides each outcome. */
-function simulate(p: MathProgress, rounds: number, answer: (key: string) => 'first' | 'retry' | 'miss', seed = 1, startRound = 1) {
+function simulate(p: TwoOps, rounds: number, answer: (key: string) => 'first' | 'retry' | 'miss', seed = 1, startRound = 1) {
   const plans: string[][] = [];
   for (let r = startRound; r < startRound + rounds; r++) {
     const plan = mathSubject.planRound(p, { roundNumber: r, rng: createRng(seed + r), now: r, count: 10 });

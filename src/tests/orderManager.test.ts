@@ -67,7 +67,7 @@ describe('OrderManager', () => {
     const { order, presentation } = manager.current()!;
     manager.submit(presentation.correctAnswer);
     const skill = manager.profile.learning.math[order.spec.skillId];
-    expect(skill.facts[order.spec.factKey]).toMatchObject({ presentations: 1, firstTryCorrect: 1 });
+    expect(skill!.facts[order.spec.factKey]).toMatchObject({ presentations: 1, firstTryCorrect: 1 });
   });
 
   it('resumes after a reload without paying twice or changing the questions', () => {

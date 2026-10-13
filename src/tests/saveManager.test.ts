@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { ChallengeSpec } from '../learning/types';
 import { MemoryStorage, SAVE_KEYS, SaveManager, createSaveFile } from '../save/saveManager';
 import { SAVE_SCHEMA_VERSION } from '../save/saveTypes';
 import { validateSaveFile } from '../save/saveValidation';
@@ -82,7 +83,7 @@ describe('SaveManager', () => {
     p.currentRound = {
       id: 'r1', roundNumber: 1, seed: 1, startedAt: 1, currentIndex: 0, bonusPaid: false, bonus: null,
       orders: [{
-        spec: { subjectId: 'math', skillId: 'division', factKey: 'div:99/9', left: 99, right: 9, answer: 11 },
+        spec: { subjectId: 'math', skillId: 'division', factKey: 'div:99/9', left: 99, right: 9, answer: 11 } as ChallengeSpec,
         customerId: 'berry', attempts: 0, outcome: null, paid: false, sprinklesPaid: 0,
       }],
     };

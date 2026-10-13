@@ -73,6 +73,10 @@ export type VisualAid =
   | { kind: 'groups'; groups: number; perGroup: number; showTotal: boolean; caption: string }
   /** `total` scoops shared into `groups` cups; perGroup=null means "not shared yet" (hint). */
   | { kind: 'share'; total: number; groups: number; perGroup: number | null; caption: string }
+  /** Separate piles of scoops (addition); showTotal adds a running total under each. */
+  | { kind: 'combine'; parts: number[]; showTotal: boolean; caption: string }
+  /** `total` scoops with `remove` of them taken away (subtraction); showResult crosses them out. */
+  | { kind: 'takeAway'; total: number; remove: number; showResult: boolean; caption: string }
   | { kind: 'text'; caption: string };
 
 /** Customer-flavoured context the shop passes in so order text can be themed. */
@@ -118,4 +122,6 @@ export interface LearningSubject<S extends ChallengeSpec, P> {
   checkAnswer(spec: S, input: string): boolean;
   /** Mutates `progress` to record how the challenge went. */
   recordOutcome(progress: P, spec: S, outcome: AttemptOutcome, ctx: OutcomeContext): void;
+  /** Read-only lines about this child's progress for the grown-ups area. */
+  progressReport(progress: P): string[];
 }

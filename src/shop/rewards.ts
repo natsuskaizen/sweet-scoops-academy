@@ -3,14 +3,14 @@
  * and paid here, and every payout is guarded by a persisted `paid` flag so a
  * double tap, a reload or an interrupted animation can never pay twice.
  */
+import { GAME_CONFIG, type RewardConfig } from '../config/gameConfig';
 import type { AttemptOutcome } from '../learning/types';
 
-export const REWARDS = {
-  perOrder: { first: 10, retry: 5, miss: 2 } satisfies Record<AttemptOutcome, number>,
-  completionBonus: 10,
-  perfectBonus: 50,
-  ordersPerRound: 10,
-} as const;
+/** Reward amounts (from GAME_CONFIG.rewards) plus the round size bonuses depend on. */
+export const REWARDS: RewardConfig & { ordersPerRound: number } = {
+  ...GAME_CONFIG.rewards,
+  ordersPerRound: GAME_CONFIG.round.ordersPerRound,
+};
 
 export interface Wallet {
   sprinkles: number;
