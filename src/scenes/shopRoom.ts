@@ -10,9 +10,15 @@
  * Art coordinates: the room canvas starts at the top of the shop area. The
  * door, wall line and counter follow LAYOUT, so moving them in theme.ts
  * moves the art too.
+ *
+ * Wall paint and doors bought in Decorate repaint the room: `RoomLook` says
+ * which are in use, and each look is its own texture.
  */
 import { FLAVOR_COLORS } from '../characters/sprites';
-import { LAYOUT } from '../ui/theme';
+import { tierPixel, tint, TIER_COLORS } from '../characters/tierColors';
+import type { CatalogItem, TierId } from '../shop/catalog';
+import { LAYOUT, type Rect } from '../ui/theme';
+import { DOOR_ART, DOOR_W } from './doorArt';
 import type { Pixels } from './roomPixels';
 
 export const ROOM_SCALE = 4;
@@ -85,35 +91,104 @@ function doorArt() {
   return { x: artX(LAYOUT.door.x), y: artY(LAYOUT.door.y), w: artX(LAYOUT.door.w), wall: artY(LAYOUT.wallBottom) };
 }
 
-export function paintRoom(p: Pixels): void {
-  paintWall(p);
+/** The door and its frame, in art pixels: what a bought door is painted over. */
+export function doorFrame(): Rect {
+  const d = doorArt();
+  return { x: d.x - 2, y: d.y - 2, w: d.w + 4, h: d.wall - d.y + 2 };
+}
+
+/** The door and its frame in game pixels. */
+export function doorFrameRect(): Rect {
+  const f = doorFrame();
+  return { x: f.x * ROOM_SCALE, y: LAYOUT.shop.y + f.y * ROOM_SCALE, w: f.w * ROOM_SCALE, h: f.h * ROOM_SCALE };
+}
+
+/** The wall paint (its tier) and the door in use; null for the room's own. */
+export interface RoomLook {
+  wall: TierId | null;
+  door: CatalogItem | null;
+}
+
+export const PLAIN_ROOM: RoomLook = { wall: null, door: null };
+
+export function paintRoom(p: Pixels, look: RoomLook = PLAIN_ROOM): void {
+  paintWall(p, wallColors(look.wall));
   paintFloor(p);
   paintWindow(p);
-  paintDoor(p);
+  paintDoor(p, look.door);
   paintSign(p);
   paintDisplayCase(p);
 }
 
+/** A colour per stripe, scallop or panel (the i-th), so Sparkly Rainbow runs in bands. */
+type Band = (i: number) => string;
+
+export interface WallColors {
+  base: string;
+  stripe: Band;
+  heart: string;
+  valance: Band;
+  valanceShade: Band;
+  rail: string;
+  wainscot: string;
+  panel: Band;
+  panelLine: Band;
+}
+
+const PLAIN_WALL: WallColors = {
+  base: C.cream,
+  stripe: () => C.stripe,
+  heart: C.heart,
+  valance: () => C.pink,
+  valanceShade: () => C.pinkDark,
+  rail: C.mint,
+  wainscot: C.wainscot,
+  panel: () => C.panel,
+  panelLine: () => C.panelLine,
+};
+
+/** The wall's colours: the strawberry parlour's own, or wall paint in a tier's colours. */
+export function wallColors(tier: TierId | null): WallColors {
+  if (!tier) return PLAIN_WALL;
+  const { main, shade } = TIER_COLORS[tier];
+  const band =
+    (colors: readonly string[], amount: number): Band =>
+    (i) =>
+      tint(colors[Math.floor(i) % colors.length]!, amount);
+  const plain = main.length === 1;
+  return {
+    base: plain ? tint(main[0]!, 0.82) : C.cream,
+    stripe: band(main, 0.5),
+    heart: plain ? tint(shade[0]!, 0.35) : C.white,
+    valance: band(main, 0),
+    valanceShade: band(shade, 0),
+    rail: C.white,
+    wainscot: plain ? tint(main[0]!, 0.35) : C.creamDark,
+    panel: band(main, 0.62),
+    panelLine: band(shade, 0.15),
+  };
+}
+
 const HEART = ['p.p', 'ppp', '.p.'];
 
-function paintWall(p: Pixels): void {
+function paintWall(p: Pixels, c: WallColors): void {
   const { w } = roomArt();
   const wall = artY(LAYOUT.wallBottom);
   // Striped wallpaper with little hearts.
-  p.rect(0, 0, w, wall, C.cream);
-  for (let x = 0; x < w; x += 12) p.rect(x, 0, 6, wall, C.stripe);
+  p.rect(0, 0, w, wall, c.base);
+  for (let x = 0; x < w; x += 12) p.rect(x, 0, 6, wall, c.stripe(x / 12));
   for (let x = 9; x < w; x += 24) {
-    for (let y = 30; y < 96; y += 18) p.stamp(HEART, x, y + ((x / 24) % 2) * 9, { p: C.heart });
+    for (let y = 30; y < 96; y += 18) p.stamp(HEART, x, y + ((x / 24) % 2) * 9, { p: c.heart });
   }
   // Scalloped valance along the ceiling.
-  p.rect(0, 0, w, 4, C.pink);
-  for (let x = 0; x < w; x += 8) p.disc(x + 4, 4, 3, C.pink).rect(x + 3, 7, 3, 1, C.pinkDark);
-  // Wainscot panels under a mint rail.
+  p.rect(0, 0, w, 4, c.valance(0));
+  for (let x = 0; x < w; x += 8) p.disc(x + 4, 4, 3, c.valance(x / 8)).rect(x + 3, 7, 3, 1, c.valanceShade(x / 8));
+  // Wainscot panels under a rail.
   const rail = wall - 25;
-  p.rect(0, rail, w, 25, C.wainscot)
-    .rect(0, rail, w, 2, C.mint)
+  p.rect(0, rail, w, 25, c.wainscot)
+    .rect(0, rail, w, 2, c.rail)
     .rect(0, rail + 2, w, 1, C.outline);
-  for (let x = 4; x < w; x += 20) p.box(x, rail + 5, 16, 16, { fill: C.panel, line: C.panelLine });
+  for (let x = 4; x < w; x += 20) p.box(x, rail + 5, 16, 16, { fill: c.panel(x / 20), line: c.panelLine(x / 20) });
   p.rect(0, wall - 1, w, 1, C.outline);
 }
 
@@ -155,7 +230,25 @@ function paintWindow(p: Pixels): void {
   for (let fx = x + 2; fx < x + w - 2; fx += 7) p.stamp(FLOWER, fx, y + h - 5, { p: C.pink, y: C.sun, g: C.mintDark });
 }
 
-function paintDoor(p: Pixels): void {
+/** Colours of a bought door's fixed pixels; `L` and `l` take its tier's. */
+const DOOR_FIXED: Record<string, string> = {
+  o: C.outline,
+  t: C.wood,
+  B: C.sky,
+  w: C.white,
+  k: C.brass,
+  S: C.pinkDark,
+  p: C.pink,
+};
+
+function paintDoor(p: Pixels, door: CatalogItem | null): void {
+  const rows = door && DOOR_ART[door.asset];
+  if (!door || !rows) return paintPlainDoor(p);
+  const f = doorFrame();
+  p.paint(rows, f.x, f.y, (ch, x) => tierPixel(door.tier, ch, x, DOOR_W) ?? DOOR_FIXED[ch] ?? null);
+}
+
+function paintPlainDoor(p: Pixels): void {
   const d = doorArt();
   p.box(d.x - 2, d.y - 2, d.w + 4, d.wall - d.y + 2, C.wood);
   p.box(d.x + 1, d.y + 1, d.w - 2, d.wall - d.y - 1, C.curtain);

@@ -6,7 +6,13 @@ export interface Hook {
     keypad: { isEnabled: boolean };
     scale: { gameSize: { width: number; height: number } };
     results: { x: number; y: number } | null;
-    decorate: { pick: (tier: string) => void; act: () => void; close: () => void } | null;
+    decorate: {
+      pick: (tier: string) => void;
+      act: () => void;
+      close: () => void;
+      selectById: (id: string) => void;
+      turnPage: (step: number) => void;
+    } | null;
     closet: {
       showTab: (tab: string) => void;
       pick: (tier: string) => void;
@@ -14,6 +20,9 @@ export interface Hook {
       close: () => void;
     } | null;
     shopkeeper: { list: { texture: { key: string } }[] };
+    placed: { room: { texture: { key: string } } };
+    aid: { visible: boolean };
+    bubble: { visible: boolean; hide: () => void };
     showResults: (summary: object, stickers: [], outcomes: []) => Promise<void>;
   };
   manager: () => {

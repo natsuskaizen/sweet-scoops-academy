@@ -91,8 +91,7 @@ export class ShopScene extends Phaser.Scene {
 
     this.parentArea = parentArea({ scene: this, services: this.services, profile: () => this.manager.profile });
 
-    drawShopRoom(this);
-    this.placed = new PlacedDecorations(this);
+    this.placed = new PlacedDecorations(this, drawShopRoom(this));
     this.placed.draw(this.manager.profile.decorations);
     this.registerPanel = this.drawRegisterPanel();
 
@@ -381,19 +380,29 @@ export class ShopScene extends Phaser.Scene {
   // Decorate
   // -------------------------------------------------------------------------
 
-  /** Opens Decorate from the results card: the register and `cover` hide until it closes. */
+  /**
+   * Opens Decorate from the results card: the register and `cover` hide until
+   * it closes. Each comes back as it was, so what was already hidden (the
+   * hint board, the speech bubble) stays hidden.
+   */
   private openDecorate(cover: Phaser.GameObjects.GameObject[]): void {
     if (this.decorate) return;
-    const hidden = [this.registerPanel, this.ticket, this.aid, this.bubble, this.customer, this.treat, ...cover].filter(
-      (o) => o !== null,
-    ) as unknown as {
+    const parts = [
+      this.registerPanel,
+      this.ticket,
+      this.aid,
+      this.bubble,
+      this.customer,
+      this.treat,
+      ...cover,
+      this.keypad,
+    ];
+    const hidden = parts.filter((o) => o !== null) as unknown as {
+      visible: boolean;
       setVisible: (v: boolean) => void;
     }[];
-    const show = (visible: boolean) => {
-      hidden.forEach((o) => o.setVisible(visible));
-      this.keypad.setVisible(visible);
-    };
-    show(false);
+    const wasVisible = hidden.map((o) => o.visible);
+    hidden.forEach((o) => o.setVisible(false));
     this.decorate = new DecorateMode({
       scene: this,
       profile: () => this.manager.profile,
@@ -401,7 +410,7 @@ export class ShopScene extends Phaser.Scene {
       save: () => this.saveNow(),
       onClose: () => {
         this.decorate = null;
-        show(true);
+        hidden.forEach((o, i) => o.setVisible(wasVisible[i]!));
         this.status.setSprinkles(this.manager.profile.sprinkles);
       },
     });

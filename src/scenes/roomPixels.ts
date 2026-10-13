@@ -43,9 +43,14 @@ export class Pixels {
 
   /** Stamps a text pixel map; characters missing from `colors` are transparent. */
   stamp(rows: readonly string[], x: number, y: number, colors: Record<string, string>): this {
+    return this.paint(rows, x, y, (ch) => colors[ch] ?? null);
+  }
+
+  /** Stamps a text pixel map, asking `colorFor` for each pixel's colour (null is transparent). */
+  paint(rows: readonly string[], x: number, y: number, colorFor: (ch: string, dx: number) => string | null): this {
     rows.forEach((row, dy) => {
       for (let dx = 0; dx < row.length; dx++) {
-        const color = colors[row[dx]!];
+        const color = colorFor(row[dx]!, dx);
         if (color) this.rect(x + dx, y + dy, 1, 1, color);
       }
     });
