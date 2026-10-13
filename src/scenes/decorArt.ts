@@ -156,9 +156,18 @@ export const DECOR_ART: Readonly<Record<string, readonly string[]>> = {
   'deco-rug': rug(),
 };
 
-/** Screen pixels per art pixel for each design: furniture is drawn a little chunkier than the walls so it reads next to the customers. */
-const DECOR_SCALE: Readonly<Record<string, number>> = { 'deco-cafe': 6 };
+/** Screen pixels per art pixel for each design: furniture is drawn chunkier than the walls so it reads next to the customers. */
+const DECOR_SCALE: Readonly<Record<string, number>> = { 'deco-cafe': 8 };
 const DEFAULT_DECOR_SCALE = 5;
+
+const scaleOf = (asset: string): number => DECOR_SCALE[asset] ?? DEFAULT_DECOR_SCALE;
+
+/** How big a design is drawn in the room, in game pixels (0 x 0 for a design with no art). */
+export function decorSize(asset: string): { w: number; h: number } {
+  const rows = DECOR_ART[asset];
+  if (!rows) return { w: 0, h: 0 };
+  return { w: rows[0]!.length * scaleOf(asset), h: rows.length * scaleOf(asset) };
+}
 
 /** The item's texture (its design drawn in its tier's colours), or null for a design with no art. */
 export function decorationTexture(scene: Phaser.Scene, item: CatalogItem): string | null {
@@ -185,10 +194,7 @@ export function drawDecoration(scene: Phaser.Scene, item: CatalogItem, at: Point
   const box = scene.add.container(at.x, at.y).setDepth(depthFor(item));
   const key = decorationTexture(scene, item);
   if (!key) return box;
-  const image = scene.add
-    .image(0, 0, key)
-    .setOrigin(0.5, 1)
-    .setScale(DECOR_SCALE[item.asset] ?? DEFAULT_DECOR_SCALE);
+  const image = scene.add.image(0, 0, key).setOrigin(0.5, 1).setScale(scaleOf(item.asset));
   box.add(image);
   if (item.tier === 'rainbow') twinkle(scene, box, image.displayWidth, image.displayHeight);
   return box;

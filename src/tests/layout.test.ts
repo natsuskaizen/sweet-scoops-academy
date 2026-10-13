@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { decorSize } from '../scenes/decorArt';
 import { tubSpot } from '../scenes/shopRoom';
+import { designsIn } from '../shop/catalog';
 import {
   decorTrayRect,
   layoutFor,
@@ -92,20 +94,32 @@ describe('tubSpot', () => {
 
 describe('decorating layout', () => {
   const overlaps = (a: Rect, b: Rect) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
-  const screens = [layoutFor(1180, 820), layoutFor(393, 852), layoutFor(820, 1180)];
+  const screens = [layoutFor(1180, 820), layoutFor(393, 852), layoutFor(375, 667), layoutFor(820, 1180)];
 
-  it('keeps every decoration spot on screen and clear of the tray and the colour card', () => {
+  it('keeps every decoration on screen and clear of the tray and the colour card', () => {
     for (const l of screens) {
       const tray = decorTrayRect(l);
-      for (const [spot, at] of Object.entries(l.decorSpots)) {
-        // A generous box for the biggest piece standing on the spot.
-        const piece = { x: at.x - 130, y: at.y - 100, w: 260, h: 100 };
-        expect(at.x, spot).toBeGreaterThan(0);
-        expect(at.x, spot).toBeLessThan(l.width);
-        expect(at.y, spot).toBeLessThanOrEqual(tray.y);
-        expect(overlaps(piece, tierCardRect(l, at)), `${l.orientation} ${spot}`).toBe(false);
+      for (const design of designsIn('decorate')) {
+        if (design.placement.kind !== 'shop') continue;
+        const at = l.decorSpots[design.placement.spot];
+        const { w, h } = decorSize(design.asset);
+        // The piece as drawn (bottom centre on the spot), with the preview outline's margin.
+        const piece = { x: at.x - w / 2 - 12, y: at.y - h - 12, w: w + 24, h: h + 24 };
+        const name = `${l.orientation} ${design.id}`;
+        expect(w * h, name).toBeGreaterThan(0);
+        expect(piece.x, name).toBeGreaterThanOrEqual(0);
+        expect(piece.x + piece.w, name).toBeLessThanOrEqual(l.width);
+        expect(piece.y, name).toBeGreaterThanOrEqual(l.shop.y);
+        expect(at.y, name).toBeLessThanOrEqual(tray.y);
+        expect(overlaps(piece, tierCardRect(l, at)), name).toBe(false);
         expect(overlaps(tierCardRect(l, at), tray)).toBe(false);
       }
     }
+  });
+
+  it('draws the café set big enough to sit at, next to the customers', () => {
+    const { w, h } = decorSize('deco-cafe');
+    expect(h).toBeGreaterThanOrEqual(120);
+    expect(w).toBeGreaterThanOrEqual(300);
   });
 });

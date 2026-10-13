@@ -150,7 +150,7 @@ function landscapeLayout(): Layout {
     decorSpots: {
       ...DECOR_SPOTS,
       'wall-right': { x: 1040, y: 340 },
-      'floor-right': { x: 1040, y: 690 },
+      'floor-right': { x: 1030, y: 690 },
       // Clear of Decorate's tray, just behind where customers stand.
       'floor-center': { x: 360, y: 696 },
     },
@@ -196,7 +196,8 @@ function portraitLayout(screenAspect: number): Layout {
       gearX: 762,
     },
     ...SHOP_PARTS,
-    decorSpots: { ...DECOR_SPOTS, 'wall-right': { x: 708, y: 300 }, 'floor-right': { x: 420, y: 940 } },
+    // The café set stands on the floor below the counter, clear of the rug and the tray.
+    decorSpots: { ...DECOR_SPOTS, 'wall-right': { x: 708, y: 300 }, 'floor-right': { x: 440, y: 1000 } },
     registerArea: area,
     panel,
     ticket: { x: panel.x + pad, y: panel.y + (panel.h - ticketH) / 2, w: keypadX - panel.x - 2 * pad, h: ticketH },
