@@ -28,7 +28,7 @@ import { COLORS, CSS, LAYOUT, text } from '../ui/theme';
 import { VisualAidView } from '../ui/VisualAidView';
 import { backupActions } from './backupActions';
 import { ResultsOverlay } from './ResultsOverlay';
-import { drawDecorations, drawShopRoom, flavorColor } from './shopArt';
+import { drawDecorations, drawShopRoom } from './shopArt';
 
 /** Test hooks (`window.__ssa`, `?fast`) exist in dev, and in a build only when opened with `?e2e`. */
 const testHooksEnabled = (): boolean => import.meta.env.DEV || new URLSearchParams(window.location.search).has('e2e');
@@ -199,7 +199,7 @@ export class ShopScene extends Phaser.Scene {
   private showHint(presentation: ChallengePresentation): void {
     this.ticket.setFeedback('So close! Look at the scoops and try once more.', 'gentle');
     if (this.manager.profile.settings.showHints) {
-      this.aid.show(presentation.hint, flavorColor(this.manager.current()?.customer.favoriteFlavor ?? 'vanilla'));
+      this.aid.show(presentation.hint, this.manager.current()?.customer.favoriteFlavor);
     }
   }
 
@@ -217,7 +217,7 @@ export class ShopScene extends Phaser.Scene {
       // Show the answer and why, then let the child continue when ready.
       this.ticket.setAnswer(presentation.correctAnswer, CSS.strawberry);
       this.ticket.setFeedback(`It's ${presentation.correctAnswer}! Let's see why.`, 'explain');
-      this.aid.show(presentation.explanation, flavorColor(flavor));
+      this.aid.show(presentation.explanation, flavor);
       await this.waitForGotIt();
       this.aid.hide();
     } else {

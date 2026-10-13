@@ -69,6 +69,7 @@ src/
     mathValidator.ts         entry point for validating a question (delegates to its operation)
     questionGenerator.ts     builds validated questions from fact keys
     adaptiveEngine.ts        learning -> practicing -> mastered, round planning
+    aidBeats.ts              the steps an explanation plays out (fill a cup, deal a round)
     mathSubject.ts           math as a LearningSubject, built from the enabled operations
   shop/
     orderManager.ts          round/order state machine; persists every step
@@ -98,7 +99,8 @@ src/
     ResultsOverlay.ts        end-of-round card drawn over the shop
     shopArt.ts               procedural room, props, decorations
   ui/                        NumberKeypad, OrderPanel (+ SpeechBubble), VisualAidView,
-                             StatusBar, ParentGate, ProgressScreen, Button, theme
+                             StatusBar, ParentGate, ProgressScreen, Button, theme;
+                             aidLayout.ts sizes the hint board's scoops and cups (unit tested)
   tests/                     Vitest suites
 e2e/                         Playwright: smoke test, offline and backup, redeploy
 scripts/                     offline-plugin.mjs (writes dist/sw.js), make-icons.mjs, check-live-site.mjs

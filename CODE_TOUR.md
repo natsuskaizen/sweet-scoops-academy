@@ -112,6 +112,17 @@ export type VisualAid =
   | { kind: 'text'; caption: string };
 ```
 
+The shop draws these with pixel-art scoops and cups (`src/ui/VisualAidView.ts`). Hints appear at once; explanations play out in beats from `src/learning/aidBeats.ts`, which is Phaser-free and only reads the `VisualAid` data:
+
+```ts
+aidBeats({ kind: 'groups', groups: 3, perGroup: 4, showTotal: true, caption });
+// -> fill cup 0 "4", fill cup 1 "8", fill cup 2 "12" (final)
+aidBeats({ kind: 'share', total: 12, groups: 4, perGroup: 3, caption });
+// -> deal round 1 (8 left), round 2 (4 left), round 3 (0 left, final)
+```
+
+So multiplication fills one cup at a time while the skip-count total grows under each cup, and division deals one scoop into every cup per round until the pile is gone. Scoops sit in rows of up to five, like a ten frame (`src/ui/aidLayout.ts`). The pace is `GAME_CONFIG.timing.aidFillMs` and `aidDealMs`.
+
 `mathSubject` is built from the enabled operations, so its `present()` is generic:
 
 ```ts

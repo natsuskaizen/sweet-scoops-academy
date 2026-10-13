@@ -93,6 +93,10 @@ export interface GameConfig {
     parentHoldMs: number;
     /** Pause between a customer's greeting and their order. */
     greetingMs: number;
+    /** Explanation boards: time between filling one cup and the next... */
+    aidFillMs: number;
+    /** ...and between dealing rounds when sharing scoops into cups. */
+    aidDealMs: number;
   };
 }
 
@@ -139,5 +143,5 @@ export const GAME_CONFIG: GameConfig = {
     practiceLookbackRounds: 5,
     practiceFacts: 8,
   },
-  timing: { parentHoldMs: 1200, greetingMs: 900 },
+  timing: { parentHoldMs: 1200, greetingMs: 900, aidFillMs: 450, aidDealMs: 650 },
 };
