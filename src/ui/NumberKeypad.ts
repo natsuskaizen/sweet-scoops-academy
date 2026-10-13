@@ -99,6 +99,10 @@ export class NumberKeypad {
     for (const b of this.buttons) b.setVisible(visible);
   }
 
+  get visible(): boolean {
+    return this.buttons.some((b) => b.visible);
+  }
+
   setDepth(depth: number): void {
     for (const b of this.buttons) b.setDepth(depth);
   }

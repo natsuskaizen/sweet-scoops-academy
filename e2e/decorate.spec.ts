@@ -13,6 +13,8 @@ interface Hook {
       turnPage: (step: number) => void;
     } | null;
     placed: { room: { texture: { key: string } } };
+    aid: { visible: boolean };
+    bubble: { visible: boolean; hide: () => void };
     showResults: (summary: object, stickers: [], outcomes: []) => Promise<void>;
   };
   manager: () => { profile: { sprinkles: number; decorations: { itemId: string; spot: string }[] } };
@@ -52,6 +54,8 @@ test('Decorate opens from the results card, and a bought plant is saved in its s
     const { x, y } = (window as HookWindow).__ssa!.scene.results!;
     return { x, y };
   });
+  // At the end of a real round the customer has left and the speech bubble is gone.
+  await page.evaluate(() => (window as HookWindow).__ssa!.scene.bubble.hide());
   await tapAt(page, card.x + 150, card.y + 630); // the Decorate button
   await page.waitForFunction(() => (window as HookWindow).__ssa!.scene.decorate !== null);
 
@@ -73,6 +77,17 @@ test('Decorate opens from the results card, and a bought plant is saved in its s
 
   await page.evaluate(() => (window as HookWindow).__ssa!.scene.decorate!.close());
   await page.waitForFunction(() => (window as HookWindow).__ssa!.scene.decorate === null);
+
+  // What was hidden before Decorate stays hidden after it: no stale hint board or speech bubble.
+  const shown = () =>
+    page.evaluate(() => {
+      const { aid, bubble } = (window as HookWindow).__ssa!.scene;
+      return { aid: aid.visible, bubble: bubble.visible };
+    });
+  expect(await shown()).toEqual({ aid: false, bubble: false });
+  await tapAt(page, card.x + 450, card.y + 630); // Keep scooping!
+  await page.waitForFunction(() => (window as HookWindow).__ssa!.scene.keypad.isEnabled);
+  expect((await shown()).aid).toBe(false);
 
   const saved = await page.evaluate((key) => {
     const save = JSON.parse(localStorage.getItem(key)!);
