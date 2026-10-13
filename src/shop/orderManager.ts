@@ -55,6 +55,7 @@ export interface OrderManagerOptions {
   now?: () => number;
   ordersPerRound?: number;
   attemptsPerOrder?: number;
+  playTimeIdleCapMs?: number;
   /** Called when a write fails, so the UI can warn a parent. */
   onSaveError?: (error: string) => void;
 }
@@ -65,11 +66,13 @@ export class OrderManager {
   private readonly now: () => number;
   private readonly ordersPerRound: number;
   private readonly attemptsPerOrder: number;
+  private readonly idleCapMs: number;
 
   constructor(private readonly opts: OrderManagerOptions) {
     this.now = opts.now ?? (() => Date.now());
     this.ordersPerRound = opts.ordersPerRound ?? GAME_CONFIG.round.ordersPerRound;
     this.attemptsPerOrder = opts.attemptsPerOrder ?? GAME_CONFIG.round.attemptsPerOrder;
+    this.idleCapMs = opts.playTimeIdleCapMs ?? GAME_CONFIG.round.playTimeIdleCapMs;
   }
 
   /** This subject's progress in the active profile. */
@@ -109,11 +112,14 @@ export class OrderManager {
       count: this.ordersPerRound,
     });
     const customers = lineup(rng, specs.length);
+    const startedAt = this.now();
     return {
       id: `r${roundNumber}-${seed.toString(36)}`,
       roundNumber,
       seed,
-      startedAt: this.now(),
+      startedAt,
+      playMs: 0,
+      lastActiveAt: startedAt,
       currentIndex: 0,
       bonusPaid: false,
       bonus: null,
@@ -146,6 +152,7 @@ export class OrderManager {
     if (!active || active.phase === 'resolved' || input.trim() === '') return { kind: 'ignored' };
 
     const { order, presentation } = active;
+    this.trackPlayTime(this.profile.currentRound!);
     order.attempts += 1;
     const correct = this.opts.subject.checkAnswer(order.spec, input);
 
@@ -171,6 +178,7 @@ export class OrderManager {
     const active = this.current();
     if (!round || !active || active.phase !== 'resolved') return { kind: 'ignored' };
 
+    this.trackPlayTime(round);
     if (round.currentIndex < round.orders.length - 1) {
       round.currentIndex += 1;
       this.persist();
@@ -178,11 +186,24 @@ export class OrderManager {
     }
 
     const bonus = payRoundBonus(this.profile, round) ?? round.bonus ?? { completion: 0, perfect: 0 };
-    const summary = summarizeRound(round, bonus, this.now());
+    const summary = summarizeRound(round, bonus, this.now(), (o) => this.expression(o));
     this.profile.roundHistory = [...this.profile.roundHistory, summary].slice(-MAX_HISTORY);
     this.profile.currentRound = null;
     this.persist();
     return { kind: 'round-complete', summary };
+  }
+
+  /** Adds the time since the last step, capped so a long pause counts as a short one. */
+  private trackPlayTime(round: RoundState): void {
+    const now = this.now();
+    if (round.playMs !== null) round.playMs += Math.min(Math.max(0, now - round.lastActiveAt), this.idleCapMs);
+    round.lastActiveAt = now;
+  }
+
+  /** The question as the ticket showed it, for the grown-ups report. */
+  private expression(order: OrderState): string {
+    const flavor = customerById(order.customerId).favoriteFlavor;
+    return this.opts.subject.present(order.spec, { flavor }).expression;
   }
 
   private persist(): void {
@@ -195,12 +216,20 @@ function newOrder(spec: ChallengeSpec, customerId: string): OrderState {
   return { spec, customerId, attempts: 0, outcome: null, paid: false, sprinklesPaid: 0 };
 }
 
-function summarizeRound(round: RoundState, bonus: RoundBonus, finishedAt: number): RoundSummary {
-  const count = (outcome: AttemptOutcome | null) => round.orders.filter((o) => o.outcome === outcome).length;
+function summarizeRound(
+  round: RoundState,
+  bonus: RoundBonus,
+  finishedAt: number,
+  expression: (order: OrderState) => string,
+): RoundSummary {
+  const withOutcome = (outcome: AttemptOutcome | null) => round.orders.filter((o) => o.outcome === outcome);
+  const count = (outcome: AttemptOutcome | null) => withOutcome(outcome).length;
   const orderSprinkles = round.orders.reduce((sum, o) => sum + o.sprinklesPaid, 0);
   return {
     roundNumber: round.roundNumber,
+    startedAt: round.startedAt,
     finishedAt,
+    playMs: round.playMs,
     ordersCompleted: round.orders.length - count(null),
     firstTryCorrect: count('first'),
     retryCorrect: count('retry'),
@@ -210,5 +239,7 @@ function summarizeRound(round: RoundState, bonus: RoundBonus, finishedAt: number
     perfectBonus: bonus.perfect,
     total: orderSprinkles + bonus.completion + bonus.perfect,
     perfect: bonus.perfect > 0,
+    retryFacts: withOutcome('retry').map(expression),
+    missFacts: withOutcome('miss').map(expression),
   };
 }

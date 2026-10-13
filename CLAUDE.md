@@ -40,7 +40,7 @@ Before pushing, run everything CI runs: `typecheck`, `test:coverage`, `lint`, `f
 - **Game logic stays Phaser-free** (`config`, `core`, `learning`, `shop`, `save`) so it is unit tested directly. Scenes only animate what `OrderManager` decides.
 - Randomness goes through the seeded RNG in `src/core/rng.ts`, so a given state and seed always reproduce the same round.
 - Sprinkles are computed and paid only in `src/shop/rewards.ts`; item prices live only in `src/shop/catalog.ts`.
-- Saves: every meaningful change is written immediately. When the save format changes, bump `SAVE_SCHEMA_VERSION` in `saveTypes.ts` and add a step in `migrate()`. Never write data that fails validation.
+- Saves: every meaningful change is written immediately. When the save format changes, bump `SAVE_SCHEMA_VERSION` in `saveTypes.ts` and add a step to `MIGRATIONS` in `src/save/migrations.ts`. Never write data that fails validation.
 
 ## Gameplay rules from the spec
 
