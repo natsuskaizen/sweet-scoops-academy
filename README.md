@@ -75,7 +75,7 @@ src/
     orderManager.ts          round/order state machine; persists every step
     rewards.ts               the only place Sprinkles are calculated and paid
     progressReport.ts        numbers and words for the grown-ups Progress screen
-    customerManager.ts       customer roster and lineup
+    customerManager.ts       the 13 built-in customers (names, flavours, lines) and lineup
     addedCharacters.ts       checks for grown-up-added characters; adds them to the roster
     catalog.ts               item catalog (prices live only here)
   save/
@@ -92,8 +92,9 @@ src/
     services.ts              wires the save system and subject for the scenes
     backupTransfer.ts        share sheet / download and file picker for backup files
   characters/
-    sprites.ts               original placeholder pixel art as text grids
-    characterManager.ts      layered character rendering (body + outfit/hat/bow/handheld), added-character sheets
+    friendArt.ts             the built-in cast (Momo and 13 customers): 32x40 text grids, faces drawn per pose
+    sprites.ts               16x20 species and clothing layers (Milestone 3 equipment)
+    characterManager.ts      layered species rendering (body + outfit/hat/bow/handheld), sprite sheets for the cast and added characters
   scenes/
     BootScene.ts             builds textures, loads the save
     ShopScene.ts             the persistent shop: animates what OrderManager decides
@@ -169,7 +170,7 @@ In the grown-ups area, **Characters** then **Add a character** picks a picture a
 
 - **Picture**: a PNG with a transparent background, at most 300 KB. One row of equal frames, left to right: standing, happy, thinking, walk A, walk B. A sheet has 1, 2, 3 or 5 frames; missing poses use the standing frame, and without walk frames the character hops.
 - **Frame size**: the built-in 16×20 grid times 1 to 4 (16×20, 32×40, 48×60 or 64×80), so shop accessories can scale onto it. Draw the character facing the player, centred, feet on the bottom edge. For example, 5 frames of 32×40 is a 160×40 PNG.
-- **Role**: a customer joins the line of visitors from the next round; a shopkeeper replaces the puppy (the newest switched-on one is used).
+- **Role**: a customer joins the line of visitors from the next round; a shopkeeper replaces Momo (the newest switched-on one is used).
 - **Head and neck**: tap the picture at the top of the head, then the neck. Optional; it records where hats and bows will sit (Milestone 3).
 - **Lines**: up to 3 hello and 3 thank-you lines, 24 characters each; built-in ones are used if empty.
 

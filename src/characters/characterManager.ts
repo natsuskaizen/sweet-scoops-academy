@@ -9,6 +9,16 @@
  * authorised art can replace a texture key without touching game logic.
  */
 import Phaser from 'phaser';
+import {
+  FRIEND_ART,
+  FRIEND_H,
+  FRIEND_IDS,
+  FRIEND_W,
+  friendColor,
+  friendFrames,
+  type FriendArt,
+  type FriendId,
+} from './friendArt';
 import { makePixelTexture } from './pixelArt';
 import {
   EYES,
@@ -36,13 +46,13 @@ export interface CharacterLook {
   layers?: Partial<Record<CharacterLayerSlot, LayerId>>;
 }
 
-/** A character a grown-up added: frames of their picture instead of a species. */
-export interface AddedLook {
-  added: { key: string; frames: number; frameW: number; frameH: number };
+/** A character drawn from a sprite sheet (the built-in friends, or a picture a grown-up added) instead of a species. */
+export interface SheetLook {
+  sheet: { key: string; frames: number; frameW: number; frameH: number };
 }
 
-export type AnyLook = CharacterLook | AddedLook;
-const isAdded = (look: AnyLook): look is AddedLook => 'added' in look;
+export type AnyLook = CharacterLook | SheetLook;
+const isSheet = (look: AnyLook): look is SheetLook => 'sheet' in look;
 
 const POSES: Record<Expression, Pose> = { neutral: 'stand', happy: 'happy', thinking: 'thinking' };
 
@@ -69,10 +79,29 @@ export async function registerAddedTextures(scene: Phaser.Scene, characters: rea
 }
 
 /** How to draw an added character, or null if its picture isn't loaded. */
-export function addedLook(scene: Phaser.Scene, c: AddedCharacter): AddedLook | null {
+export function addedLook(scene: Phaser.Scene, c: AddedCharacter): SheetLook | null {
   const key = addedTextureKey(c.id);
   if (!scene.textures.exists(key)) return null;
-  return { added: { key, frames: c.frames, frameW: c.frameW, frameH: c.frameH } };
+  return { sheet: { key, frames: c.frames, frameW: c.frameW, frameH: c.frameH } };
+}
+
+const friendTextureKey = (id: FriendId): string => `friend-${id}`;
+
+/** Draws each built-in friend's frames side by side into one sprite sheet. */
+export function registerFriendTextures(scene: Phaser.Scene): void {
+  for (const id of FRIEND_IDS) {
+    const key = friendTextureKey(id);
+    if (scene.textures.exists(key)) continue;
+    const art: FriendArt = FRIEND_ART[id];
+    const frames = friendFrames(art);
+    const rows = Array.from({ length: FRIEND_H }, (_, y) => frames.map((f) => f[y]).join(''));
+    const texture = scene.textures.get(makePixelTexture(scene, key, rows, (ch) => friendColor(art, ch)));
+    frames.forEach((_, i) => texture.add(i, 0, i * FRIEND_W, 0, FRIEND_W, FRIEND_H));
+  }
+}
+
+export function friendLook(id: FriendId): SheetLook {
+  return { sheet: { key: friendTextureKey(id), frames: 3, frameW: FRIEND_W, frameH: FRIEND_H } };
 }
 
 function applyExpression(species: SpeciesId, rows: string[], expression: Expression): string[] {
@@ -130,38 +159,38 @@ export class CharacterView extends Phaser.GameObjects.Container {
   ) {
     super(scene, x, y);
     // Origin at the feet so y is "where they stand".
-    this.base = isAdded(look)
-      ? scene.add.image(0, 0, look.added.key, 0).setOrigin(0.5, 1)
+    this.base = isSheet(look)
+      ? scene.add.image(0, 0, look.sheet.key, 0).setOrigin(0.5, 1)
       : scene.add.image(0, 0, bodyTextureKey(scene, look, 'neutral')).setOrigin(0.5, 1);
     this.add(this.base);
-    if (!isAdded(look)) {
+    if (!isSheet(look)) {
       for (const slot of LAYER_ORDER) {
         const layer = look.layers?.[slot];
         if (layer) this.setLayer(slot, layer);
       }
     }
-    // Added pictures are the 16x20 grid times 1-4, drawn at the same height as built-in characters.
-    const frameW = isAdded(look) ? look.added.frameW : SPRITE_W;
+    // Sheets are the 16x20 grid times 1-4, drawn at the same height as the species characters.
+    const frameW = isSheet(look) ? look.sheet.frameW : SPRITE_W;
     this.setScale((CHAR_SCALE * SPRITE_W) / frameW);
-    this.setSize(frameW, isAdded(look) ? look.added.frameH : SPRITE_H);
+    this.setSize(frameW, isSheet(look) ? look.sheet.frameH : SPRITE_H);
     scene.add.existing(this);
   }
 
   setExpression(expression: Expression): this {
     if (expression === this.expression) return this;
     this.expression = expression;
-    if (isAdded(this.look)) this.showPose(POSES[expression]);
+    if (isSheet(this.look)) this.showPose(POSES[expression]);
     else this.base.setTexture(bodyTextureKey(this.scene, this.look, expression));
     return this;
   }
 
   private showPose(pose: Pose): void {
-    if (isAdded(this.look)) this.base.setFrame(frameFor(this.look.added.frames, pose));
+    if (isSheet(this.look)) this.base.setFrame(frameFor(this.look.sheet.frames, pose));
   }
 
   /** Equip (or with null, remove) one clothing/accessory layer. Added characters wear them from Milestone 3. */
   setLayer(slot: CharacterLayerSlot, layer: LayerId | null): this {
-    if (isAdded(this.look)) return this;
+    if (isSheet(this.look)) return this;
     this.layerImages.get(slot)?.destroy();
     this.layerImages.delete(slot);
     if (layer) {
@@ -233,7 +262,7 @@ export class CharacterView extends Phaser.GameObjects.Container {
 
   /** Walk frames when the picture has them, otherwise a little waddle. Returns a stop function. */
   private startStepping(): () => void {
-    if (isAdded(this.look) && hasWalkFrames(this.look.added.frames)) {
+    if (isSheet(this.look) && hasWalkFrames(this.look.sheet.frames)) {
       let step = 0;
       const timer = this.scene.time.addEvent({
         delay: 160,
