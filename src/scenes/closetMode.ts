@@ -20,7 +20,7 @@ import {
   type EquipSlot,
   type TierId,
 } from '../shop/catalog';
-import { equippedIn, equippedItems, isInUse, owns, ownedTiers, takeOffer } from '../shop/purchases';
+import { equippedIn, equippedItems, isInUse, owns, ownedTiers, takeOffer, wornWith } from '../shop/purchases';
 import { TierCard } from '../ui/TierCard';
 import { closetLayout, CSS, LAYOUT, text, type ClosetLayout } from '../ui/theme';
 import { drawBackdrop, drawTabs, drawTile, drawTopBar, heldScooper, tileRect, type ClosetTab } from './closetParts';
@@ -35,17 +35,17 @@ export interface ClosetHost {
 }
 
 const TABS: readonly ClosetTab[] = [
-  { slot: 'hat', label: 'Hats' },
-  { slot: 'bow', label: 'Bows' },
-  { slot: 'glasses', label: 'Glasses' },
-  { slot: 'hearing', label: 'Hearing aids' },
-  { slot: 'handheld', label: 'Scoopers' },
+  { id: 'clothing', label: 'Clothing', slots: ['hat', 'top', 'outfit', 'bottom', 'shoes'] },
+  { id: 'accessories', label: 'Accessories', slots: ['glasses', 'hearing', 'bow'] },
+  { id: 'tools', label: 'Ice Cream Tools', slots: ['handheld'] },
 ];
 
 const slotOf = (design: Pick<CatalogDesign, 'placement'>): EquipSlot | null =>
   design.placement.kind === 'equip' ? design.placement.slot : null;
 
-const designsFor = (slot: EquipSlot): CatalogDesign[] => designsIn('closet').filter((d) => slotOf(d) === slot);
+/** A tab's designs, slot by slot in the tab's order, cheapest first within a slot. */
+const designsFor = (tab: ClosetTab): CatalogDesign[] =>
+  tab.slots.flatMap((slot) => designsIn('closet').filter((d) => slotOf(d) === slot));
 
 export class ClosetMode {
   private readonly root: Phaser.GameObjects.Container;
@@ -55,7 +55,7 @@ export class ClosetMode {
   private readonly card: TierCard;
   /** Things redrawn on every change: tabs, tiles, captions, the scooper and sparkles. */
   private readonly changing: Phaser.GameObjects.Container;
-  private slot: EquipSlot = TABS[0]!.slot;
+  private tab: ClosetTab = TABS[0]!;
   private design: CatalogDesign;
   private tier: TierId = 'pink';
   /** Whether Momo is trying on the chosen colour (off once it is taken off). */
@@ -80,19 +80,19 @@ export class ClosetMode {
       onAction: () => this.act(),
     });
     this.root.add([this.momo, this.changing, this.card]);
-    this.design = designsFor(this.slot)[0]!;
-    this.showTab(this.slot);
+    this.design = designsFor(this.tab)[0]!;
+    this.showTab(this.tab.id);
   }
 
-  showTab(slot: EquipSlot): void {
-    this.slot = slot;
-    this.select(designsFor(slot)[0]!);
+  showTab(id: string): void {
+    this.tab = TABS.find((t) => t.id === id) ?? TABS[0]!;
+    this.select(designsFor(this.tab)[0]!);
   }
 
   /** Shows a design, in the colour Momo has on if she wears it, else the first owned, else pink. */
   select(design: CatalogDesign): void {
     this.design = design;
-    const worn = equippedIn(this.host.profile(), this.slot);
+    const worn = equippedIn(this.host.profile(), slotOf(design)!);
     const tier = worn?.designId === design.id ? worn.tier : ownedTiers(this.host.profile(), design)[0];
     this.pick(tier ?? TIERS[0]);
   }
@@ -126,8 +126,8 @@ export class ClosetMode {
     this.card.show(this.design, this.tier, profile);
     this.changing.removeAll(true);
     const { scene } = this.host;
-    this.changing.add(drawTabs(scene, this.layout.tabs, TABS, { slot: this.slot, onTap: (s) => this.showTab(s) }));
-    designsFor(this.slot).forEach((design, i) => this.tile(design, i));
+    this.changing.add(drawTabs(scene, this.layout.tabs, TABS, { id: this.tab.id, onTap: (t) => this.showTab(t.id) }));
+    designsFor(this.tab).forEach((design, i) => this.tile(design, i));
     this.dressUp();
     this.caption();
   }
@@ -149,9 +149,8 @@ export class ClosetMode {
 
   /** Momo in what she has on, with the colour being tried in place of her own for that slot. */
   private dressUp(): void {
-    const preview = this.trying ? this.item() : undefined;
-    const worn = equippedItems(this.host.profile()).filter((i) => !preview || slotOf(i) !== this.slot);
-    const items = preview ? [...worn, preview] : worn;
+    const profile = this.host.profile();
+    const items = this.trying ? wornWith(profile, this.item()) : equippedItems(profile);
     dressMomo(this.momo, items, MOMO_SHEETS);
     const { momo } = this.layout;
     const scooper = items.find((i) => slotOf(i) === 'handheld');

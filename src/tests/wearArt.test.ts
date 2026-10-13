@@ -4,7 +4,7 @@ import { SCOOPER_LOOKS } from '../characters/scooperArt';
 import { MOMO_HATLESS, onFrame, WEAR_ART, withoutChefHat } from '../characters/wearArt';
 import { designsIn, TIERS } from '../shop/catalog';
 
-const LETTERS = /^[.oLlwgGyrB]+$/;
+const LETTERS = /^[.oLlwgGyrBk]+$/;
 
 describe('wear art', () => {
   it('draws every Closet design: worn ones on Momo, scoopers in her paw', () => {

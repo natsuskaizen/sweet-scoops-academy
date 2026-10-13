@@ -8,7 +8,7 @@ export interface Hook {
     results: { x: number; y: number } | null;
     decorate: { pick: (tier: string) => void; act: () => void; close: () => void } | null;
     closet: {
-      showTab: (slot: string) => void;
+      showTab: (tab: string) => void;
       pick: (tier: string) => void;
       act: () => void;
       close: () => void;

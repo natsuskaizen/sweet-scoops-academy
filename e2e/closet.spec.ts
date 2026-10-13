@@ -13,12 +13,12 @@ test("Momo's Closet opens from the results card, and what she buys she wears in 
   await tapAt(page, card.x + 302, card.y + 630); // the Closet button
   await page.waitForFunction(() => (window as HookWindow).__ssa!.scene.closet !== null);
 
-  // Hats come first, with the Beret (the cheapest); buy it in Mint, then a Pink scooper.
+  // Clothing comes first, starting with the Beret; buy it in Mint, then a Pink scooper.
   await page.evaluate(() => {
     const closet = (window as HookWindow).__ssa!.scene.closet!;
     closet.pick('mint');
     closet.act();
-    closet.showTab('handheld');
+    closet.showTab('tools');
     closet.pick('pink');
     closet.act();
     closet.pick('golden'); // too dear: tried on, not bought

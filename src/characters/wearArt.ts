@@ -80,6 +80,15 @@ function spectacles(lens: readonly string[], bridgeRow: number): string[] {
 const ROUND_LENS = ['.oooooo.', 'oLLLLLLo', 'oL....Lo', 'oL....Lo', 'oL....Lo', 'oLLLLLLo', '.oooooo.'];
 const HEART_LENS = ['.oo..oo.', 'oLLooLLo', 'oLLLLLLo', 'oL....Lo', 'oL....Lo', '.oL..Lo.', '..oLLo..', '...oo...'];
 
+const SUN_LENS = ['.oooooo.', 'oLLLLLLo', 'oLkkkwLo', 'oLkkkkLo', 'oLwkkkLo', 'oLLLLLLo', '.oooooo.'];
+
+/** Clothes sit on Momo's body below her head: her tummy is rows 30-36, her feet rows 38-39. */
+const SHIRT = ['.oLLwwwLLo.', '.oLLLLLLLo.', 'oLLLLLLLLLo', 'LLLLLLLLLLL', 'lllllllllll'];
+const SKIRT_HEM = ['.oLLLLLLLLLLLLLo.', 'oLwLLLLwLLLLLwLLo', 'ooooooooooooooooo'];
+const SKIRT = ['..oLLLLLLLLLLLo..', ...SKIRT_HEM];
+const DRESS = [...SHIRT.slice(0, 4).map((r) => `...${r}...`), '..olllllllllllo..', ...SKIRT_HEM];
+const SHOES = ['oLLwo...owLLo', 'ooooo...ooooo'];
+
 const HEARING_AID = ['.ooo.', 'oLLLo', 'oLwLo', 'oLLLo', 'oLLlo', '.oLlo', '..oo.'];
 const mirror = (rows: readonly string[]): string[] => rows.map((r) => [...r].reverse().join(''));
 
@@ -97,6 +106,10 @@ const AIDS = hearingAids();
 
 /** Keyed by the catalog design's asset. Eyes sit on rows 18-20, the head's top on row 10. */
 export const WEAR_ART: Readonly<Record<string, WearArt>> = {
+  shirt: { rows: SHIRT, x: 11, y: 30 },
+  skirt: { rows: SKIRT, x: 8, y: 34 },
+  dress: { rows: DRESS, x: 8, y: 30 },
+  shoes: { rows: SHOES, x: 10, y: 38 },
   'hat-beret': { rows: BERET, x: 6, y: 1 },
   'hat-berry': { rows: BERRY_HAT, x: 7, y: 1 },
   'hat-flowers': { rows: FLOWER_CROWN, x: 4, y: 4 },
@@ -104,6 +117,7 @@ export const WEAR_ART: Readonly<Record<string, WearArt>> = {
   'bow-strawberry': { rows: BOW, x: 22, y: 3 },
   'glasses-round': { rows: spectacles(ROUND_LENS, 1), x: 0, y: 16 },
   'glasses-heart': { rows: spectacles(HEART_LENS, 2), x: 0, y: 15 },
+  'glasses-sun': { rows: spectacles(SUN_LENS, 1), x: 0, y: 16 },
   'hearing-aids': { rows: AIDS.rows, x: 0, y: 9, icon: AIDS.icon },
 };
 
@@ -116,6 +130,7 @@ const FIXED: Readonly<Record<string, string>> = {
   y: '#ffd84a',
   r: '#ff5f7e',
   B: '#9cc8ff',
+  k: '#3b2f45',
 };
 
 /** The art laid on a clear frame the size of Momo's picture. */
@@ -169,7 +184,16 @@ export function withoutChefHat(rows: readonly string[]): string[] {
 export const MOMO_HATLESS: FriendArt = { ...FRIEND_ART.momo, rows: withoutChefHat(FRIEND_ART.momo.rows) };
 
 /** The slots drawn on Momo, back to front. Her scooper is only drawn while she serves. */
-export const WORN_SLOTS: readonly EquipSlot[] = ['hearing', 'hat', 'bow', 'glasses'];
+export const WORN_SLOTS: readonly EquipSlot[] = [
+  'top',
+  'bottom',
+  'outfit',
+  'shoes',
+  'hearing',
+  'hat',
+  'bow',
+  'glasses',
+];
 
 /**
  * Dresses Momo in `items`: each worn slot shows its item or nothing, and

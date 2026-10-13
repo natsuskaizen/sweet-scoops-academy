@@ -9,6 +9,7 @@ import {
   itemById,
   TIERS,
   itemId,
+  SLOT_CLASHES,
   type CatalogDesign,
   type CatalogItem,
   type EquipSlot,
@@ -45,6 +46,7 @@ export function useItem(profile: Profile, item: CatalogItem): void {
   if (!owns(profile, item)) return;
   const { placement } = item;
   if (placement.kind === 'equip') {
+    for (const slot of SLOT_CLASHES[placement.slot] ?? []) delete profile.equipped[slot];
     profile.equipped[placement.slot] = item.id;
     return;
   }
@@ -73,6 +75,18 @@ export function equippedItems(profile: Profile): CatalogItem[] {
   return Object.values(profile.equipped)
     .map((id) => (id ? itemById(id) : undefined))
     .filter((item): item is CatalogItem => item !== undefined);
+}
+
+/**
+ * What Momo would have on wearing `item`: everything she wears now, less
+ * whatever is in its slot or a slot that clashes with it, plus the item.
+ */
+export function wornWith(profile: Profile, item: CatalogItem): CatalogItem[] {
+  const { placement } = item;
+  if (placement.kind !== 'equip') return equippedItems(profile);
+  const freed = [placement.slot, ...(SLOT_CLASHES[placement.slot] ?? [])];
+  const kept = equippedItems(profile).filter((i) => i.placement.kind !== 'equip' || !freed.includes(i.placement.slot));
+  return [...kept, item];
 }
 
 export function equippedIn(profile: Profile, slot: EquipSlot): CatalogItem | undefined {

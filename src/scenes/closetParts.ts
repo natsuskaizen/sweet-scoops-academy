@@ -60,8 +60,10 @@ export function drawTopBar(
 }
 
 export interface ClosetTab {
-  slot: EquipSlot;
+  id: string;
   label: string;
+  /** The slots whose designs the tab shows, in this order. */
+  slots: readonly EquipSlot[];
 }
 
 /** One row of tabs; the chosen one is white with a lavender edge. */
@@ -69,20 +71,20 @@ export function drawTabs(
   scene: Phaser.Scene,
   rect: Rect,
   tabs: readonly ClosetTab[],
-  chosen: { slot: EquipSlot; onTap: (slot: EquipSlot) => void },
+  chosen: { id: string; onTap: (tab: ClosetTab) => void },
 ): Phaser.GameObjects.GameObject[] {
   const gap = 10;
   const w = (rect.w - gap * (tabs.length - 1)) / tabs.length;
   return tabs.flatMap((tab, i) => {
     const x = rect.x + i * (w + gap);
-    const on = tab.slot === chosen.slot;
+    const on = tab.id === chosen.id;
     const g = scene.add.graphics();
     g.fillStyle(on ? COLORS.white : COLORS.creamDark, 1).fillRoundedRect(x, rect.y, w, rect.h, 16);
     g.lineStyle(4, on ? COLORS.lavenderDark : 0xe6d6c4, 1).strokeRoundedRect(x, rect.y, w, rect.h, 16);
-    const style = text(19, on ? CSS.ink : CSS.inkSoft, { align: 'center', wordWrap: { width: w - 12 } });
+    const style = text(22, on ? CSS.ink : CSS.inkSoft, { align: 'center', wordWrap: { width: w - 12 } });
     const label = scene.add.text(x + w / 2, rect.y + rect.h / 2, tab.label, style).setOrigin(0.5);
     const hit = scene.add.zone(x, rect.y, w, rect.h).setOrigin(0).setInteractive({ useHandCursor: true });
-    hit.on('pointerup', () => chosen.onTap(tab.slot));
+    hit.on('pointerup', () => chosen.onTap(tab));
     return [g, label, hit];
   });
 }
@@ -103,7 +105,8 @@ const TILE_COLS = 4;
 /** Where tile `i` of the grid goes. */
 export function tileRect(grid: Rect, i: number): Rect {
   const w = (grid.w - TILE_GAP * (TILE_COLS - 1)) / TILE_COLS;
-  const h = grid.h;
+  const rows = 2;
+  const h = (grid.h - TILE_GAP * (rows - 1)) / rows;
   return { x: grid.x + (i % TILE_COLS) * (w + TILE_GAP), y: grid.y + Math.floor(i / TILE_COLS) * (h + TILE_GAP), w, h };
 }
 

@@ -264,9 +264,9 @@ export interface ClosetLayout {
 
 const CLOSET_BAR_H = 72;
 const CLOSET_CARD_H = 270;
-const CLOSET_TILE_H = 180;
-/** Tabs, one row of tiles and the colour card, with the gaps around them. */
-const CLOSET_PANEL_H = 18 + 64 + 18 + CLOSET_TILE_H + 24 + CLOSET_CARD_H + 16;
+const CLOSET_TILE_H = 150;
+/** Tabs, two rows of tiles and the colour card, with the gaps around them. */
+const CLOSET_PANEL_H = 18 + 64 + 18 + 2 * CLOSET_TILE_H + 14 + 24 + CLOSET_CARD_H + 16;
 
 export function closetLayout(layout: Layout): ClosetLayout {
   const landscape = layout.orientation === 'landscape';
@@ -278,11 +278,11 @@ export function closetLayout(layout: Layout): ClosetLayout {
     : { x: 0, y: CLOSET_BAR_H, w: layout.width, h: panel.y - 20 - CLOSET_BAR_H };
   const inner = { x: panel.x + 20, w: panel.w - 40 };
   const tabs = { ...inner, y: panel.y + 18, h: 64 };
-  const grid = { ...inner, y: tabs.y + tabs.h + 18, h: CLOSET_TILE_H };
+  const grid = { ...inner, y: tabs.y + tabs.h + 18, h: 2 * CLOSET_TILE_H + 14 };
   const momoY = landscape ? 600 : stage.y + stage.h - 130;
   return {
     stage,
-    momo: { x: stage.x + stage.w / 2, y: momoY, scale: landscape ? 9 : 10 },
+    momo: { x: stage.x + stage.w / 2, y: momoY, scale: 9 },
     captionY: momoY + 46,
     panel,
     tabs,

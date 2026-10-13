@@ -378,7 +378,7 @@ new TierCard(scene, rect, {
 });
 ```
 
-Momo's Closet also opens from the results card and covers the whole screen (`closetLayout()` in `theme.ts`): Momo on a stage, tabs for each slot (hats, bows, glasses, hearing aids, scoopers), a tile per design and the same `TierCard`. Whatever colour is picked is shown on Momo at once; buying keeps it on, and when the Closet closes the shop rebuilds her in what she now has on.
+Momo's Closet also opens from the results card and covers the whole screen (`closetLayout()` in `theme.ts`): Momo on a stage, three tabs (Clothing: hats, T-shirt, dress, skirt, shoes; Accessories: glasses, sunglasses, hearing aids, bow; Ice Cream Tools: the scooper), a tile per design and the same `TierCard`. A dress is worn instead of a T-shirt and skirt (`SLOT_CLASHES` in `catalog.ts`), and `wornWith(profile, item)` gives what Momo would have on while trying something. Whatever colour is picked is shown on Momo at once; buying keeps it on, and when the Closet closes the shop rebuilds her in what she now has on.
 
 ## Tests
 
