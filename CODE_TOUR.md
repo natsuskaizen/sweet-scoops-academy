@@ -263,6 +263,24 @@ new CharacterView(scene, x, y, { species: 'puppy', layers: { outfit: 'apron', ha
 view.setLayer('bow', 'bow-strawberry');   // how Milestone 3 equipment will plug in
 ```
 
+## 8. The room: `src/scenes/shopRoom.ts`
+
+The room is pixel art too. It is painted once onto a 200×202 canvas (one texel per art pixel) and shown at 4×, so its pixels match the characters'. Painting uses a tiny helper, `Pixels` in `roomPixels.ts`; the door, wall line and counter are placed from `LAYOUT`:
+
+```ts
+function paintDoor(p: Pixels): void {
+  const d = doorArt(); // LAYOUT.door in art pixels
+  p.box(d.x - 2, d.y - 2, d.w + 4, d.wall - d.y + 2, C.wood); // frame, plum outline
+  p.ring(cx, d.y + 13, 8, C.sky); // round window
+}
+
+// shopArt.ts
+paintTexture(scene, 'room', ROOM_ART, paintRoom);
+scene.add.image(ROOM_ART.x, ROOM_ART.y, 'room').setOrigin(0).setScale(ROOM_SCALE);
+```
+
+The counter is a second canvas on a higher layer so it hides the shopkeeper's legs.
+
 ## Tests
 
 `src/tests/` has one suite per module. `operations.test.ts` checks every operation's fact table against its own rules and shows how turning on more operations behaves. The most useful to read are `adaptiveEngine.test.ts` (mastery across rounds, misses coming back, mastered facts returning, seeded reproducibility) and `orderManager.test.ts` (full rounds, retry flow, double submits, reload mid-order).

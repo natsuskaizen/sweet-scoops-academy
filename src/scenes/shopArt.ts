@@ -1,16 +1,15 @@
 /**
- * Procedural placeholder art for the shop room and small props. Drawn with
- * chunky, flat shapes in the pastel palette; real pixel-art textures can
- * replace any of these functions later.
+ * Shop art: small prop textures, the pixel-art room (painted in shopRoom.ts)
+ * and the decorations placed in it.
  */
 import type Phaser from 'phaser';
 import { makePixelTexture } from '../characters/pixelArt';
 import { FLAVOR_COLORS } from '../characters/sprites';
 import { itemById, type ShopSpot } from '../shop/catalog';
 import type { PlacedDecoration } from '../save/saveTypes';
-import { COLORS, CSS, LAYOUT, text } from '../ui/theme';
-
-const hex = (css: string): number => Number.parseInt(css.replace('#', ''), 16);
+import { Pixels } from './roomPixels';
+import { COUNTER_ART, paintCounter, paintRoom, ROOM_ART, ROOM_OUTLINE, ROOM_SCALE, ROOM_TEXT } from './shopRoom';
+import { COLORS, CSS, text } from '../ui/theme';
 
 /** Small pixel textures used across the scene. */
 export function createPropTextures(scene: Phaser.Scene): void {
@@ -43,84 +42,27 @@ export function createPropTextures(scene: Phaser.Scene): void {
   }
 }
 
+/** Paints a pixel-art canvas texture once; later scenes (after a rotation) reuse it. */
+function paintTexture(scene: Phaser.Scene, key: string, size: { w: number; h: number }, paint: (p: Pixels) => void) {
+  if (scene.textures.exists(key)) return;
+  const canvas = scene.textures.createCanvas(key, size.w, size.h);
+  if (!canvas) throw new Error(`Could not create texture ${key}`);
+  paint(new Pixels(canvas.getContext(), ROOM_OUTLINE));
+  canvas.refresh();
+}
+
 export function drawShopRoom(scene: Phaser.Scene): void {
-  const g = scene.add.graphics().setDepth(0);
-  drawWallAndFloor(g);
-  drawWindowAndDoor(scene, g);
-  drawDisplayCase(g);
-  drawSignAndCounter(scene, g);
-}
-
-function drawWallAndFloor(g: Phaser.GameObjects.Graphics): void {
-  const { shop, wallBottom } = LAYOUT;
-  // Wallpaper: cream with soft strawberry stripes.
-  g.fillStyle(COLORS.cream, 1).fillRect(shop.x, shop.y, shop.w, wallBottom - shop.y);
-  g.fillStyle(0xffe3ec, 1);
-  for (let x = 0; x < shop.w; x += 48) g.fillRect(x, shop.y, 22, wallBottom - shop.y);
-  g.fillStyle(COLORS.mint, 1).fillRect(0, wallBottom - 26, shop.w, 26);
-  g.fillStyle(COLORS.mintDark, 1).fillRect(0, wallBottom - 6, shop.w, 6);
-
-  // Checkered floor.
-  const tile = 48;
-  for (let y = wallBottom; y < shop.y + shop.h; y += tile) {
-    for (let x = 0; x < shop.w; x += tile) {
-      const even = (x / tile + Math.floor((y - wallBottom) / tile)) % 2 === 0;
-      g.fillStyle(even ? 0xdff6ea : COLORS.cream, 1).fillRect(x, y, tile, tile);
-    }
-  }
-}
-
-function drawWindowAndDoor(scene: Phaser.Scene, g: Phaser.GameObjects.Graphics): void {
-  const { door } = LAYOUT;
-
-  // Window with clouds.
-  g.fillStyle(COLORS.brown, 1).fillRoundedRect(226, 196, 196, 150, 14);
-  g.fillStyle(0xcfe8ff, 1).fillRoundedRect(236, 206, 176, 130, 10);
-  g.fillStyle(COLORS.white, 1).fillCircle(290, 250, 18).fillCircle(312, 244, 22).fillCircle(334, 252, 16);
-  g.fillStyle(COLORS.brown, 1).fillRect(320, 206, 8, 130).fillRect(236, 268, 176, 8);
-
-  // Door.
-  g.fillStyle(COLORS.brownDark, 1).fillRoundedRect(door.x - 8, door.y - 8, door.w + 16, door.h + 8, 16);
-  g.fillStyle(COLORS.sky, 1).fillRoundedRect(door.x, door.y, door.w, door.h, 12);
-  g.fillStyle(0xcfe8ff, 1).fillRoundedRect(door.x + 22, door.y + 22, door.w - 44, 80, 30);
-  g.fillStyle(COLORS.cream, 1).fillCircle(door.x + door.w - 22, door.y + door.h / 2 + 20, 7);
-  g.fillStyle(COLORS.strawberry, 1).fillRoundedRect(door.x + 20, door.y + 120, door.w - 40, 34, 8);
+  paintTexture(scene, 'room', ROOM_ART, paintRoom);
+  paintTexture(scene, 'room-counter', COUNTER_ART, paintCounter);
+  scene.add.image(ROOM_ART.x, ROOM_ART.y, 'room').setOrigin(0).setScale(ROOM_SCALE).setDepth(0);
+  // The counter sits on a higher layer so it hides the shopkeeper's legs.
+  scene.add.image(COUNTER_ART.x, COUNTER_ART.y, 'room-counter').setOrigin(0).setScale(ROOM_SCALE).setDepth(30);
+  const { sign, open } = ROOM_TEXT;
   scene.add
-    .text(door.x + door.w / 2, door.y + 137, 'OPEN', text(20, CSS.white))
+    .text(sign.x, sign.y, 'Sweet Scoops', text(40, CSS.white, { stroke: CSS.ink, strokeThickness: 6 }))
     .setOrigin(0.5)
     .setDepth(1);
-}
-
-function drawDisplayCase(g: Phaser.GameObjects.Graphics): void {
-  // Display case of ice cream tubs behind the counter.
-  const caseX = 470;
-  const caseY = 330;
-  g.fillStyle(COLORS.brown, 1).fillRoundedRect(caseX, caseY, 320, 150, 14);
-  g.fillStyle(0xeaf6ff, 1).fillRoundedRect(caseX + 10, caseY + 10, 300, 130, 10);
-  const tubColors = Object.values(FLAVOR_COLORS).map(hex);
-  tubColors.slice(0, 6).forEach((c, i) => {
-    const tx = caseX + 22 + (i % 3) * 98;
-    const ty = caseY + 22 + Math.floor(i / 3) * 62;
-    g.fillStyle(0xbfc7d6, 1).fillRect(tx, ty + 18, 82, 34);
-    g.fillStyle(c, 1).fillEllipse(tx + 41, ty + 20, 80, 30);
-  });
-}
-
-function drawSignAndCounter(scene: Phaser.Scene, g: Phaser.GameObjects.Graphics): void {
-  const { counter } = LAYOUT;
-  // Shop sign.
-  g.fillStyle(COLORS.strawberry, 1).fillRoundedRect(226, 100, 380, 70, 22);
-  g.lineStyle(5, COLORS.strawberryDark, 1).strokeRoundedRect(226, 100, 380, 70, 22);
-  scene.add.text(416, 135, 'Sweet Scoops', text(42, CSS.white)).setOrigin(0.5).setDepth(1);
-
-  // Counter (drawn on a higher layer so it hides the shopkeeper's legs).
-  const c = scene.add.graphics().setDepth(30);
-  c.fillStyle(COLORS.creamDark, 1).fillRoundedRect(counter.x - 10, counter.y - 24, counter.w + 20, 34, 10);
-  c.fillStyle(COLORS.cream, 1).fillRoundedRect(counter.x - 10, counter.y - 30, counter.w + 20, 26, 10);
-  c.fillStyle(COLORS.strawberry, 1).fillRect(counter.x, counter.y + 4, counter.w, counter.h);
-  c.fillStyle(0xffb3ca, 1);
-  for (let x = counter.x + 10; x < counter.x + counter.w; x += 40) c.fillRect(x, counter.y + 4, 18, counter.h);
-  c.fillStyle(COLORS.strawberryDark, 1).fillRect(counter.x, counter.y + counter.h - 2, counter.w, 8);
+  scene.add.text(open.x, open.y, 'OPEN', text(20, CSS.white)).setOrigin(0.5).setDepth(1);
 }
 
 const SPOTS: Record<ShopSpot, { x: number; y: number }> = {

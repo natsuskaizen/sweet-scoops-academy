@@ -97,7 +97,9 @@ src/
     ShopScene.ts             the persistent shop: animates what OrderManager decides
     backupActions.ts         grown-ups area actions for saving and loading backup files
     ResultsOverlay.ts        end-of-round card drawn over the shop
-    shopArt.ts               procedural room, props, decorations
+    shopArt.ts               prop textures, draws the room, places decorations
+    shopRoom.ts              the pixel-art room and counter (strawberry parlour)
+    roomPixels.ts            tiny pixel painter the room is drawn with
   ui/                        NumberKeypad, OrderPanel (+ SpeechBubble), VisualAidView,
                              StatusBar, ParentGate, ProgressScreen, Button, theme;
                              aidLayout.ts sizes the hint board's scoops and cups (unit tested)
@@ -163,7 +165,7 @@ All items in the spec's acceptance checklist are implemented. Verified automatic
 ## Known limitations
 
 - **Not yet tested on a real iPad or iPhone.** It was checked in desktop Chromium at iPad and iPhone viewport sizes with touch emulation. Safari on a real device still needs a look.
-- Art is original placeholder pixel art and flat procedural shapes. Animation is simple tweens (walk, hop, scoop stacking). Milestone 2 covers polish.
+- Art is original pixel art: the room is painted at 1/4 resolution and scaled up so it matches the characters; characters are still placeholder sprites. Animation is simple tweens (walk, hop, scoop stacking). Milestone 2 covers polish.
 - There is one profile ("Player 1"). Multiple profiles and profile names are Milestone 4; JSON backup files are already in the grown-ups area. The save format already supports several profiles.
 - The item catalog exists with a few sample items and decorations render if owned, but there is no shop or customization screen yet (Milestone 3). The results card only offers "Keep scooping!".
 - Division practice uses divisors 1-12 (`GAME_CONFIG.math.division.divisor`); the spec itself only requires a positive divisor.
