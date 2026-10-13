@@ -1,5 +1,12 @@
 import Phaser from 'phaser';
+import type { AttemptOutcome } from '../learning/types';
 import { COLORS, CSS, GAME_W, LAYOUT, text } from './theme';
+
+const OUTCOME_COLORS: Record<AttemptOutcome, [number, number]> = {
+  first: [COLORS.mint, COLORS.mintDark],
+  retry: [COLORS.sky, COLORS.skyDark],
+  miss: [COLORS.peach, 0xe8a888],
+};
 
 /**
  * Top strip: order number, round progress dots, Sprinkles balance, and the
@@ -64,24 +71,41 @@ export class StatusBar extends Phaser.GameObjects.Container {
     scene.add.existing(this);
   }
 
-  setProgress(index: number, total: number, doneCount: number): void {
+  /**
+   * One dot per order. Finished orders show how they went, gently:
+   * mint star = first try, sky = got it on the retry, peach = answer shown.
+   */
+  setProgress(index: number, outcomes: readonly (AttemptOutcome | null)[]): void {
+    const total = outcomes.length;
     this.orderText.setText(`Order ${Math.min(index + 1, total)} of ${total}`);
     const g = this.dots;
     g.clear();
     const startX = 290;
-    for (let i = 0; i < total; i++) {
+    const y = LAYOUT.statusBar.h / 2 - 3;
+    outcomes.forEach((outcome, i) => {
       const x = startX + i * 52;
-      const y = LAYOUT.statusBar.h / 2 - 3;
-      if (i < doneCount) {
-        g.fillStyle(COLORS.mint, 1).fillCircle(x, y, 16);
-        g.lineStyle(3, COLORS.mintDark, 1).strokeCircle(x, y, 16);
+      if (outcome !== null) {
+        const [fill, edge] = OUTCOME_COLORS[outcome];
+        g.fillStyle(fill, 1).fillCircle(x, y, 16);
+        g.lineStyle(3, edge, 1).strokeCircle(x, y, 16);
+        if (outcome === 'first') this.star(x, y);
       } else if (i === index) {
         g.fillStyle(COLORS.white, 1).fillCircle(x, y, 16);
         g.lineStyle(4, COLORS.strawberry, 1).strokeCircle(x, y, 16);
       } else {
         g.fillStyle(COLORS.cream, 0.7).fillCircle(x, y, 13);
       }
+    });
+  }
+
+  private star(x: number, y: number): void {
+    const points: Phaser.Geom.Point[] = [];
+    for (let i = 0; i < 10; i++) {
+      const r = i % 2 === 0 ? 10 : 4.5;
+      const a = -Math.PI / 2 + (i * Math.PI) / 5;
+      points.push(new Phaser.Geom.Point(x + Math.cos(a) * r, y + Math.sin(a) * r));
     }
+    this.dots.fillStyle(COLORS.white, 1).fillPoints(points, true);
   }
 
   setSprinkles(value: number, animate = false): void {
