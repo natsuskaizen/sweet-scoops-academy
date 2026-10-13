@@ -7,13 +7,17 @@ import { createOperations } from '../learning/math/registry';
 import { createMathSubject, mathSubject } from '../learning/mathSubject';
 import type { ChallengeSpec, LearningSubject } from '../learning/types';
 import { CharacterLibrary } from '../save/characterLibrary';
-import { MemoryStorage, SaveManager, type LoadResult, type StorageLike } from '../save/saveManager';
+import { MemoryStorage, SaveManager, type LoadResult, type LoadStatus, type StorageLike } from '../save/saveManager';
+import type { SaveFile } from '../save/saveTypes';
 
 export const SERVICES_KEY = 'services';
 
 export interface GameServices {
   saves: SaveManager;
-  load: LoadResult;
+  /** The game being played. Whatever replaces it (a backup, a reset) also writes it through `saves`. */
+  save: SaveFile;
+  /** How the save was found at startup, until the shop has told the player (then null). */
+  loadNotice: LoadStatus | null;
   /** False when the browser blocks localStorage (e.g. some private modes). */
   persistent: boolean;
   /** The subject the shop is practising. Swap here to play a different subject. */
@@ -45,6 +49,8 @@ function chooseSubject(): LearningSubject<ChallengeSpec, unknown> {
   });
 }
 
+const fromLoad = (load: LoadResult) => ({ save: load.save, loadNotice: load.status });
+
 export function createServices(): GameServices {
   const storage = browserStorage();
   const saves = new SaveManager(storage ?? new MemoryStorage());
@@ -57,8 +63,8 @@ export function createServices(): GameServices {
     const memory = new MemoryStorage();
     const saves = new SaveManager(memory);
     const characters = new CharacterLibrary(memory);
-    return { saves, load: saves.load(), persistent: false, subject: chooseSubject(), characters };
+    return { ...fromLoad(saves.load()), saves, persistent: false, subject: chooseSubject(), characters };
   }
   const characters = new CharacterLibrary(storage ?? new MemoryStorage());
-  return { saves, load, persistent: storage !== null, subject: chooseSubject(), characters };
+  return { ...fromLoad(load), saves, persistent: storage !== null, subject: chooseSubject(), characters };
 }

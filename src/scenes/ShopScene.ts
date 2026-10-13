@@ -7,17 +7,9 @@
  * only animates what the manager says and forwards what the player taps.
  */
 import Phaser from 'phaser';
-import {
-  addedLook,
-  CharacterView,
-  friendLook,
-  registerAddedTextures,
-  type AnyLook,
-} from '../characters/characterManager';
+import { addedLook, CharacterView, friendLook, type AnyLook } from '../characters/characterManager';
 import { SERVICES_KEY, type GameServices } from '../game/services';
 import { GAME_CONFIG } from '../config/gameConfig';
-import { createProfile } from '../save/saveManager';
-import { resetSubjectProgress, subjectProgress } from '../save/saveTypes';
 import type { RoundSummary } from '../save/saveTypes';
 import { chosenShopkeeper, customerRoster } from '../shop/addedCharacters';
 import { lineFor, type CustomerDef } from '../shop/customerManager';
@@ -26,14 +18,14 @@ import type { AttemptOutcome, ChallengePresentation } from '../learning/types';
 import { Button } from '../ui/Button';
 import { NumberKeypad } from '../ui/NumberKeypad';
 import { OrderPanel, SpeechBubble } from '../ui/OrderPanel';
-import { ParentGate, type ParentAction } from '../ui/ParentGate';
-import { showProgress } from '../ui/ProgressScreen';
+import { ParentGate, type ParentGateOptions } from '../ui/ParentGate';
 import { StatusBar } from '../ui/StatusBar';
-import { COLORS, CSS, LAYOUT, paradeSpots, SHOP_W, text } from '../ui/theme';
+import { COLORS, CSS, LAYOUT, text } from '../ui/theme';
+import { delay, tweenAsync } from '../ui/tweenAsync';
 import { VisualAidView } from '../ui/VisualAidView';
-import { backupActions } from './backupActions';
-import { characterAction } from './characterActions';
-import { confetti, ResultsOverlay } from './ResultsOverlay';
+import { Parade } from './parade';
+import { parentArea } from './parentArea';
+import { ResultsOverlay } from './ResultsOverlay';
 import { scoopOntoCone } from './serveAnimation';
 import { drawDecorations, drawShopRoom } from './shopArt';
 
@@ -58,8 +50,10 @@ export class ShopScene extends Phaser.Scene {
   private busy = false;
   /** The open grown-ups area, if any (the e2e test drives it through `__ssa`). */
   private gate: ParentGate | null = null;
-  /** Shown while a perfect round's parade plays (the e2e test taps it through `__ssa`). */
-  private skipButton: Button | null = null;
+  /** A perfect round's parade (the e2e test taps its Skip through `__ssa`). */
+  private parade!: Parade;
+  /** What the grown-ups area shows (the e2e tests run its actions through `__ssa`). */
+  private parentArea!: Pick<ParentGateOptions, 'info' | 'actions'>;
   private results: ResultsOverlay | null = null;
 
   constructor() {
@@ -76,12 +70,14 @@ export class ShopScene extends Phaser.Scene {
     }
 
     this.manager = new OrderManager({
-      save: this.services.load.save,
+      save: this.services.save,
       persister: this.services.saves,
       subject: this.services.subject,
       onSaveError: () => this.toast('Progress could not be saved just now.'),
       roster: customerRoster(this.services.characters.list()),
     });
+
+    this.parentArea = parentArea({ scene: this, services: this.services, profile: () => this.manager.profile });
 
     drawShopRoom(this);
     drawDecorations(this, this.manager.profile.decorations);
@@ -168,7 +164,7 @@ export class ShopScene extends Phaser.Scene {
   private async placeOrder(active: ActiveOrder, customer: CharacterView): Promise<void> {
     const { customer: def, presentation } = active;
     this.bubble.say(lineFor(def.greetings, active.index), customer.x);
-    await this.wait(GAME_CONFIG.timing.greetingMs);
+    await delay(this, GAME_CONFIG.timing.greetingMs);
     this.bubble.say(presentation.orderLine, customer.x);
     this.ticket.showOrder(`${def.name}'s order`, presentation.expression);
     this.keypad.setMaxDigits(presentation.answerInput.maxDigits);
@@ -185,7 +181,7 @@ export class ShopScene extends Phaser.Scene {
     this.gotIt = null;
     this.busy = false;
     this.gate = null;
-    this.skipButton = null;
+    this.parade = new Parade(this);
     this.results = null;
   }
 
@@ -214,7 +210,7 @@ export class ShopScene extends Phaser.Scene {
       this.ticket.wiggle();
       this.customer?.puzzled();
       this.showHint(result.presentation);
-      await this.wait(450);
+      await delay(this, GAME_CONFIG.timing.retryPauseMs);
       this.keypad.clear();
       this.readyForAnswer();
       return;
@@ -283,7 +279,13 @@ export class ShopScene extends Phaser.Scene {
     const customer = this.customer!;
     customer.setExpression('happy');
     const treat = await this.scoopTreat(Number(presentation.correctAnswer), flavor);
-    await this.tween({ targets: treat, x: customer.x + 52, y: customer.y - 62, duration: 450, ease: 'Quad.easeInOut' });
+    await tweenAsync(this, {
+      targets: treat,
+      x: customer.x + 52,
+      y: customer.y - 62,
+      duration: GAME_CONFIG.timing.handOffMs,
+      ease: 'Quad.easeInOut',
+    });
     treat.setData('follow', true);
     await this.thankAndPay(customer, Number(presentation.correctAnswer), sprinkles);
     await this.customerLeaves(customer, treat);
@@ -305,7 +307,7 @@ export class ShopScene extends Phaser.Scene {
     void customer.hop();
     this.sprinklePopup(customer.x, customer.y - 170, sprinkles);
     this.status.setSprinkles(this.manager.profile.sprinkles, true);
-    await this.wait(1300);
+    await delay(this, GAME_CONFIG.timing.payMs);
   }
 
   private async customerLeaves(customer: CharacterView, treat: Phaser.GameObjects.Container): Promise<void> {
@@ -313,7 +315,7 @@ export class ShopScene extends Phaser.Scene {
     this.ticket.clearOrder();
     customer.idle(false);
     await customer.walkTo(LAYOUT.doorSpot.x);
-    await this.tween({ targets: [customer, treat], alpha: 0, duration: 200 });
+    await tweenAsync(this, { targets: [customer, treat], alpha: 0, duration: 200 });
     customer.destroy();
     treat.destroy();
     this.customer = null;
@@ -338,7 +340,7 @@ export class ShopScene extends Phaser.Scene {
     this.shopkeeper.setExpression('happy');
     const stickers = served.map((s) => ({ look: this.customerLook(s.customer), firstTry: s.firstTry }));
     // A perfect round brings every customer back for a parade before the card.
-    const parade = summary.perfect ? await this.parade(stickers.map((s) => s.look)) : [];
+    const parade = summary.perfect ? await this.parade.play(stickers.map((s) => s.look)) : [];
     let closed = false;
     const overlay = new ResultsOverlay(this, summary, stickers, () => {
       if (closed) return;
@@ -353,57 +355,6 @@ export class ShopScene extends Phaser.Scene {
     this.results = overlay;
   }
 
-  /**
-   * Customers walk in from the door one after another, line up on the floor
-   * and cheer. Skip puts everyone in place at once and goes straight to the card.
-   */
-  private async parade(looks: AnyLook[]): Promise<CharacterView[]> {
-    const spots = paradeSpots(looks.length);
-    const views = looks.map((look, i) => {
-      const spot = spots[i]!;
-      const view = new CharacterView(this, LAYOUT.doorSpot.x, spot.y, look).setDepth(spot.y / 10).setAlpha(0);
-      return view.setScale(view.scaleX * spot.scale);
-    });
-    let skipped = false;
-    const skip = new Promise<void>((resolve) => {
-      this.skipButton = new Button(this, SHOP_W - 110, LAYOUT.shop.y + 56, {
-        width: 180,
-        height: 72,
-        label: 'Skip ▸',
-        fontSize: 28,
-        onTap: () => {
-          skipped = true;
-          resolve();
-        },
-      }).setDepth(600);
-    });
-    await Promise.race([this.marchIn(views, spots, () => skipped), skip]);
-    this.skipButton?.destroy();
-    this.skipButton = null;
-    if (skipped) views.forEach((v, i) => v.arriveAt(spots[i]!.x, spots[i]!.y).setAlpha(1).setExpression('happy'));
-    return views;
-  }
-
-  /** The parade itself; each step checks whether Skip was tapped meanwhile. */
-  private async marchIn(views: CharacterView[], spots: { x: number }[], skipped: () => boolean): Promise<void> {
-    const { paradeStepMs, paradeCheerMs } = GAME_CONFIG.timing;
-    await Promise.all(
-      views.map(async (view, i) => {
-        await this.wait(i * paradeStepMs);
-        if (skipped()) return;
-        this.tweens.add({ targets: view, alpha: 1, duration: 200 });
-        await view.walkTo(spots[i]!.x, 2);
-        if (skipped()) return;
-        view.setExpression('happy');
-        await view.hop();
-      }),
-    );
-    if (skipped()) return;
-    confetti(this, true);
-    views.forEach((v) => void v.hop());
-    await this.wait(paradeCheerMs);
-  }
-
   // -------------------------------------------------------------------------
   // Parent area
   // -------------------------------------------------------------------------
@@ -411,8 +362,7 @@ export class ShopScene extends Phaser.Scene {
   private openParentGate(): void {
     if (this.gate) return;
     this.gate = new ParentGate(this, {
-      info: () => this.parentInfo(),
-      actions: () => this.parentActions(),
+      ...this.parentArea,
       onClose: () => {
         this.gate = null;
         this.syncInput();
@@ -421,88 +371,9 @@ export class ShopScene extends Phaser.Scene {
     this.syncInput();
   }
 
-  private parentInfo(): string[] {
-    const p = this.manager.profile;
-    const subject = this.services.subject;
-    const last = p.roundHistory[p.roundHistory.length - 1];
-    const lastRound = last ? `   ·   Last round: ${last.firstTryCorrect}/${last.ordersCompleted} first try` : '';
-    return [
-      `Player: ${p.displayName}   ·   Sprinkles: ${p.sprinkles} (earned in total: ${p.lifetimeSprinkles})`,
-      `Rounds finished: ${p.roundHistory.length}${lastRound}`,
-      ...subject.progressReport(subjectProgress(p, subject)),
-      this.services.persistent
-        ? 'Progress is saved in this browser on this device.'
-        : 'This browser is not allowing saves; progress will be lost on reload.',
-    ];
-  }
-
-  private parentActions(): ParentAction[] {
-    const saves = this.services.saves;
-    return [
-      {
-        label: 'Progress',
-        enabled: true,
-        run: (gate) => showProgress(gate, this, this.manager.profile.roundHistory),
-      },
-      characterAction(this, this.services),
-      ...backupActions(this.services, () => void this.restartWithCharacters()),
-      {
-        label: 'Restore previous save',
-        confirm: 'Goes back to the backup copy from the previous save. The current copy is kept aside, not deleted.',
-        enabled: saves.hasBackup(),
-        run: () => {
-          const restored = saves.restoreBackup();
-          if (restored) this.services.load = { save: restored, status: 'loaded', problems: [] };
-          this.scene.restart();
-        },
-      },
-      ...this.resetActions(),
-    ];
-  }
-
-  private resetActions(): ParentAction[] {
-    return [
-      {
-        label: 'Reset learning progress',
-        confirm: 'Clears all practice progress. Sprinkles and items are kept.',
-        enabled: true,
-        run: () => {
-          const p = this.manager.profile;
-          resetSubjectProgress(p, this.services.subject);
-          p.learning.roundsStarted = 0;
-          p.currentRound = null;
-          this.saveAndRestart();
-        },
-      },
-      {
-        label: 'Reset whole profile',
-        confirm: 'Starts this player over: Sprinkles, items, history and learning progress are all cleared.',
-        enabled: true,
-        run: () => {
-          const fresh = createProfile(this.manager.profile.displayName, Date.now());
-          const save = this.services.load.save;
-          save.profiles = { [fresh.id]: fresh };
-          save.activeProfileId = fresh.id;
-          this.saveAndRestart();
-        },
-      },
-    ];
-  }
-
   // -------------------------------------------------------------------------
   // Helpers
   // -------------------------------------------------------------------------
-
-  /** After a backup brings characters, decode their pictures before rebuilding the shop. */
-  private async restartWithCharacters(): Promise<void> {
-    await registerAddedTextures(this, this.services.characters.list());
-    this.scene.restart();
-  }
-
-  private saveAndRestart(): void {
-    this.services.saves.write(this.services.load.save);
-    this.scene.restart();
-  }
 
   private updateStatus(active: ActiveOrder): void {
     this.status.setProgress(active.index, this.roundOutcomes());
@@ -523,13 +394,12 @@ export class ShopScene extends Phaser.Scene {
   }
 
   private showLoadNotices(): void {
-    const load = this.services.load;
-    if (load.status === 'restored-from-backup') this.toast('Saved game restored from the backup copy.');
-    else if (load.status === 'reset-after-corrupt')
-      this.toast('Saved game could not be read, so a new one was started.');
+    const notice = this.services.loadNotice;
+    if (notice === 'restored-from-backup') this.toast('Saved game restored from the backup copy.');
+    else if (notice === 'reset-after-corrupt') this.toast('Saved game could not be read, so a new one was started.');
     else if (!this.services.persistent) this.toast('This browser is not saving progress.');
     // Only show once per page load.
-    this.services.load = { ...load, status: 'loaded', problems: [] };
+    this.services.loadNotice = null;
   }
 
   private toast(message: string): void {
@@ -537,7 +407,13 @@ export class ShopScene extends Phaser.Scene {
       .text(400, 840, message, text(22, CSS.white, { backgroundColor: '#7a6a88', padding: { x: 16, y: 8 } }))
       .setOrigin(0.5)
       .setDepth(900);
-    this.tweens.add({ targets: t, alpha: 0, delay: 4000, duration: 600, onComplete: () => t.destroy() });
+    this.tweens.add({
+      targets: t,
+      alpha: 0,
+      delay: GAME_CONFIG.timing.toastMs,
+      duration: 600,
+      onComplete: () => t.destroy(),
+    });
   }
 
   private sprinklePopup(x: number, y: number, amount: number): void {
@@ -556,13 +432,5 @@ export class ShopScene extends Phaser.Scene {
       duration: 1000,
       onComplete: () => c.destroy(),
     });
-  }
-
-  private wait(ms: number): Promise<void> {
-    return new Promise((resolve) => this.time.delayedCall(ms, resolve));
-  }
-
-  private tween(config: Phaser.Types.Tweens.TweenBuilderConfig): Promise<void> {
-    return new Promise((resolve) => this.tweens.add({ ...config, onComplete: () => resolve() }));
   }
 }

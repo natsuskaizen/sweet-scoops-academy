@@ -17,8 +17,14 @@ export function characterAction(scene: Phaser.Scene, services: GameServices): Pa
       new CharacterDialog(services.characters, (changed) => {
         if (!changed) return;
         gate.close();
-        void registerAddedTextures(scene, services.characters.list()).then(() => scene.scene.restart());
+        void restartWithCharacters(scene, services);
       });
     },
   };
+}
+
+/** Decodes added characters' pictures, then rebuilds the shop from the save. */
+export async function restartWithCharacters(scene: Phaser.Scene, services: GameServices): Promise<void> {
+  await registerAddedTextures(scene, services.characters.list());
+  scene.scene.restart();
 }

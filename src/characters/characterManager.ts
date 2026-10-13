@@ -38,6 +38,7 @@ import {
 import { frameFor, hasWalkFrames, type AddedCharacter, type Pose } from '../shop/addedCharacters';
 import { GAME_CONFIG } from '../config/gameConfig';
 import { CHAR_SCALE } from '../ui/theme';
+import { tweenAsync } from '../ui/tweenAsync';
 
 export type CharacterLayerSlot = 'outfit' | 'hat' | 'bow' | 'handheld';
 const LAYER_ORDER: CharacterLayerSlot[] = ['outfit', 'bow', 'hat', 'handheld'];
@@ -255,16 +256,7 @@ export class CharacterView extends Phaser.GameObjects.Container {
   /** Jump for joy with a few hearts (a right answer). */
   cheer(): Promise<void> {
     hearts(this.scene, this.x, this.y - this.displayHeight - 10);
-    return new Promise((resolve) => {
-      this.scene.tweens.add({
-        targets: this,
-        y: this.y - 40,
-        duration: 180,
-        yoyo: true,
-        ease: 'Quad.easeOut',
-        onComplete: () => resolve(),
-      });
-    });
+    return tweenAsync(this.scene, { targets: this, y: this.y - 40, duration: 180, yoyo: true, ease: 'Quad.easeOut' });
   }
 
   /** A kind, puzzled head tilt with a question bubble (a first miss). */
@@ -298,49 +290,37 @@ export class CharacterView extends Phaser.GameObjects.Container {
 
   /** Hop in place (happy reaction). */
   hop(): Promise<void> {
-    return new Promise((resolve) => {
-      this.scene.tweens.add({
-        targets: this,
-        y: this.y - 24,
-        duration: 140,
-        yoyo: true,
-        repeat: 1,
-        ease: 'Quad.easeOut',
-        onComplete: () => resolve(),
-      });
+    return tweenAsync(this.scene, {
+      targets: this,
+      y: this.y - 24,
+      duration: 140,
+      yoyo: true,
+      repeat: 1,
+      ease: 'Quad.easeOut',
     });
   }
 
-  /** Walk to x with a little waddle. */
-  walkTo(x: number, msPerPixel = 3.2): Promise<void> {
+  /** Walk to x with a little waddle. Settles when the walk ends, or early if arriveAt() cuts it short. */
+  async walkTo(x: number, msPerPixel = 3.2): Promise<void> {
     const distance = Math.abs(this.x - x);
     this.setFlipX(x < this.x);
-    return new Promise((resolve) => {
-      const stop = this.startStepping();
-      this.stopStepping = stop;
-      this.scene.tweens.add({
-        targets: this,
-        x,
-        duration: Math.max(200, distance * msPerPixel),
-        ease: 'Linear',
-        onComplete: () => {
-          stop();
-          this.stopStepping = null;
-          this.setFlipX(false);
-          resolve();
-        },
-      });
-    });
+    this.stopStepping = this.startStepping();
+    await tweenAsync(this.scene, { targets: this, x, duration: Math.max(200, distance * msPerPixel), ease: 'Linear' });
+    this.endWalk();
   }
 
-  /** Ends any walk or hop at once, standing at (x, y). A walk cut short this way never resolves its promise. */
+  /** Ends any walk or hop at once, standing at (x, y). */
   arriveAt(x: number, y: number): this {
-    this.scene.tweens.killTweensOf(this);
+    for (const tween of this.scene.tweens.getTweensOf(this)) tween.stop();
+    this.endWalk();
+    return this.setPosition(x, y);
+  }
+
+  private endWalk(): void {
     this.stopStepping?.();
     this.stopStepping = null;
     this.angle = 0;
     this.setFlipX(false);
-    return this.setPosition(x, y);
   }
 
   /**

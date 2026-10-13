@@ -17,7 +17,7 @@ export function backupActions(services: GameServices, onRestored: () => void): P
 }
 
 async function saveBackup(services: GameServices, gate: ParentGate): Promise<void> {
-  const { save } = services.load;
+  const { save } = services;
   try {
     await saveBackupFile(backupFileName(Date.now()), exportBackup(save, services.characters.list()));
     gate.notice('Backup saved', 'Keep the file somewhere safe, like Files or iCloud Drive.');
@@ -51,7 +51,7 @@ function restoreAction(
       const result = services.saves.replaceWith(save);
       if (!result.ok) return gate.notice('Backup not loaded', result.error);
       services.characters.merge(characters);
-      services.load = { save, status: 'loaded', problems: [] };
+      services.save = save;
       onRestored();
     },
   };
