@@ -263,6 +263,21 @@ new CharacterView(scene, x, y, { species: 'puppy', layers: { outfit: 'apron', ha
 view.setLayer('bow', 'bow-strawberry');   // how Milestone 3 equipment will plug in
 ```
 
+Grown-ups can add characters from their own pictures (`src/shop/addedCharacters.ts`). A picture is a row of frames on the same grid times 1-4, and it becomes a normal customer for the order flow:
+
+```ts
+sheetLayout(160, 40); // { ok: true, frameW: 32, frameH: 40, frames: 5 }
+frameFor(3, 'walkA'); // 0: missing poses use the standing frame
+
+// services.characters is a CharacterLibrary (src/save/characterLibrary.ts)
+const roster = customerRoster(services.characters.list()); // built-ins + switched-on added customers
+new OrderManager({ save, persister, subject, roster });
+
+// BootScene registers each picture as a sprite sheet; expressions pick frames
+const look = addedLook(scene, character) ?? { species: 'bunny' }; // null if the picture didn't load
+new CharacterView(scene, x, y, look).setExpression('happy'); // frame 1, or standing
+```
+
 ## 8. The room: `src/scenes/shopRoom.ts`
 
 The room is pixel art too. It is painted once onto a 200×202 canvas (one texel per art pixel) and shown at 4×, so its pixels match the characters'. Painting uses a tiny helper, `Pixels` in `roomPixels.ts`; the door, wall line and counter are placed from `LAYOUT`:

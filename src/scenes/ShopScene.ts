@@ -7,7 +7,7 @@
  * only animates what the manager says and forwards what the player taps.
  */
 import Phaser from 'phaser';
-import { CharacterView } from '../characters/characterManager';
+import { addedLook, CharacterView, registerAddedTextures, type AnyLook } from '../characters/characterManager';
 import type { LayerId } from '../characters/sprites';
 import { SERVICES_KEY, type GameServices } from '../game/services';
 import { GAME_CONFIG } from '../config/gameConfig';
@@ -15,6 +15,7 @@ import { createProfile } from '../save/saveManager';
 import { resetSubjectProgress, subjectProgress } from '../save/saveTypes';
 import type { RoundSummary } from '../save/saveTypes';
 import { itemById } from '../shop/catalog';
+import { chosenShopkeeper, customerRoster } from '../shop/addedCharacters';
 import { lineFor, type CustomerDef } from '../shop/customerManager';
 import { OrderManager, type ActiveOrder } from '../shop/orderManager';
 import type { AttemptOutcome, ChallengePresentation } from '../learning/types';
@@ -27,6 +28,7 @@ import { StatusBar } from '../ui/StatusBar';
 import { COLORS, CSS, LAYOUT, text } from '../ui/theme';
 import { VisualAidView } from '../ui/VisualAidView';
 import { backupActions } from './backupActions';
+import { characterAction } from './characterActions';
 import { ResultsOverlay } from './ResultsOverlay';
 import { drawDecorations, drawShopRoom } from './shopArt';
 
@@ -74,19 +76,14 @@ export class ShopScene extends Phaser.Scene {
       persister: this.services.saves,
       subject: this.services.subject,
       onSaveError: () => this.toast('Progress could not be saved just now.'),
+      roster: customerRoster(this.services.characters.list()),
     });
 
     drawShopRoom(this);
     drawDecorations(this, this.manager.profile.decorations);
     this.drawRegisterPanel();
 
-    const equippedBow = itemById(this.manager.profile.equipped.bow ?? '')?.asset as LayerId | undefined;
-    this.shopkeeper = new CharacterView(this, LAYOUT.shopkeeper.x, 530, {
-      species: 'puppy',
-      layers: { outfit: 'apron', hat: 'chef-hat', bow: equippedBow },
-    })
-      .setDepth(20)
-      .idle(true);
+    this.shopkeeper = new CharacterView(this, LAYOUT.shopkeeper.x, 530, this.shopkeeperLook()).setDepth(20).idle(true);
 
     this.status = new StatusBar(this, () => this.openParentGate());
     this.status.setSprinkles(this.manager.profile.sprinkles);
@@ -143,10 +140,7 @@ export class ShopScene extends Phaser.Scene {
   }
 
   private async customerArrives(def: CustomerDef): Promise<CharacterView> {
-    const customer = new CharacterView(this, LAYOUT.doorSpot.x, LAYOUT.customerSpot.y, {
-      species: def.species,
-      palette: def.palette,
-    })
+    const customer = new CharacterView(this, LAYOUT.doorSpot.x, LAYOUT.customerSpot.y, this.customerLook(def))
       .setDepth(40)
       .setAlpha(0);
     this.customer = customer;
@@ -154,6 +148,20 @@ export class ShopScene extends Phaser.Scene {
     await customer.walkTo(LAYOUT.customerSpot.x);
     customer.idle(true);
     return customer;
+  }
+
+  /** The newest added shopkeeper, else the puppy in an apron and chef's hat. */
+  private shopkeeperLook(): AnyLook {
+    const added = chosenShopkeeper(this.services.characters.list());
+    const look = added && addedLook(this, added);
+    if (look) return look;
+    const equippedBow = itemById(this.manager.profile.equipped.bow ?? '')?.asset as LayerId | undefined;
+    return { species: 'puppy', layers: { outfit: 'apron', hat: 'chef-hat', bow: equippedBow } };
+  }
+
+  private customerLook(def: CustomerDef): AnyLook {
+    const added = def.addedId ? this.services.characters.list().find((c) => c.id === def.addedId) : undefined;
+    return (added && addedLook(this, added)) || { species: def.species, palette: def.palette };
   }
 
   private async placeOrder(active: ActiveOrder, customer: CharacterView): Promise<void> {
@@ -358,14 +366,14 @@ export class ShopScene extends Phaser.Scene {
 
   private parentActions(): ParentAction[] {
     const saves = this.services.saves;
-    const save = this.services.load.save;
     return [
       {
         label: 'Progress',
         enabled: true,
         run: (gate) => showProgress(gate, this, this.manager.profile.roundHistory),
       },
-      ...backupActions(this.services, () => this.scene.restart()),
+      characterAction(this, this.services),
+      ...backupActions(this.services, () => void this.restartWithCharacters()),
       {
         label: 'Restore previous save',
         confirm: 'Goes back to the backup copy from the previous save. The current copy is kept aside, not deleted.',
@@ -376,6 +384,12 @@ export class ShopScene extends Phaser.Scene {
           this.scene.restart();
         },
       },
+      ...this.resetActions(),
+    ];
+  }
+
+  private resetActions(): ParentAction[] {
+    return [
       {
         label: 'Reset learning progress',
         confirm: 'Clears all practice progress. Sprinkles and items are kept.',
@@ -394,6 +408,7 @@ export class ShopScene extends Phaser.Scene {
         enabled: true,
         run: () => {
           const fresh = createProfile(this.manager.profile.displayName, Date.now());
+          const save = this.services.load.save;
           save.profiles = { [fresh.id]: fresh };
           save.activeProfileId = fresh.id;
           this.saveAndRestart();
@@ -405,6 +420,12 @@ export class ShopScene extends Phaser.Scene {
   // -------------------------------------------------------------------------
   // Helpers
   // -------------------------------------------------------------------------
+
+  /** After a backup brings characters, decode their pictures before rebuilding the shop. */
+  private async restartWithCharacters(): Promise<void> {
+    await registerAddedTextures(this, this.services.characters.list());
+    this.scene.restart();
+  }
 
   private saveAndRestart(): void {
     this.services.saves.write(this.services.load.save);

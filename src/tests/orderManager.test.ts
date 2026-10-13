@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { mathSubject } from '../learning/mathSubject';
 import { MemoryStorage, SaveManager } from '../save/saveManager';
+import { createCharacter, toCustomerDef } from '../shop/addedCharacters';
 import { OrderManager } from '../shop/orderManager';
+import { draft } from './characterFixtures';
 
 let clock = 1_700_000_000_000;
 const now = () => (clock += 1000);
@@ -165,5 +167,18 @@ describe('OrderManager', () => {
       manager.finishOrder();
     }
     expect(manager.profile.roundHistory[0]!.playMs).toBeNull();
+  });
+
+  it('serves added customers, and a removed one is replaced by a built-in customer on reload', () => {
+    const storage = new MemoryStorage();
+    const saves = new SaveManager(storage, now);
+    const minty = createCharacter(draft(), 1, []);
+    const roster = [toCustomerDef(minty)];
+    const manager = new OrderManager({ save: saves.load().save, persister: saves, subject: mathSubject, now, roster });
+    manager.ensureRound();
+    expect(manager.current()!.customer).toMatchObject({ name: 'Minty', addedId: minty.id });
+
+    const reloaded = new OrderManager({ save: saves.load().save, persister: saves, subject: mathSubject, now });
+    expect(reloaded.current()!.customer.addedId).toBeUndefined();
   });
 });

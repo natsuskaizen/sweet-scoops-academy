@@ -12,6 +12,8 @@ export interface CustomerDef {
   species: SpeciesId;
   /** Optional recolour so one species can make several customers. */
   palette?: Partial<Palette>;
+  /** Set for characters a grown-up added: drawn from their picture instead of `species`. */
+  addedId?: string;
   favoriteFlavor: string;
   greetings: readonly string[];
   thanks: readonly string[];
@@ -61,8 +63,9 @@ export const CUSTOMERS: readonly CustomerDef[] = [
   },
 ];
 
-export function customerById(id: string): CustomerDef {
-  return CUSTOMERS.find((c) => c.id === id) ?? CUSTOMERS[0]!;
+/** A customer from the roster; one that has since been removed falls back to the first built-in customer. */
+export function customerById(id: string, roster: readonly CustomerDef[] = CUSTOMERS): CustomerDef {
+  return roster.find((c) => c.id === id) ?? CUSTOMERS[0]!;
 }
 
 /** Picks `count` customers, never the same one twice in a row. */

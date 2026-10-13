@@ -6,6 +6,7 @@ import { GAME_CONFIG } from '../config/gameConfig';
 import { createOperations } from '../learning/math/registry';
 import { createMathSubject, mathSubject } from '../learning/mathSubject';
 import type { ChallengeSpec, LearningSubject } from '../learning/types';
+import { CharacterLibrary } from '../save/characterLibrary';
 import { MemoryStorage, SaveManager, type LoadResult, type StorageLike } from '../save/saveManager';
 
 export const SERVICES_KEY = 'services';
@@ -17,6 +18,8 @@ export interface GameServices {
   persistent: boolean;
   /** The subject the shop is practising. Swap here to play a different subject. */
   subject: LearningSubject<ChallengeSpec, unknown>;
+  /** Characters a grown-up added on this device. */
+  characters: CharacterLibrary;
 }
 
 function browserStorage(): StorageLike | null {
@@ -51,8 +54,11 @@ export function createServices(): GameServices {
   } catch {
     // Storage is full and the old save could not be quarantined: play this
     // session in memory rather than risk overwriting it.
-    const memory = new SaveManager(new MemoryStorage());
-    return { saves: memory, load: memory.load(), persistent: false, subject: chooseSubject() };
+    const memory = new MemoryStorage();
+    const saves = new SaveManager(memory);
+    const characters = new CharacterLibrary(memory);
+    return { saves, load: saves.load(), persistent: false, subject: chooseSubject(), characters };
   }
-  return { saves, load, persistent: storage !== null, subject: chooseSubject() };
+  const characters = new CharacterLibrary(storage ?? new MemoryStorage());
+  return { saves, load, persistent: storage !== null, subject: chooseSubject(), characters };
 }
