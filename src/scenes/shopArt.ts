@@ -69,6 +69,7 @@ const SPOTS: Record<ShopSpot, { x: number; y: number }> = {
   'wall-left': { x: 200, y: 420 },
   'wall-right': { x: 450, y: 250 },
   'floor-left': { x: 200, y: 640 },
+  'floor-center': { x: 360, y: 790 },
   'counter-top': { x: 760, y: 486 },
   window: { x: 324, y: 330 },
 };

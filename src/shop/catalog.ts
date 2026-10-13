@@ -1,69 +1,83 @@
 /**
- * Item catalog: the one place prices live. Milestone 1 only ships a few
- * placeholder entries so the save format and rendering hooks exist; the
- * shopping interface arrives in Milestone 3.
+ * Item catalog: the one place prices live. Items sit on one of three shelves
+ * in the Sprinkle Shop: things Momo wears, her scoopers, and decorations for
+ * the room.
  */
 export type ItemCategory =
   'outfit' | 'hat' | 'bow' | 'handheld' | 'decoration' | 'furniture' | 'wallpaper' | 'sign' | 'collectible';
 
 export type EquipSlot = 'outfit' | 'hat' | 'bow' | 'handheld';
 
+export type ShopSpot = 'wall-left' | 'wall-right' | 'floor-left' | 'floor-center' | 'counter-top' | 'window';
+
 export interface CatalogItem {
   id: string;
   name: string;
   price: number;
   category: ItemCategory;
-  /** Texture key (procedural placeholder today, real art later). */
+  /** Art key: a layer or decoration texture, or a scooper look for handheld items. */
   asset: string;
   /** Character layer for wearables, or a named spot in the shop for decorations. */
   placement: { kind: 'equip'; slot: EquipSlot } | { kind: 'shop'; spot: ShopSpot };
 }
 
-export type ShopSpot = 'wall-left' | 'wall-right' | 'floor-left' | 'counter-top' | 'window';
+/** The Sprinkle Shop's tabs, in the order they are shown. */
+export const SHELVES = ['wear', 'scoop', 'room'] as const;
+export type ShelfId = (typeof SHELVES)[number];
+
+const wear = (id: string, name: string, price: number, slot: 'hat' | 'bow'): CatalogItem => ({
+  id,
+  name,
+  price,
+  category: slot,
+  asset: id,
+  placement: { kind: 'equip', slot },
+});
+
+const scooper = (look: string, name: string, price: number): CatalogItem => ({
+  id: `scooper-${look}`,
+  name,
+  price,
+  category: 'handheld',
+  asset: look,
+  placement: { kind: 'equip', slot: 'handheld' },
+});
+
+const decoration = (id: string, name: string, price: number, spot: ShopSpot): CatalogItem => ({
+  id,
+  name,
+  price,
+  category: 'decoration',
+  asset: id,
+  placement: { kind: 'shop', spot },
+});
 
 export const CATALOG: readonly CatalogItem[] = [
-  {
-    id: 'deco-plant',
-    name: 'Mint Plant',
-    price: 60,
-    category: 'decoration',
-    asset: 'deco-plant',
-    placement: { kind: 'shop', spot: 'floor-left' },
-  },
-  {
-    id: 'deco-lamp',
-    name: 'Cloud Lamp',
-    price: 90,
-    category: 'decoration',
-    asset: 'deco-lamp',
-    placement: { kind: 'shop', spot: 'counter-top' },
-  },
-  {
-    id: 'deco-frame',
-    name: 'Cone Picture',
-    price: 120,
-    category: 'decoration',
-    asset: 'deco-frame',
-    placement: { kind: 'shop', spot: 'wall-right' },
-  },
-  {
-    id: 'hat-beret',
-    name: 'Lavender Beret',
-    price: 80,
-    category: 'hat',
-    asset: 'hat-beret',
-    placement: { kind: 'equip', slot: 'hat' },
-  },
-  {
-    id: 'bow-strawberry',
-    name: 'Strawberry Bow',
-    price: 50,
-    category: 'bow',
-    asset: 'bow-strawberry',
-    placement: { kind: 'equip', slot: 'bow' },
-  },
+  wear('bow-strawberry', 'Strawberry Bow', 50, 'bow'),
+  wear('hat-beret', 'Lavender Beret', 80, 'hat'),
+  wear('hat-berry', 'Berry Hat', 120, 'hat'),
+  wear('hat-flowers', 'Flower Crown', 150, 'hat'),
+  wear('hat-crown', 'Little Crown', 400, 'hat'),
+  scooper('silver', 'Silver Scooper', 200),
+  scooper('golden', 'Golden Scooper', 500),
+  scooper('rainbow', 'Rainbow Scooper', 1000),
+  decoration('deco-plant', 'Mint Plant', 60, 'floor-left'),
+  decoration('deco-flags', 'Party Flags', 70, 'window'),
+  decoration('deco-lamp', 'Cloud Lamp', 90, 'counter-top'),
+  decoration('deco-rug', 'Heart Rug', 100, 'floor-center'),
+  decoration('deco-frame', 'Cone Picture', 120, 'wall-right'),
 ];
 
-export function itemById(id: string): CatalogItem | undefined {
-  return CATALOG.find((item) => item.id === id);
+export function itemById(id: string, catalog: readonly CatalogItem[] = CATALOG): CatalogItem | undefined {
+  return catalog.find((item) => item.id === id);
+}
+
+export function shelfOf(item: CatalogItem): ShelfId {
+  if (item.placement.kind === 'shop') return 'room';
+  return item.placement.slot === 'handheld' ? 'scoop' : 'wear';
+}
+
+/** A shelf's items, cheapest first. */
+export function itemsOnShelf(shelf: ShelfId, catalog: readonly CatalogItem[] = CATALOG): CatalogItem[] {
+  return catalog.filter((item) => shelfOf(item) === shelf).sort((a, b) => a.price - b.price);
 }
