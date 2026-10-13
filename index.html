@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="theme-color" content="#c7b3f0" />
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <title>Sweet Scoops Academy</title>
+    <style>
+      html, body {
+        margin: 0;
+        height: 100%;
+        background: #c7b3f0;
+        overflow: hidden;
+        overscroll-behavior: none;
+        touch-action: none;
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
+        -webkit-touch-callout: none;
+      }
+      #game { position: fixed; inset: 0; }
+      #rotate {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 10;
+        background: #fff6e8;
+        color: #4a3a58;
+        font: bold 28px "Trebuchet MS", system-ui, sans-serif;
+        text-align: center;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 24px;
+        padding: 24px;
+      }
+      #rotate .phone {
+        width: 90px;
+        height: 150px;
+        border: 8px solid #ff8fb3;
+        border-radius: 18px;
+        animation: turn 2s ease-in-out infinite;
+      }
+      @keyframes turn {
+        0%, 20% { transform: rotate(0deg); }
+        60%, 100% { transform: rotate(-90deg); }
+      }
+      @media (orientation: portrait) {
+        #rotate { display: flex; }
+        #game { visibility: hidden; }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="game"></div>
+    <div id="rotate" role="alert">
+      <div class="phone"></div>
+      <div>Please turn your device sideways<br />to open the ice cream shop!</div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

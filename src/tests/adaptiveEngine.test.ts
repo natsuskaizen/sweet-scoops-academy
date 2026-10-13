@@ -1,0 +1,178 @@
+import { describe, expect, it } from 'vitest';
+import { createRng } from '../core/rng';
+import { planRound, recordOutcome } from '../learning/adaptiveEngine';
+import { mathSubject, type MathProgress } from '../learning/mathSubject';
+import { factsFor } from '../learning/questionGenerator';
+import type { SkillProgress } from '../learning/types';
+
+const ctx = (roundNumber: number) => ({ roundNumber, now: 1_000 * roundNumber });
+
+function freshProgress(): MathProgress {
+  return mathSubject.createProgress();
+}
+
+/** Plays `rounds` rounds where `answer(key)` decides each outcome. */
+function simulate(p: MathProgress, rounds: number, answer: (key: string) => 'first' | 'retry' | 'miss', seed = 1, startRound = 1) {
+  const plans: string[][] = [];
+  for (let r = startRound; r < startRound + rounds; r++) {
+    const plan = mathSubject.planRound(p, { roundNumber: r, rng: createRng(seed + r), now: r, count: 10 });
+    plans.push(plan.map((q) => q.factKey));
+    for (const q of plan) mathSubject.recordOutcome(p, q, answer(q.factKey), ctx(r));
+  }
+  return plans;
+}
+
+describe('recordOutcome', () => {
+  it('starts new facts in Learning and tracks first-try and retry separately', () => {
+    const skill: SkillProgress = { facts: {} };
+    const rec = recordOutcome(skill, 'mul:3x4', 'retry', ctx(1));
+    expect(rec.state).toBe('learning');
+    expect(rec.retryCorrect).toBe(1);
+    expect(rec.firstTryCorrect).toBe(0);
+
+    recordOutcome(skill, 'mul:3x4', 'first', ctx(2));
+    expect(skill.facts['mul:3x4']).toMatchObject({ firstTryCorrect: 1, retryCorrect: 1, presentations: 2 });
+  });
+
+  it('never masters a fact from a single correct answer', () => {
+    const skill: SkillProgress = { facts: {} };
+    expect(recordOutcome(skill, 'mul:2x2', 'first', ctx(1)).state).toBe('practicing');
+  });
+
+  it('requires first-try success across multiple separate rounds to master', () => {
+    const skill: SkillProgress = { facts: {} };
+    // Many correct answers inside ONE round only count as one session.
+    for (let i = 0; i < 5; i++) recordOutcome(skill, 'mul:2x3', 'first', ctx(1));
+    expect(skill.facts['mul:2x3']!.state).toBe('practicing');
+
+    recordOutcome(skill, 'mul:2x3', 'first', ctx(2));
+    expect(skill.facts['mul:2x3']!.state).toBe('practicing');
+    recordOutcome(skill, 'mul:2x3', 'first', ctx(3));
+    expect(skill.facts['mul:2x3']!.state).toBe('mastered');
+  });
+
+  it('treats retry-assisted answers as weaker evidence than first-try answers', () => {
+    const skill: SkillProgress = { facts: {} };
+    for (let r = 1; r <= 6; r++) recordOutcome(skill, 'mul:4x6', 'retry', ctx(r));
+    expect(skill.facts['mul:4x6']!.state).not.toBe('mastered');
+  });
+
+  it('a miss raises priority without resetting accumulated progress', () => {
+    const skill: SkillProgress = { facts: {} };
+    for (let r = 1; r <= 3; r++) recordOutcome(skill, 'mul:6x7', 'first', ctx(r));
+    expect(skill.facts['mul:6x7']!.state).toBe('mastered');
+
+    const rec = recordOutcome(skill, 'mul:6x7', 'miss', ctx(8));
+    expect(rec.state).toBe('practicing'); // drops one level, not back to zero
+    expect(rec.firstTryCorrect).toBe(3); // history kept
+    expect(rec.nextDueRound).toBe(9); // due again next round
+  });
+});
+
+describe('planRound', () => {
+  it('reproduces the same sequence for the same state and seed', () => {
+    const a = mathSubject.planRound(freshProgress(), { roundNumber: 1, rng: createRng(42), now: 0, count: 10 });
+    const b = mathSubject.planRound(freshProgress(), { roundNumber: 1, rng: createRng(42), now: 0, count: 10 });
+    expect(a).toEqual(b);
+    const c = mathSubject.planRound(freshProgress(), { roundNumber: 1, rng: createRng(43), now: 0, count: 10 });
+    expect(c).not.toEqual(a);
+  });
+
+  it('gives a brand-new player 10 distinct, accessible facts from both operations', () => {
+    const plan = mathSubject.planRound(freshProgress(), { roundNumber: 1, rng: createRng(7), now: 0, count: 10 });
+    expect(plan).toHaveLength(10);
+    expect(new Set(plan.map((q) => q.factKey)).size).toBe(10);
+    const mul = plan.filter((q) => q.skillId === 'multiplication');
+    expect(mul.length).toBe(5);
+    // Easiest facts first: nothing from the 6/7/8 tables in round one.
+    for (const q of mul) expect(Math.min(q.left, q.right)).toBeLessThanOrEqual(5);
+  });
+
+  it('never repeats a fact within a round', () => {
+    const p = freshProgress();
+    const plans = simulate(p, 15, (k) => (k.length % 3 === 0 ? 'miss' : 'first'));
+    for (const plan of plans) expect(new Set(plan).size).toBe(plan.length);
+  });
+
+  it('keeps multiplication and division records independent', () => {
+    const p = freshProgress();
+    simulate(p, 3, (k) => (k.startsWith('mul') ? 'first' : 'miss'));
+    expect(Object.keys(p.multiplication.facts).every((k) => k.startsWith('mul:'))).toBe(true);
+    expect(Object.keys(p.division.facts).every((k) => k.startsWith('div:'))).toBe(true);
+    const divStates = Object.values(p.division.facts).map((r) => r.state);
+    const mulStates = Object.values(p.multiplication.facts).map((r) => r.state);
+    expect(divStates.every((s) => s === 'learning')).toBe(true);
+    expect(mulStates.some((s) => s !== 'learning')).toBe(true);
+  });
+
+  it('brings a missed fact back in the next round', () => {
+    const p = freshProgress();
+    const [round1] = simulate(p, 1, () => 'first');
+    const missedKey = round1![0]!;
+    p.multiplication.facts[missedKey] && recordOutcome(p.multiplication, missedKey, 'miss', ctx(1));
+    p.division.facts[missedKey] && recordOutcome(p.division, missedKey, 'miss', ctx(1));
+    const next = mathSubject.planRound(p, { roundNumber: 2, rng: createRng(99), now: 0, count: 10 });
+    expect(next.map((q) => q.factKey)).toContain(missedKey);
+  });
+
+  it('introduces new facts gradually once a learner has a backlog', () => {
+    const p = freshProgress();
+    simulate(p, 2, () => 'miss'); // 20 facts stuck in learning
+    const before = Object.keys(p.multiplication.facts).length + Object.keys(p.division.facts).length;
+    simulate(p, 1, () => 'miss', 1, 3);
+    const after = Object.keys(p.multiplication.facts).length + Object.keys(p.division.facts).length;
+    expect(after - before).toBeLessThanOrEqual(1);
+  });
+
+  it('revisits a mastered fact periodically even when everything else needs work', () => {
+    const p = freshProgress();
+    for (let r = 1; r <= 3; r++) recordOutcome(p.multiplication, 'mul:2x5', 'first', ctx(r));
+    expect(p.multiplication.facts['mul:2x5']!.state).toBe('mastered');
+
+    const seenAt: number[] = [];
+    for (let r = 4; r <= 20; r++) {
+      const plan = mathSubject.planRound(p, { roundNumber: r, rng: createRng(r), now: 0, count: 10 });
+      for (const q of plan) {
+        if (q.factKey === 'mul:2x5') {
+          seenAt.push(r);
+          mathSubject.recordOutcome(p, q, 'first', ctx(r));
+        } else {
+          mathSubject.recordOutcome(p, q, 'miss', ctx(r));
+        }
+      }
+    }
+    expect(seenAt.length).toBeGreaterThanOrEqual(2);
+    // ...but less often than every round.
+    expect(seenAt.length).toBeLessThan(17);
+  });
+
+  it('copes with a child who already knows nearly everything', () => {
+    const p = freshProgress();
+    for (const op of ['multiplication', 'division'] as const) {
+      for (const f of factsFor(op)) {
+        for (let r = 1; r <= 3; r++) recordOutcome(p[op], f.key, 'first', ctx(r));
+      }
+    }
+    const plan = mathSubject.planRound(p, { roundNumber: 6, rng: createRng(5), now: 0, count: 10 });
+    expect(plan).toHaveLength(10);
+    expect(new Set(plan.map((q) => q.factKey)).size).toBe(10);
+  });
+
+  it('mastery takes several rounds of steady play', () => {
+    const p = freshProgress();
+    const anyMastered = () =>
+      [...Object.values(p.multiplication.facts), ...Object.values(p.division.facts)].some((r) => r.state === 'mastered');
+    let round = 0;
+    while (!anyMastered() && round < 20) simulate(p, 1, () => 'first', 1, ++round);
+    expect(round).toBeGreaterThanOrEqual(3);
+    expect(anyMastered()).toBe(true);
+  });
+
+  it('works on a single generic skill (subject-agnostic)', () => {
+    const catalog = ['cat', 'dog', 'sun'].map((key, difficulty) => ({ key, difficulty }));
+    const plan = planRound([{ skillId: 'vocab', progress: { facts: {} }, catalog }], {
+      roundNumber: 1, rng: createRng(1), count: 5,
+    });
+    expect(plan).toHaveLength(5); // tiny catalog: repeats allowed only when exhausted
+  });
+});
