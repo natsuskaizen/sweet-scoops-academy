@@ -285,3 +285,45 @@ export function decorTraySlots(layout: Layout): TraySlots {
   const arrow = (x: number): Rect => ({ x, y: tray.y + 83, w: 80, h: 120 });
   return { perPage: 8, d: 118, slots, prev: arrow(10), next: arrow(layout.width - 90), dotsY: tray.y + 284 };
 }
+
+/** Momo's Closet: Momo on a little stage, and a panel of tabs, item tiles and the colour card. */
+export interface ClosetLayout {
+  stage: Rect;
+  /** Where Momo stands (her feet) and how many screen pixels each of her pixels takes. */
+  momo: Point & { scale: number };
+  /** The top of the line naming what she is trying on. */
+  captionY: number;
+  panel: Rect;
+  tabs: Rect;
+  grid: Rect;
+  card: Rect;
+}
+
+const CLOSET_BAR_H = 72;
+const CLOSET_CARD_H = 270;
+const CLOSET_TILE_H = 150;
+/** Tabs, two rows of tiles and the colour card, with the gaps around them. */
+const CLOSET_PANEL_H = 18 + 64 + 18 + 2 * CLOSET_TILE_H + 14 + 24 + CLOSET_CARD_H + 16;
+
+export function closetLayout(layout: Layout): ClosetLayout {
+  const landscape = layout.orientation === 'landscape';
+  const panel = landscape
+    ? { x: 632, y: Math.round((layout.height + CLOSET_BAR_H - CLOSET_PANEL_H) / 2), w: 636, h: CLOSET_PANEL_H }
+    : { x: 12, y: layout.height - 12 - CLOSET_PANEL_H, w: layout.width - 24, h: CLOSET_PANEL_H };
+  const stage = landscape
+    ? { x: 0, y: CLOSET_BAR_H, w: 620, h: layout.height - CLOSET_BAR_H }
+    : { x: 0, y: CLOSET_BAR_H, w: layout.width, h: panel.y - 20 - CLOSET_BAR_H };
+  const inner = { x: panel.x + 20, w: panel.w - 40 };
+  const tabs = { ...inner, y: panel.y + 18, h: 64 };
+  const grid = { ...inner, y: tabs.y + tabs.h + 18, h: 2 * CLOSET_TILE_H + 14 };
+  const momoY = landscape ? 600 : stage.y + stage.h - 130;
+  return {
+    stage,
+    momo: { x: stage.x + stage.w / 2, y: momoY, scale: 9 },
+    captionY: momoY + 46,
+    panel,
+    tabs,
+    grid,
+    card: { ...inner, y: grid.y + grid.h + 24, h: CLOSET_CARD_H },
+  };
+}

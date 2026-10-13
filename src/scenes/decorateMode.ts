@@ -54,8 +54,7 @@ export class DecorateMode {
     this.tray = scene.add.container(0, 0);
     this.root.add(this.tray);
     this.card = new TierCard(scene, tierCardRect(LAYOUT, pieceRect(this.design)), {
-      useLabel: 'Put it in the shop',
-      removeLabel: 'Take it away',
+      labels: () => ({ use: 'Put it in the shop', remove: 'Take it away' }),
       onPick: (tier) => this.pick(tier),
       onAction: () => this.act(),
     });

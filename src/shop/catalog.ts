@@ -10,7 +10,15 @@
  * Most decorations stand in a spot in the room; wall paint and doors are
  * room surfaces, which repaint the room itself.
  */
-export type EquipSlot = 'outfit' | 'hat' | 'bow' | 'glasses' | 'hearing' | 'handheld';
+/** `outfit` is a whole outfit (a dress), worn instead of a `top` and `bottom`. */
+export type EquipSlot = 'outfit' | 'top' | 'bottom' | 'shoes' | 'hat' | 'bow' | 'glasses' | 'hearing' | 'handheld';
+
+/** Slots that cannot be worn together: putting one on takes the others off. */
+export const SLOT_CLASHES: Readonly<Partial<Record<EquipSlot, readonly EquipSlot[]>>> = {
+  outfit: ['top', 'bottom'],
+  top: ['outfit'],
+  bottom: ['outfit'],
+};
 
 export type ItemCategory = EquipSlot | 'decoration' | 'furniture' | 'wallpaper' | 'sign' | 'collectible';
 
@@ -97,6 +105,10 @@ const decoration = (
 });
 
 export const DESIGNS: readonly CatalogDesign[] = [
+  wear('shoes', 'Shoes', 60, 'shoes'),
+  wear('shirt', 'T-Shirt', 70, 'top'),
+  wear('skirt', 'Skirt', 70, 'bottom'),
+  wear('dress', 'Dress', 120, 'outfit'),
   wear('bow-strawberry', 'Bow', 50, 'bow'),
   wear('hat-beret', 'Beret', 80, 'hat'),
   wear('hat-berry', 'Berry Hat', 120, 'hat'),
@@ -104,6 +116,7 @@ export const DESIGNS: readonly CatalogDesign[] = [
   wear('hat-crown', 'Little Crown', 200, 'hat'),
   wear('glasses-round', 'Round Glasses', 60, 'glasses'),
   wear('glasses-heart', 'Heart Glasses', 90, 'glasses'),
+  wear('glasses-sun', 'Sunglasses', 80, 'glasses'),
   wear('hearing-aids', 'Hearing Aids', 60, 'hearing'),
   {
     id: 'scooper',

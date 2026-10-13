@@ -25,6 +25,7 @@ const GOLD = '#f5b400';
  */
 export interface ResultsActions {
   onDecorate: () => void;
+  onCloset: () => void;
   onContinue: () => void;
 }
 
@@ -37,25 +38,21 @@ export class ResultsOverlay extends Phaser.GameObjects.Container {
     this.drawCard(summary);
     this.drawStickers(stickers);
     this.drawSprinkles(summary);
+    const button = (x: number, width: number, label: string, look: [number, number], onTap: () => void) =>
+      new Button(scene, x, H - 70, {
+        width,
+        height: 96,
+        label,
+        fontSize: width > 200 ? 26 : 30,
+        fill: look[0],
+        shade: look[1],
+        onTap,
+      });
+    const lavender: [number, number] = [COLORS.lavender, COLORS.lavenderDark];
     this.add([
-      new Button(scene, 150, H - 70, {
-        width: 240,
-        height: 96,
-        label: 'Decorate',
-        fontSize: 30,
-        fill: COLORS.lavender,
-        shade: COLORS.lavenderDark,
-        onTap: actions.onDecorate,
-      }),
-      new Button(scene, W - 190, H - 70, {
-        width: 320,
-        height: 96,
-        label: 'Keep scooping!',
-        fontSize: 34,
-        fill: COLORS.mint,
-        shade: COLORS.mintDark,
-        onTap: actions.onContinue,
-      }),
+      button(110, 180, 'Decorate', lavender, actions.onDecorate),
+      button(302, 180, 'Closet', lavender, actions.onCloset),
+      button(512, 216, 'Keep scooping!', [COLORS.mint, COLORS.mintDark], actions.onContinue),
     ]);
 
     this.setDepth(500).setScale(0.8).setAlpha(0);

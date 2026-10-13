@@ -331,7 +331,8 @@ const TWINKLES = [
   { x: 0.05, y: 1.05, delay: 1000 },
 ];
 
-function twinkle(scene: Phaser.Scene, box: Phaser.GameObjects.Container, w: number, h: number): void {
+/** Sparkles that come and go around a piece `w` by `h` standing at the bottom centre of `box`. */
+export function twinkle(scene: Phaser.Scene, box: Phaser.GameObjects.Container, w: number, h: number): void {
   for (const t of TWINKLES) {
     const s = scene.add
       .image(t.x * w, -t.y * h, sparkleTexture(scene))

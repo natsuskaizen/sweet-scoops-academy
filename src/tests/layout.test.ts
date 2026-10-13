@@ -3,6 +3,7 @@ import { decorSize, pieceRect } from '../scenes/decorArt';
 import { tubSpot } from '../scenes/shopRoom';
 import { designsIn, isRoomSurface } from '../shop/catalog';
 import {
+  closetLayout,
   decorTrayRect,
   decorTraySlots,
   layoutFor,
@@ -162,5 +163,24 @@ describe('decorating layout', () => {
     const { w, h } = decorSize('deco-cafe');
     expect(h).toBeGreaterThanOrEqual(120);
     expect(w).toBeGreaterThanOrEqual(300);
+  });
+});
+
+describe('closet layout', () => {
+  const screens = [layoutFor(1180, 820), layoutFor(393, 852), layoutFor(820, 1180)];
+
+  it('keeps Momo, her caption and the panel on screen without overlapping', () => {
+    for (const l of screens) {
+      const c = closetLayout(l);
+      const screen = { x: 0, y: 0, w: l.width, h: l.height };
+      for (const part of [c.panel, c.stage]) expect(inside(part, screen), l.orientation).toBe(true);
+      for (const part of [c.tabs, c.grid, c.card]) expect(inside(part, c.panel), l.orientation).toBe(true);
+      expect(c.tabs.y + c.tabs.h).toBeLessThanOrEqual(c.grid.y);
+      expect(c.grid.y + c.grid.h).toBeLessThanOrEqual(c.card.y);
+      // Momo (40 pixels tall) stands below the top bar, and her caption (two lines) fits on the stage.
+      expect(c.momo.y - 40 * c.momo.scale).toBeGreaterThan(c.stage.y);
+      const caption = { x: c.stage.x, y: c.captionY, w: c.stage.w, h: 70 };
+      expect(inside(caption, c.stage), l.orientation).toBe(true);
+    }
   });
 });

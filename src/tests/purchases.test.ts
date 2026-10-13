@@ -14,6 +14,9 @@ import {
 } from '../shop/catalog';
 import {
   buyItem,
+  equippedIn,
+  equippedItems,
+  wornWith,
   isInUse,
   itemInSpot,
   offerFor,
@@ -213,6 +216,50 @@ describe('offerFor and takeOffer', () => {
     expect(takeOffer(p, lamp)).toBe('used');
     expect(p.decorations).toEqual([{ itemId: 'deco-lamp.pink', spot: 'counter-top' }]);
     expect(p.sprinkles).toBe(0);
+  });
+});
+
+describe('what Momo has on', () => {
+  it('lists equipped items and finds the one in a slot', () => {
+    const { p } = player(2000);
+    expect(equippedItems(p)).toEqual([]);
+    expect(equippedIn(p, 'handheld')).toBeUndefined();
+    buyItem(p, 'scooper.golden');
+    buyItem(p, 'glasses-heart.mint');
+    buyItem(p, 'hearing-aids.rainbow');
+    expect(equippedIn(p, 'handheld')?.tier).toBe('golden');
+    expect(
+      equippedItems(p)
+        .map((i) => i.id)
+        .sort(),
+    ).toEqual(['glasses-heart.mint', 'hearing-aids.rainbow', 'scooper.golden']);
+    p.equipped.hat = 'hat-gone.pink'; // an id no longer in the catalog is skipped
+    expect(equippedItems(p)).toHaveLength(3);
+  });
+});
+
+describe('clothes that clash', () => {
+  it('takes off a shirt and skirt for a dress, and the dress for either', () => {
+    const { p } = player(2000);
+    buyItem(p, 'shirt.pink');
+    buyItem(p, 'skirt.mint');
+    buyItem(p, 'shoes.sky');
+    buyItem(p, 'dress.golden');
+    expect(p.equipped).toEqual({ shoes: 'shoes.sky', outfit: 'dress.golden' });
+    useItem(p, item('skirt.mint'));
+    expect(p.equipped).toEqual({ shoes: 'shoes.sky', bottom: 'skirt.mint' });
+    expect(p.ownedItems).toHaveLength(4); // nothing taken off is lost
+  });
+
+  it('previews an item in place of what it would replace', () => {
+    const { p } = player(2000);
+    buyItem(p, 'shirt.pink');
+    buyItem(p, 'glasses-round.pink');
+    const dress = item('dress.rainbow');
+    expect(wornWith(p, dress).map((i) => i.id)).toEqual(['glasses-round.pink', 'dress.rainbow']);
+    expect(wornWith(p, item('glasses-sun.golden')).map((i) => i.id)).toEqual(['shirt.pink', 'glasses-sun.golden']);
+    expect(wornWith(p, item('deco-rug.pink')).map((i) => i.id)).toEqual(['shirt.pink', 'glasses-round.pink']);
+    expect(p.equipped).toEqual({ top: 'shirt.pink', glasses: 'glasses-round.pink' }); // a preview changes nothing
   });
 });
 

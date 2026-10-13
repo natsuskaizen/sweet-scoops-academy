@@ -20,6 +20,7 @@ import {
   type FriendId,
 } from './friendArt';
 import { makePixelTexture } from './pixelArt';
+import { MOMO_HATLESS } from './wearArt';
 import { hearts, questionBubble } from './reactions';
 import {
   EYES,
@@ -91,17 +92,21 @@ export function addedLook(scene: Phaser.Scene, c: AddedCharacter): SheetLook | n
 const friendTextureKey = (id: FriendId): string => `friend-${id}`;
 const FRIEND_FRAMES = 6;
 
-/** Draws each built-in friend's frames side by side into one sprite sheet. */
+/** Momo's picture with and without her chef hat, for dressMomo(). */
+export const MOMO_SHEETS = { withHat: friendTextureKey('momo'), hatless: 'friend-momo-hatless' } as const;
+
+/** Draws a friend's frames side by side into one sprite sheet. */
+function registerSheet(scene: Phaser.Scene, key: string, art: FriendArt): void {
+  if (scene.textures.exists(key)) return;
+  const frames = friendFrames(art);
+  const rows = Array.from({ length: FRIEND_H }, (_, y) => frames.map((f) => f[y]).join(''));
+  const texture = scene.textures.get(makePixelTexture(scene, key, rows, (ch) => friendColor(art, ch)));
+  frames.forEach((_, i) => texture.add(i, 0, i * FRIEND_W, 0, FRIEND_W, FRIEND_H));
+}
+
 export function registerFriendTextures(scene: Phaser.Scene): void {
-  for (const id of FRIEND_IDS) {
-    const key = friendTextureKey(id);
-    if (scene.textures.exists(key)) continue;
-    const art: FriendArt = FRIEND_ART[id];
-    const frames = friendFrames(art);
-    const rows = Array.from({ length: FRIEND_H }, (_, y) => frames.map((f) => f[y]).join(''));
-    const texture = scene.textures.get(makePixelTexture(scene, key, rows, (ch) => friendColor(art, ch)));
-    frames.forEach((_, i) => texture.add(i, 0, i * FRIEND_W, 0, FRIEND_W, FRIEND_H));
-  }
+  for (const id of FRIEND_IDS) registerSheet(scene, friendTextureKey(id), FRIEND_ART[id]);
+  registerSheet(scene, MOMO_SHEETS.hatless, MOMO_HATLESS);
 }
 
 export function friendLook(id: FriendId): SheetLook {
@@ -152,6 +157,9 @@ export function layerTextureKey(scene: Phaser.Scene, layer: LayerId): string {
 export class CharacterView extends Phaser.GameObjects.Container {
   private base: Phaser.GameObjects.Image;
   private layerImages = new Map<CharacterLayerSlot, Phaser.GameObjects.Image>();
+  /** Closet items drawn over a sheet character. */
+  private worn: Phaser.GameObjects.Image[] = [];
+  private idling = false;
   private bobTween?: Phaser.Tweens.Tween;
   private blinkTimer?: Phaser.Time.TimerEvent;
   private expression: Expression = 'neutral';
@@ -216,13 +224,31 @@ export class CharacterView extends Phaser.GameObjects.Container {
     return this;
   }
 
+  /** Swaps a sheet character's picture for another the same size (Momo without her chef hat). */
+  setSheet(key: string): this {
+    if (!isSheet(this.look) || this.look.sheet.key === key) return this;
+    this.look = { sheet: { ...this.look.sheet, key } };
+    this.base.setTexture(key, this.base.frame.name);
+    return this;
+  }
+
+  /** Dresses a sheet character in items drawn on its own frame, back to front, replacing what it wore. */
+  dress(textureKeys: readonly string[]): this {
+    for (const img of this.worn) img.destroy();
+    this.worn = textureKeys.map((key) => this.scene.add.image(0, 0, key).setOrigin(0.5, 1));
+    this.add(this.worn);
+    if (this.idling) this.idle(true);
+    return this;
+  }
+
   /** Waiting: slow breathing, and a blink now and then for characters that have the frame. */
   idle(on: boolean): this {
+    this.idling = on;
     this.bobTween?.stop();
     this.bobTween = undefined;
     this.blinkTimer?.remove();
     this.blinkTimer = undefined;
-    const parts = [this.base, ...this.layerImages.values()];
+    const parts = [this.base, ...this.layerImages.values(), ...this.worn];
     for (const part of parts) part.setScale(1);
     if (on) {
       this.bobTween = this.scene.tweens.add({

@@ -296,13 +296,22 @@ void customer.cheer(); // right answer: a jump and three hearts (reactions.ts)
 customer.puzzled(); // first miss: thinking face, a head tilt and a "?" bubble
 ```
 
-Serving is in `src/scenes/serveAnimation.ts`: the shopkeeper's paw holds an ice cream scooper (`src/characters/scooperArt.ts`), dips it into the flavour's tub (`tubSpot(flavor)` in `shopRoom.ts`), carries each scoop to the cone in its bowl and drops it into the treat, then the shopkeeper cheers. She serves with the wooden scooper; the silver, golden and rainbow ones are drawn ready to become Milestone 3 shop items, and the golden and rainbow ones throw sparkles:
+Serving is in `src/scenes/serveAnimation.ts`: the shopkeeper's paw holds an ice cream scooper (`src/characters/scooperArt.ts`), dips it into the flavour's tub (`tubSpot(flavor)` in `shopRoom.ts`), carries each scoop to the cone in its bowl and drops it into the treat, then the shopkeeper cheers. She serves with the wooden scooper until one is bought in her Closet (one look per item tier; Silver, Golden and Rainbow throw sparkles):
 
 ```ts
-await scoopOntoCone(scene, { keeper: shopkeeper, scooper: 'wooden' }, treat, flavor, count);
+const scooper = equippedIn(profile, 'handheld')?.tier ?? 'wooden';
+await scoopOntoCone(scene, { keeper: shopkeeper, scooper }, treat, flavor, count);
 ```
 
-The older 16×20 species in `sprites.ts` share one grid so clothing layers line up on any of them, which is how Milestone 3 equipment will plug in:
+What Momo wears from her Closet is drawn in `wearArt.ts` on her own 32×40 frame, so each item is a layer the same size as her picture. A hat replaces her chef hat, so she is then drawn from a copy of her picture with it taken off:
+
+```ts
+WEAR_ART['glasses-round']; // { rows: [...], x: 0, y: 16 }: lenses around her eyes on rows 18-20
+withoutChefHat(FRIEND_ART.momo.rows); // registered as MOMO_SHEETS.hatless
+dressMomo(view, equippedItems(profile), MOMO_SHEETS); // swaps her sheet, then view.dress([...texture keys])
+```
+
+The older 16×20 species in `sprites.ts` share one grid so clothing layers line up on any of them:
 
 ```ts
 new CharacterView(scene, x, y, { species: 'puppy', layers: { outfit: 'apron', hat: 'chef-hat' } });
@@ -343,7 +352,7 @@ Wall paint and doors bought in Decorate repaint the room rather than standing in
 
 The counter is a second canvas on a higher layer so it hides the shopkeeper's legs.
 
-## 9. Buying and decorating: `src/shop/catalog.ts`, `purchases.ts`, `src/scenes/decorateMode.ts`
+## 9. Buying, decorating and dressing up: `src/shop/catalog.ts`, `purchases.ts`, `src/scenes/decorateMode.ts`, `closetMode.ts`
 
 The catalog lists designs; each comes in six tiers, and each tier is its own item to buy and own (`hat-beret.golden`). Plain colours cost the base price, then Silver ×2.5, Golden ×5 and Sparkly Rainbow ×10:
 
@@ -360,12 +369,24 @@ offerFor(profile, item); // { kind: 'buy', price } | { kind: 'short', short } | 
 takeOffer(profile, item); // buys, puts in the shop, or takes away; the scene then saves
 ```
 
-Decorate opens from the results card. Each decoration has a spot (`LAYOUT.decorSpots`); its art is a text grid in `decorArt.ts` whose `L`/`l` pixels take the tier's colours (`tierColors.ts`), and Sparkly Rainbow pieces twinkle. Two spots are room surfaces (`isRoomSurface`): `'wall'` for wall paint and `'door'` for the doors. What is used there repaints the room (`PlacedDecorations.tryOn` previews it), and taking it away brings back the plain wall or door. Tapping a colour shows the piece in the room right away; `TierCard` (shared with the coming closet) shows the swatches and the button, placed by `tierCardRect` clear of what the piece covers (`pieceRect`). The tray shows a page of big bubbles between ◀ ▶ arrows (`decorTraySlots` in `theme.ts`).
+Decorate opens from the results card. Each decoration has a spot (`LAYOUT.decorSpots`); its art is a text grid in `decorArt.ts` whose `L`/`l` pixels take the tier's colours (`tierColors.ts`), and Sparkly Rainbow pieces twinkle. Two spots are room surfaces (`isRoomSurface`): `'wall'` for wall paint and `'door'` for the doors. What is used there repaints the room (`PlacedDecorations.tryOn` previews it), and taking it away brings back the plain wall or door. Tapping a colour shows the piece in the room right away; `TierCard` shows the swatches and the button, placed by `tierCardRect` clear of what the piece covers (`pieceRect`). The tray shows a page of big bubbles between ◀ ▶ arrows (`decorTraySlots` in `theme.ts`).
 
 ```ts
 (decoration('door-arch', 'Arched Door', 220, 'door', 'furniture'), // a new door design: add its grid to DOOR_ART
   itemInSpot(profile.decorations, 'wall')); // the wall paint in use, if any
 ```
+
+The card's words are picked by each shop:
+
+```ts
+new TierCard(scene, rect, {
+  labels: (design) => ({ use: 'Wear it', remove: 'Take it off' }),
+  onPick: (tier) => this.pick(tier), // try it on
+  onAction: () => this.act(), // takeOffer, then save
+});
+```
+
+Momo's Closet also opens from the results card and covers the whole screen (`closetLayout()` in `theme.ts`): Momo on a stage, three tabs (Clothing: hats, T-shirt, dress, skirt, shoes; Accessories: glasses, sunglasses, hearing aids, bow; Ice Cream Tools: the scooper), a tile per design and the same `TierCard`. A dress is worn instead of a T-shirt and skirt (`SLOT_CLASHES` in `catalog.ts`), and `wornWith(profile, item)` gives what Momo would have on while trying something. Whatever colour is picked is shown on Momo at once; buying keeps it on, and when the Closet closes the shop rebuilds her in what she now has on.
 
 ## Tests
 

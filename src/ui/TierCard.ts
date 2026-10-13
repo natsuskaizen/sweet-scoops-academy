@@ -7,9 +7,8 @@ import { Button } from './Button';
 import { COLORS, CSS, text, type Point, type Rect } from './theme';
 
 export interface TierCardOptions {
-  /** The big button's words when the item is owned but not in use, and when it is. */
-  useLabel: string;
-  removeLabel: string;
+  /** The big button's words when the design is owned but not in use, and when it is. */
+  labels: (design: CatalogDesign) => { use: string; remove: string };
   onPick: (tier: TierId) => void;
   onAction: () => void;
 }
@@ -55,7 +54,7 @@ export class TierCard extends Phaser.GameObjects.Container {
     TIERS.forEach((tier, i) =>
       this.swatch({ x: startX + i * SWATCH_STEP, y: 104 }, design, tier, tier === selected, profile),
     );
-    this.action = this.button(item, offerFor(profile, item));
+    this.action = this.button(design, item, offerFor(profile, item));
     this.add(this.action);
   }
 
@@ -74,13 +73,13 @@ export class TierCard extends Phaser.GameObjects.Container {
     this.add([g, label, hit]);
   }
 
-  private button(item: CatalogItem, offer: Offer): Button {
+  private button(design: CatalogDesign, item: CatalogItem, offer: Offer): Button {
     const { w, h } = this.rect;
     const look = BUTTON_LOOK[offer.kind];
     const button = new Button(this.scene, w / 2, h - 52, {
       width: w - 40,
       height: 76,
-      label: this.labelFor(item, offer),
+      label: this.labelFor(design, item, offer),
       fontSize: 28,
       fill: look.fill,
       shade: look.shade,
@@ -90,10 +89,11 @@ export class TierCard extends Phaser.GameObjects.Container {
     return button;
   }
 
-  private labelFor(item: CatalogItem, offer: Offer): string {
+  private labelFor(design: CatalogDesign, item: CatalogItem, offer: Offer): string {
     if (offer.kind === 'buy') return `Buy for ✦ ${item.price}`;
     if (offer.kind === 'short') return `✦ ${offer.short} more to go!`;
-    return offer.kind === 'use' ? this.opts.useLabel : this.opts.removeLabel;
+    const labels = this.opts.labels(design);
+    return offer.kind === 'use' ? labels.use : labels.remove;
   }
 }
 
