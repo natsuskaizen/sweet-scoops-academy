@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { decorSize } from '../scenes/decorArt';
+import { decorSize, pieceRect } from '../scenes/decorArt';
 import { tubSpot } from '../scenes/shopRoom';
-import { designsIn } from '../shop/catalog';
+import { designsIn, isRoomSurface } from '../shop/catalog';
 import {
   decorTrayRect,
+  decorTraySlots,
   layoutFor,
   paradeSpots,
   PORTRAIT_MAX_H,
@@ -102,18 +103,58 @@ describe('decorating layout', () => {
       for (const design of designsIn('decorate')) {
         if (design.placement.kind !== 'shop') continue;
         const at = l.decorSpots[design.placement.spot];
-        const { w, h } = decorSize(design.asset);
-        // The piece as drawn (bottom centre on the spot), with the preview outline's margin.
-        const piece = { x: at.x - w / 2 - 12, y: at.y - h - 12, w: w + 24, h: h + 24 };
+        const r = pieceRect(design, l);
+        // The piece as drawn, with the preview outline's margin (the wall gets no outline).
+        const m = design.placement.spot === 'wall' ? 0 : 12;
+        const piece = { x: r.x - m, y: r.y - m, w: r.w + 2 * m, h: r.h + 2 * m };
+        const card = tierCardRect(l, r);
         const name = `${l.orientation} ${design.id}`;
-        expect(w * h, name).toBeGreaterThan(0);
+        expect(r.w * r.h, name).toBeGreaterThan(0);
         expect(piece.x, name).toBeGreaterThanOrEqual(0);
         expect(piece.x + piece.w, name).toBeLessThanOrEqual(l.width);
-        expect(piece.y, name).toBeGreaterThanOrEqual(l.shop.y);
+        expect(r.y, name).toBeGreaterThanOrEqual(l.shop.y);
         expect(at.y, name).toBeLessThanOrEqual(tray.y);
-        expect(overlaps(piece, tierCardRect(l, at)), name).toBe(false);
-        expect(overlaps(tierCardRect(l, at), tray)).toBe(false);
+        expect(overlaps(card, tray), name).toBe(false);
+        // In landscape the card always sits on the wall, so wall paint shows around it.
+        if (design.placement.spot === 'wall' && l.orientation === 'landscape') continue;
+        expect(overlaps(piece, card), name).toBe(false);
       }
+    }
+  });
+
+  it('gives each piece standing in the room a spot of its own', () => {
+    const spots = designsIn('decorate').map((d) => (d.placement.kind === 'shop' ? d.placement.spot : ''));
+    const standing = spots.filter((s) => s && !isRoomSurface(s));
+    expect(new Set(standing).size).toBe(standing.length);
+    for (const l of screens) {
+      const rects = designsIn('decorate')
+        .filter((d) => d.placement.kind === 'shop' && !['wall', 'floor-center'].includes(d.placement.spot))
+        .map((d) => ({ id: d.id, r: pieceRect(d, l) }));
+      const doors = (a: string, b: string) => a.startsWith('door-') && b.startsWith('door-');
+      const pairs = rects.flatMap((a) => rects.filter((b) => a.id < b.id && !doors(a.id, b.id)).map((b) => [a, b]));
+      for (const [a, b] of pairs) expect(overlaps(a!.r, b!.r), `${l.orientation} ${a!.id} / ${b!.id}`).toBe(false);
+    }
+  });
+
+  it('pages the tray with big bubbles that fit between the arrows', () => {
+    for (const l of screens) {
+      const tray = decorTrayRect(l);
+      const { perPage, d, slots, prev, next, dotsY } = decorTraySlots(l);
+      expect(slots).toHaveLength(perPage);
+      expect(d).toBeGreaterThanOrEqual(110); // big enough for small fingers
+      const bubbles = slots.map((s) => ({ x: s.x - d / 2, y: s.y - d / 2, w: d, h: d + 5 }));
+      for (const r of [...bubbles, prev, next]) expect(inside(r, tray), l.orientation).toBe(true);
+      for (const b of bubbles) {
+        expect(overlaps(b, prev) || overlaps(b, next)).toBe(false);
+        expect(b.y + b.h).toBeLessThan(dotsY - 8);
+      }
+      for (let i = 1; i < bubbles.length; i++) {
+        for (let j = 0; j < i; j++) expect(overlaps(bubbles[i]!, bubbles[j]!)).toBe(false);
+      }
+      expect(dotsY + 8).toBeLessThanOrEqual(tray.y + tray.h);
+      expect(prev.w).toBeGreaterThanOrEqual(80);
+      // Every design is on some page.
+      expect(Math.ceil(designsIn('decorate').length / perPage)).toBeGreaterThanOrEqual(1);
     }
   });
 

@@ -85,8 +85,7 @@ export class ShopScene extends Phaser.Scene {
 
     this.parentArea = parentArea({ scene: this, services: this.services, profile: () => this.manager.profile });
 
-    drawShopRoom(this);
-    this.placed = new PlacedDecorations(this);
+    this.placed = new PlacedDecorations(this, drawShopRoom(this));
     this.placed.draw(this.manager.profile.decorations);
     this.registerPanel = this.drawRegisterPanel();
 

@@ -6,7 +6,17 @@ import type Phaser from 'phaser';
 import { makePixelTexture } from '../characters/pixelArt';
 import { FLAVOR_COLORS } from '../characters/sprites';
 import { Pixels } from './roomPixels';
-import { COUNTER_ART, paintCounter, paintRoom, roomArt, ROOM_OUTLINE, ROOM_SCALE, ROOM_TEXT } from './shopRoom';
+import {
+  COUNTER_ART,
+  paintCounter,
+  paintRoom,
+  PLAIN_ROOM,
+  roomArt,
+  ROOM_OUTLINE,
+  ROOM_SCALE,
+  ROOM_TEXT,
+  type RoomLook,
+} from './shopRoom';
 import { CSS, text } from '../ui/theme';
 
 /** Small pixel textures used across the scene. */
@@ -49,13 +59,26 @@ function paintTexture(scene: Phaser.Scene, key: string, size: { w: number; h: nu
   canvas.refresh();
 }
 
-export function drawShopRoom(scene: Phaser.Scene): void {
+/**
+ * The room's texture for a look (wall paint and door), painted the first
+ * time it is needed. One per screen shape too, so a rotation repaints at the new size.
+ */
+export function roomTexture(scene: Phaser.Scene, look: RoomLook): string {
   const room = roomArt();
-  // One texture per screen shape, so a rotation repaints at the new size.
-  const key = `room-${room.w}x${room.h}`;
-  paintTexture(scene, key, room, paintRoom);
+  const key = `room-${room.w}x${room.h}-${look.wall ?? 'plain'}-${look.door?.id ?? 'plain'}`;
+  paintTexture(scene, key, room, (p) => paintRoom(p, look));
+  return key;
+}
+
+/** Draws the room; the image is returned so wall paint and doors can repaint it. */
+export function drawShopRoom(scene: Phaser.Scene): Phaser.GameObjects.Image {
+  const room = roomArt();
   paintTexture(scene, 'room-counter', COUNTER_ART, paintCounter);
-  scene.add.image(room.x, room.y, key).setOrigin(0).setScale(ROOM_SCALE).setDepth(0);
+  const image = scene.add
+    .image(room.x, room.y, roomTexture(scene, PLAIN_ROOM))
+    .setOrigin(0)
+    .setScale(ROOM_SCALE)
+    .setDepth(0);
   // The counter sits on a higher layer so it hides the shopkeeper's legs.
   scene.add.image(COUNTER_ART.x, COUNTER_ART.y, 'room-counter').setOrigin(0).setScale(ROOM_SCALE).setDepth(30);
   const { sign, open } = ROOM_TEXT;
@@ -64,4 +87,5 @@ export function drawShopRoom(scene: Phaser.Scene): void {
     .setOrigin(0.5)
     .setDepth(1);
   scene.add.text(open.x, open.y, 'OPEN', text(20, CSS.white)).setOrigin(0.5).setDepth(1);
+  return image;
 }

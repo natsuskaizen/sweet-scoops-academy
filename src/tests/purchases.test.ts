@@ -3,6 +3,7 @@ import {
   CATALOG,
   DESIGNS,
   designsIn,
+  isRoomSurface,
   itemById,
   itemId,
   shopOf,
@@ -14,6 +15,7 @@ import {
 import {
   buyItem,
   isInUse,
+  itemInSpot,
   offerFor,
   owns,
   ownedTiers,
@@ -211,5 +213,48 @@ describe('offerFor and takeOffer', () => {
     expect(takeOffer(p, lamp)).toBe('used');
     expect(p.decorations).toEqual([{ itemId: 'deco-lamp.pink', spot: 'counter-top' }]);
     expect(p.sprinkles).toBe(0);
+  });
+});
+
+describe('wall paint and doors', () => {
+  it('are room surfaces, sold in Decorate like any decoration', () => {
+    expect(isRoomSurface('wall')).toBe(true);
+    expect(isRoomSurface('door')).toBe(true);
+    expect(isRoomSurface('floor-left')).toBe(false);
+    for (const id of ['wall-paint', 'door-cottage', 'door-candy', 'door-arch']) {
+      expect(shopOf(design(id))).toBe('decorate');
+      expect(variantsOf(design(id))).toHaveLength(6);
+    }
+    expect(item('wall-paint.rainbow').name).toBe('Sparkly Rainbow Wall Paint');
+  });
+
+  it('paints the wall one colour at a time, and taking it away goes back to the plain wall', () => {
+    const { save, p } = player(1000);
+    buyItem(p, 'wall-paint.mint');
+    buyItem(p, 'wall-paint.golden');
+    expect(itemInSpot(p.decorations, 'wall')).toEqual(item('wall-paint.golden'));
+    useItem(p, item('wall-paint.mint'));
+    expect(itemInSpot(p.decorations, 'wall')?.tier).toBe('mint');
+    stopUsing(p, item('wall-paint.mint'));
+    expect(itemInSpot(p.decorations, 'wall')).toBeUndefined();
+    expect(ownedTiers(p, design('wall-paint'))).toEqual(['mint', 'golden']);
+    expect(validateSaveFile(save)).toEqual([]);
+  });
+
+  it('hangs one door at a time: a new door design replaces the one in use', () => {
+    const { p } = player(2000);
+    buyItem(p, 'door-cottage.pink');
+    buyItem(p, 'door-candy.sky');
+    buyItem(p, 'deco-sign.pink');
+    expect(itemInSpot(p.decorations, 'door')?.id).toBe('door-candy.sky');
+    expect(isInUse(p, item('door-cottage.pink'))).toBe(false);
+    expect(offerFor(p, item('door-cottage.pink'))).toEqual({ kind: 'use' });
+    expect(takeOffer(p, item('door-cottage.pink'))).toBe('used');
+    expect(p.decorations.filter((d) => d.spot === 'door')).toEqual([{ itemId: 'door-cottage.pink', spot: 'door' }]);
+    expect(itemInSpot(p.decorations, 'wall-left')?.id).toBe('deco-sign.pink');
+  });
+
+  it('ignores a placed id that is no longer in the catalog', () => {
+    expect(itemInSpot([{ itemId: 'door-gone.pink', spot: 'door' }], 'door')).toBeUndefined();
   });
 });

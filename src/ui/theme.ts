@@ -107,11 +107,19 @@ export interface Point {
 }
 
 const DECOR_SPOTS: Omit<Record<ShopSpot, Point>, 'wall-right' | 'floor-right'> = {
-  'wall-left': { x: 105, y: 280 },
+  // Above the door.
+  'wall-left': { x: 105, y: 282 },
   'floor-left': { x: 232, y: 640 },
   'floor-center': { x: 360, y: 812 },
+  // Between the window and the display case, floating over where customers wait.
+  'floor-back': { x: 412, y: 600 },
   'counter-top': { x: 528, y: 496 },
+  // The counter's far end, past the shopkeeper.
+  'counter-end': { x: 748, y: 496 },
   window: { x: 324, y: 236 },
+  // Room surfaces (wall paint, doors) repaint the room; their spot is the bottom centre of what they cover.
+  wall: { x: 400, y: 560 },
+  door: { x: 105, y: 560 },
 };
 
 const SHOP_PARTS = {
@@ -237,15 +245,43 @@ export function decorTrayRect(layout: Layout): Rect {
 }
 
 /**
- * Where the shop's colour card goes so it never hides the item being tried:
- * on the other side in landscape, above or below it in portrait.
+ * Where the shop's colour card goes so it never hides the item being tried
+ * (`piece`, the area it covers): on the other side in landscape; in
+ * portrait below it when there is room above the tray, else at the top.
  */
-export function tierCardRect(layout: Layout, spot: Point): Rect {
+export function tierCardRect(layout: Layout, piece: Rect): Rect {
   if (layout.orientation === 'landscape') {
     const w = 700;
-    return { x: spot.x > layout.width / 2 ? 20 : layout.width - w - 20, y: 88, w, h: 260 };
+    const right = piece.x + piece.w / 2 > layout.width / 2;
+    return { x: right ? 20 : layout.width - w - 20, y: 88, w, h: 260 };
   }
   const h = 270;
-  const below = spot.y < 420;
-  return { x: 20, y: below ? decorTrayRect(layout).y - h - 16 : 88, w: layout.width - 40, h };
+  const belowY = decorTrayRect(layout).y - h - 16;
+  return { x: 20, y: piece.y + piece.h + 16 <= belowY ? belowY : 88, w: layout.width - 40, h };
+}
+
+/** Decorate's tray: a page of bubbles between two big arrows, and a dot per page. */
+export interface TraySlots {
+  perPage: number;
+  /** Bubble diameter. */
+  d: number;
+  /** Centres of the bubbles on a page. */
+  slots: Point[];
+  prev: Rect;
+  next: Rect;
+  dotsY: number;
+}
+
+export function decorTraySlots(layout: Layout): TraySlots {
+  const tray = decorTrayRect(layout);
+  if (layout.orientation === 'landscape') {
+    const y = tray.y + 84;
+    const arrow = (x: number): Rect => ({ x, y: y - 60, w: 90, h: 120 });
+    const slots = Array.from({ length: 7 }, (_, i) => ({ x: layout.width / 2 + (i - 3) * 150, y }));
+    return { perPage: 7, d: 128, slots, prev: arrow(14), next: arrow(layout.width - 104), dotsY: tray.y + 164 };
+  }
+  const rows = [tray.y + 76, tray.y + 210];
+  const slots = rows.flatMap((y) => [175, 325, 475, 625].map((x) => ({ x, y })));
+  const arrow = (x: number): Rect => ({ x, y: tray.y + 83, w: 80, h: 120 });
+  return { perPage: 8, d: 118, slots, prev: arrow(10), next: arrow(layout.width - 90), dotsY: tray.y + 284 };
 }
