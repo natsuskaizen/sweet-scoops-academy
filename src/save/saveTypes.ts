@@ -2,16 +2,16 @@
  * Persisted data shapes. Bump SAVE_SCHEMA_VERSION and add a migration in
  * saveManager.ts whenever these change incompatibly.
  */
-import type { MathChallengeSpec } from '../learning/mathValidator';
 import type { MathProgress } from '../learning/mathSubject';
-import type { AttemptOutcome } from '../learning/types';
+import type { AttemptOutcome, ChallengeSpec, LearningSubject } from '../learning/types';
 import type { EquipSlot, ShopSpot } from '../shop/catalog';
 import type { RoundBonus } from '../shop/rewards';
 
 export const SAVE_SCHEMA_VERSION = 1;
 
 export interface OrderState {
-  spec: MathChallengeSpec;
+  /** Checked by the owning subject's isValidSpec on load. */
+  spec: ChallengeSpec;
   customerId: string;
   /** Wrong answers so far are attempts - (outcome ? 1 : 0). */
   attempts: number;
@@ -68,6 +68,7 @@ export interface Profile {
     /** Seed for this child's question sequence; each round derives its own. */
     seed: number;
     roundsStarted: number;
+    /** Progress per subject, keyed by subject id. */
     math: MathProgress;
   };
   currentRound: RoundState | null;
@@ -81,4 +82,17 @@ export interface SaveFile {
   savedAt: number;
   activeProfileId: string;
   profiles: Record<string, Profile>;
+}
+
+/**
+ * A subject's progress in a profile, stored under the subject's id and
+ * created on first use, so new subjects need no save migration.
+ */
+export function subjectProgress<P>(profile: Profile, subject: Pick<LearningSubject<ChallengeSpec, P>, 'id' | 'createProgress'>): P {
+  const store = profile.learning as unknown as Record<string, unknown>;
+  return (store[subject.id] ??= subject.createProgress()) as P;
+}
+
+export function resetSubjectProgress(profile: Profile, subject: Pick<LearningSubject<ChallengeSpec, unknown>, 'id' | 'createProgress'>): void {
+  (profile.learning as unknown as Record<string, unknown>)[subject.id] = subject.createProgress();
 }

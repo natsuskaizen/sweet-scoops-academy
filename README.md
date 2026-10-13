@@ -31,13 +31,21 @@ The rule from the spec is that **the shop never goes away**: there is one gamepl
 ```
 src/
   main.ts                    Phaser config (Scale.FIT, pixelArt), picks the layout and switches it on rotation
+  config/gameConfig.ts       every tunable: round size, rewards, adaptive pacing, number ranges, enabled operations
   core/rng.ts                seeded RNG (mulberry32) used by all game logic
   learning/
     types.ts                 subject-agnostic LearningSubject / FactRecord / VisualAid types
-    mathValidator.ts         the rules: factors 1-11, dividend 10-99, quotient 1-10, no remainders
-    questionGenerator.ts     fact tables, difficulty, building + validating questions
+    math/
+      operation.ts           the MathOperation contract + small shared helpers
+      multiplication.ts      one file per operation: facts, rules, wording, hints
+      division.ts
+      addition.ts            (built, off by default)
+      subtraction.ts         (built, off by default)
+      registry.ts            the list of operations; which ones are enabled
+    mathValidator.ts         entry point for validating a question (delegates to its operation)
+    questionGenerator.ts     builds validated questions from fact keys
     adaptiveEngine.ts        learning -> practicing -> mastered, round planning
-    mathSubject.ts           math as a LearningSubject (order text, hints, explanations)
+    mathSubject.ts           math as a LearningSubject, built from the enabled operations
   shop/
     orderManager.ts          round/order state machine; persists every step
     rewards.ts               the only place Sprinkles are calculated and paid
@@ -60,9 +68,30 @@ src/
   tests/                     Vitest suites
 ```
 
+### Changing settings
+
+Everything you are likely to tweak is in [`src/config/gameConfig.ts`](src/config/gameConfig.ts): orders per round, attempts per order, Sprinkle amounts, adaptive pacing, number ranges per operation, the times-table difficulty tiers, and timings. The Phaser-free modules read their defaults from it and also accept an override, which is how the tests try other settings.
+
+```ts
+math: {
+  enabledOperations: ['multiplication', 'division'],   // add 'addition', 'subtraction'
+  multiplication: { factor: { min: 1, max: 11 } },
+  addition: { addend: { min: 1, max: 10 }, maxSum: 20 },
+  ...
+}
+```
+
+To try other operations without editing the config, run `npm run dev` and open `http://localhost:5173/?ops=addition,subtraction`.
+
+### Adding a math operation or a subject
+
+An operation is one file that implements `MathOperation` (`src/learning/math/operation.ts`): its fact table, validation, fact key, order wording, and the hint and explanation to draw. Register it in `registry.ts`, give it rules in `MathConfig`, and turn it on in `enabledOperations`. Rounds split evenly across enabled operations, each keeps its own progress record, and saves made before it existed simply start an empty record for it. Operations that are switched off stay known, so a round saved while one was on still loads.
+
+A whole new subject (spelling, vocabulary) implements `LearningSubject` (`src/learning/types.ts`) and is plugged in in `src/game/services.ts`. The order flow, rewards and saves never look inside a subject's questions or progress.
+
 ### Adaptive learning in one paragraph
 
-Each child has separate `multiplication` and `division` records. A fact starts in **learning** the first time it is shown. A first-try correct answer moves it to **practicing**; it becomes **mastered** only after first-try success in three separate rounds (a round is one "session", so the streak can grow at most once per round). Retry-assisted answers count as progress but lower the streak; a miss schedules the fact for next round and drops it one level at most, keeping its history. Each round is planned from a target mix (4 learning, 3 practicing, 2 mastered, 1 new), split evenly between the two operations, with fallbacks when a pool is empty, so it works for a brand-new child and for one who knows everything. When a child is keeping up, empty learning slots are filled with new facts rather than repeats, and while recent first-try accuracy in an operation stays at 85% or more, new facts skip ahead to a few difficulty levels above the hardest fact already answered first try. After misses it falls back to the easiest unseen facts, and new facts stop being introduced while too many are still in learning. All tunables are in `DEFAULT_ADAPTIVE_CONFIG`. Every round's seed is derived from the profile seed and round number, so the same state and seed always reproduce the same questions.
+Each child has separate `multiplication` and `division` records. A fact starts in **learning** the first time it is shown. A first-try correct answer moves it to **practicing**; it becomes **mastered** only after first-try success in three separate rounds (a round is one "session", so the streak can grow at most once per round). Retry-assisted answers count as progress but lower the streak; a miss schedules the fact for next round and drops it one level at most, keeping its history. Each round is planned from a target mix (4 learning, 3 practicing, 2 mastered, 1 new), split evenly between the two operations, with fallbacks when a pool is empty, so it works for a brand-new child and for one who knows everything. When a child is keeping up, empty learning slots are filled with new facts rather than repeats, and while recent first-try accuracy in an operation stays at 85% or more, new facts skip ahead to a few difficulty levels above the hardest fact already answered first try. After misses it falls back to the easiest unseen facts, and new facts stop being introduced while too many are still in learning. All tunables are in `GAME_CONFIG.adaptive`. Every round's seed is derived from the profile seed and round number, so the same state and seed always reproduce the same questions.
 
 ### Saving
 
@@ -83,7 +112,7 @@ Press and hold the ⚙ button in the top-right corner for about a second, then t
 
 ## Milestone 1 status
 
-All items in the spec's acceptance checklist are implemented. Verified automatically: 95 unit tests, the production build, a scripted Chromium playthrough of a full 10-order round with touch input (including a wrong answer, a retry, a revealed answer, triple-tapped submit, a reload mid-order, a corrupted save, and the parent reset), the build served from a `/<repo>/` sub-path, and portrait play on iPhone and iPad sizes including rotating mid-order.
+All items in the spec's acceptance checklist are implemented. Verified automatically: 110 unit tests, the production build, a scripted Chromium playthrough of a full 10-order round with touch input (including a wrong answer, a retry, a revealed answer, triple-tapped submit, a reload mid-order, a corrupted save, and the parent reset), the build served from a `/<repo>/` sub-path, and portrait play on iPhone and iPad sizes including rotating mid-order.
 
 ## Known limitations
 
@@ -91,5 +120,6 @@ All items in the spec's acceptance checklist are implemented. Verified automatic
 - Art is original placeholder pixel art and flat procedural shapes. Animation is simple tweens (walk, hop, scoop stacking). Milestone 2 covers polish.
 - There is one profile ("Player 1"). Multiple profiles, profile names, and JSON export/import are Milestone 4. The save format already supports several profiles.
 - The item catalog exists with a few sample items and decorations render if owned, but there is no shop or customization screen yet (Milestone 3). The results card only offers "Keep scooping!".
-- Division practice uses divisors 1-12 (`DIVISION_DIVISOR_RANGE`); the validator itself only requires a positive divisor, as the spec says.
+- Division practice uses divisors 1-12 (`GAME_CONFIG.math.division.divisor`); the spec itself only requires a positive divisor.
+- Addition and subtraction are built and tested but switched off, since Milestone 1 is multiplication and division. Their hints use simple piles of scoops; the difficulty curve for them is a first guess.
 - localStorage is per browser and per device. If the browser blocks storage (some private modes), the game still plays but warns that progress will not be kept.

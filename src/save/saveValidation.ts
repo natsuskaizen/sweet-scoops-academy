@@ -2,7 +2,8 @@
  * Hand-rolled structural validation for save files (no runtime dependency).
  * Returns a list of problems; an empty list means the data is safe to use.
  */
-import { validateMathSpec } from '../learning/mathValidator';
+import { GAME_CONFIG } from '../config/gameConfig';
+import { mathSubject } from '../learning/mathSubject';
 import type { SaveFile } from './saveTypes';
 
 type Obj = Record<string, unknown>;
@@ -49,10 +50,9 @@ function checkRound(v: unknown, path: string, out: string[]): void {
   v.orders.forEach((o, i) => {
     const p = `${path}.orders[${i}]`;
     if (!isObj(o)) { out.push(`${p} not an object`); return; }
-    const spec = validateMathSpec(o.spec);
-    if (!spec.ok) out.push(`${p}.spec ${spec.reason}`);
+    if (!mathSubject.isValidSpec(o.spec)) out.push(`${p}.spec invalid`);
     if (!isStr(o.customerId)) out.push(`${p}.customerId invalid`);
-    if (!isNonNegInt(o.attempts) || o.attempts > 2) out.push(`${p}.attempts invalid`);
+    if (!isNonNegInt(o.attempts) || o.attempts > GAME_CONFIG.round.attemptsPerOrder) out.push(`${p}.attempts invalid`);
     if (o.outcome !== null && !OUTCOMES.has(o.outcome as string)) out.push(`${p}.outcome invalid`);
     if (typeof o.paid !== 'boolean') out.push(`${p}.paid invalid`);
     if (!isNonNegInt(o.sprinklesPaid)) out.push(`${p}.sprinklesPaid invalid`);
@@ -76,14 +76,17 @@ function checkProfile(v: unknown, id: string, out: string[]): void {
   if (!isObj(v.settings) || typeof v.settings.showHints !== 'boolean' || typeof v.settings.reduceMotion !== 'boolean') {
     out.push(`${path}.settings invalid`);
   }
-  const learning = v.learning;
-  if (!isObj(learning)) { out.push(`${path}.learning missing`); return; }
-  if (!isNonNegInt(learning.seed)) out.push(`${path}.learning.seed invalid`);
-  if (!isNonNegInt(learning.roundsStarted)) out.push(`${path}.learning.roundsStarted invalid`);
-  if (!isObj(learning.math)) { out.push(`${path}.learning.math missing`); return; }
-  checkSkill(learning.math.multiplication, `${path}.learning.math.multiplication`, out);
-  checkSkill(learning.math.division, `${path}.learning.math.division`, out);
+  checkLearning(v.learning, `${path}.learning`, out);
   checkRound(v.currentRound, `${path}.currentRound`, out);
+}
+
+function checkLearning(learning: unknown, path: string, out: string[]): void {
+  if (!isObj(learning)) { out.push(`${path} missing`); return; }
+  if (!isNonNegInt(learning.seed)) out.push(`${path}.seed invalid`);
+  if (!isNonNegInt(learning.roundsStarted)) out.push(`${path}.roundsStarted invalid`);
+  if (!isObj(learning.math)) { out.push(`${path}.math missing`); return; }
+  // One record per operation; operations switched on later simply have none yet.
+  for (const [skillId, skill] of Object.entries(learning.math)) checkSkill(skill, `${path}.math.${skillId}`, out);
 }
 
 export function validateSaveFile(data: unknown): string[] {

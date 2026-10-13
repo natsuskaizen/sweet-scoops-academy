@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import type { AttemptOutcome } from '../learning/types';
+import { GAME_CONFIG } from '../config/gameConfig';
 import { COLORS, CSS, LAYOUT, text } from './theme';
 
 const OUTCOME_COLORS: Record<AttemptOutcome, [number, number]> = {
@@ -34,7 +35,7 @@ export class StatusBar extends Phaser.GameObjects.Container {
     const icon = scene.add.image(pillX + 34, h / 2 - 3, 'sprinkle-icon').setScale(4);
     this.sprinklesText = scene.add.text(pillX + pillW - 16, h / 2 - 3, '0', text(30, CSS.strawberry)).setOrigin(1, 0.5);
 
-    // Grown-ups button: hold for 1.2 s.
+    // Grown-ups button: press and hold.
     const gear = scene.add.text(gearX, h / 2 - 3, '⚙', text(40, CSS.inkSoft)).setOrigin(0.5);
     this.holdRing = scene.add.graphics();
     const hit = scene.add.zone(gearX, h / 2 - 3, 76, 64).setInteractive();
@@ -49,7 +50,7 @@ export class StatusBar extends Phaser.GameObjects.Container {
       holdTween = scene.tweens.add({
         targets: progress,
         t: 1,
-        duration: 1200,
+        duration: GAME_CONFIG.timing.parentHoldMs,
         onUpdate: () => {
           this.holdRing.clear();
           this.holdRing.lineStyle(5, COLORS.strawberryDark, 1);

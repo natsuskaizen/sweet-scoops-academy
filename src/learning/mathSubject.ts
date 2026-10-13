@@ -1,138 +1,99 @@
 /**
- * Math as a LearningSubject: multiplication and division with independent
- * adaptive records. This is the only place that knows how to phrase a math
- * order or explain it with scoops; the shop just renders what it returns.
+ * Math as a LearningSubject. Each operation keeps its own adaptive record, so
+ * a child can be strong at multiplication and still learning division. All
+ * operation-specific wording and visuals come from the operation itself
+ * (src/learning/math/); this file only wires them into the subject contract.
  */
-import {
-  DEFAULT_ADAPTIVE_CONFIG,
-  planRound,
-  recordOutcome,
-  summarizeSkill,
-  type AdaptiveConfig,
-  type SkillPool,
-  type SkillSummary,
-} from './adaptiveEngine';
-import { validateMathSpec, type MathChallengeSpec, type MathOperation } from './mathValidator';
-import { buildQuestion, factsFor } from './questionGenerator';
-import type {
-  ChallengePresentation,
-  LearningSubject,
-  OrderContext,
-  PlanContext,
-  SkillProgress,
-} from './types';
+import { GAME_CONFIG, type AdaptiveConfig } from '../config/gameConfig';
+import { planRound, recordOutcome, summarizeSkill, type SkillPool, type SkillSummary } from './adaptiveEngine';
+import type { MathChallengeSpec } from './math/operation';
+import { OPERATIONS, type OperationRegistry } from './math/registry';
+import { validateMathSpec } from './mathValidator';
+import { buildQuestion, factByKey } from './questionGenerator';
+import type { ChallengePresentation, LearningSubject, OrderContext, PlanContext, SkillProgress } from './types';
 
-export interface MathProgress {
-  multiplication: SkillProgress;
-  division: SkillProgress;
+/** One adaptive record per operation id. Operations turned on later start empty. */
+export type MathProgress = Record<string, SkillProgress>;
+
+export type MathSubject = LearningSubject<MathChallengeSpec, MathProgress>;
+
+export interface MathSubjectOptions {
+  adaptive?: AdaptiveConfig;
+  operations?: OperationRegistry;
 }
 
-export const MATH_OPERATIONS: readonly MathOperation[] = ['multiplication', 'division'];
-
-function pools(progress: MathProgress): SkillPool[] {
-  return MATH_OPERATIONS.map((op) => ({ skillId: op, progress: progress[op], catalog: factsFor(op) }));
+/** The record for one operation, created on first use. */
+function skillProgress(progress: MathProgress, operationId: string): SkillProgress {
+  return (progress[operationId] ??= { facts: {} });
 }
 
-const plural = (n: number, one: string, many: string): string => `${n} ${n === 1 ? one : many}`;
+export function createMathSubject(options: MathSubjectOptions = {}): MathSubject {
+  const adaptive = options.adaptive ?? GAME_CONFIG.adaptive;
+  const operations = options.operations ?? OPERATIONS;
 
-function multiplicationLine(groups: number, each: number, flavor: string, variant: number): string {
-  const lines = [
-    `Can I get ${plural(groups, 'cone', 'cones')} with ${plural(each, 'scoop', 'scoops')} each?`,
-    `I'd love ${plural(groups, `${flavor} cone`, `${flavor} cones`)} with ${plural(each, 'scoop', 'scoops')} on each!`,
-    `${plural(groups, 'cup', 'cups')} please, ${plural(each, 'scoop', 'scoops')} in every cup!`,
-  ];
-  return lines[variant % lines.length]!;
-}
+  const operation = (id: string) => {
+    const op = operations.get(id);
+    if (!op) throw new Error(`Unknown math operation "${id}"`);
+    return op;
+  };
 
-function divisionLine(total: number, groups: number, flavor: string, variant: number): string {
-  if (groups === 1) return `Please put ${total} ${flavor} scoops in 1 big cup!`;
-  const lines = [
-    `Please share ${total} scoops equally between ${groups} friends.`,
-    `I have ${total} ${flavor} scoops for ${groups} cones. Same on each, please!`,
-    `Can you split ${total} scoops into ${groups} cups evenly?`,
-  ];
-  return lines[variant % lines.length]!;
-}
+  const pools = (progress: MathProgress, ops = operations.enabled): SkillPool[] =>
+    ops.map((op) => ({ skillId: op.id, progress: skillProgress(progress, op.id), catalog: op.facts() }));
 
-export function createMathSubject(
-  config: AdaptiveConfig = DEFAULT_ADAPTIVE_CONFIG,
-): LearningSubject<MathChallengeSpec, MathProgress> & {
-  summarize(progress: MathProgress): Record<MathOperation, SkillSummary>;
-} {
   return {
     id: 'math',
 
-    createProgress: () => ({ multiplication: { facts: {} }, division: { facts: {} } }),
+    createProgress: () => Object.fromEntries(operations.enabled.map((op) => [op.id, { facts: {} }])),
 
     planRound(progress: MathProgress, ctx: PlanContext): MathChallengeSpec[] {
-      const plan = planRound(pools(progress), {
-        roundNumber: ctx.roundNumber,
-        rng: ctx.rng,
-        count: ctx.count,
-        config,
-      });
+      const plan = planRound(pools(progress), { roundNumber: ctx.roundNumber, rng: ctx.rng, count: ctx.count, config: adaptive });
       // buildQuestion validates every question and throws on anything invalid.
-      return plan.map((item) => buildQuestion(item.factKey, ctx.rng));
+      return plan.map((item) => buildQuestion(item.factKey, ctx.rng, operations));
     },
 
-    isValidSpec(spec: unknown): spec is MathChallengeSpec {
-      return validateMathSpec(spec).ok;
-    },
+    isValidSpec: (spec: unknown): spec is MathChallengeSpec => validateMathSpec(spec, operations).ok,
 
     present(spec: MathChallengeSpec, ctx: OrderContext): ChallengePresentation {
-      // Variant is derived from the numbers so the same order always reads the same.
-      const variant = spec.left + spec.right;
-      if (spec.skillId === 'multiplication') {
-        const groups = spec.left;
-        const each = spec.right;
-        return {
-          expression: `${spec.left} × ${spec.right}`,
-          orderLine: multiplicationLine(groups, each, ctx.flavor, variant),
-          answerInput: { kind: 'integer', maxDigits: 3 },
-          correctAnswer: String(spec.answer),
-          hint: {
-            kind: 'groups', groups, perGroup: each, showTotal: false,
-            caption: `${plural(groups, 'cup', 'cups')} with ${each} in each. Count them all!`,
-          },
-          explanation: {
-            kind: 'groups', groups, perGroup: each, showTotal: true,
-            caption: `${plural(groups, 'group', 'groups')} of ${each} make${groups === 1 ? 's' : ''} ${spec.answer}.  ${spec.left} × ${spec.right} = ${spec.answer}`,
-          },
-        };
-      }
-      const total = spec.left;
-      const groups = spec.right;
+      const op = operation(spec.skillId);
       return {
-        expression: `${spec.left} ÷ ${spec.right}`,
-        orderLine: divisionLine(total, groups, ctx.flavor, variant),
-        answerInput: { kind: 'integer', maxDigits: 2 },
+        expression: `${spec.left} ${op.symbol} ${spec.right}`,
+        answerInput: { kind: 'integer', maxDigits: op.maxDigits },
         correctAnswer: String(spec.answer),
-        hint: {
-          kind: 'share', total, groups, perGroup: null,
-          caption: `Share ${total} scoops into ${plural(groups, 'cup', 'cups')}, one at a time.`,
-        },
-        explanation: {
-          kind: 'share', total, groups, perGroup: spec.answer,
-          caption: `${total} shared into ${groups} is ${spec.answer} each.  ${spec.left} ÷ ${spec.right} = ${spec.answer}`,
-        },
+        ...op.word(spec, ctx.flavor),
       };
     },
 
     checkAnswer(spec: MathChallengeSpec, input: string): boolean {
       const trimmed = input.trim();
-      if (!/^\d+$/.test(trimmed)) return false;
-      return Number.parseInt(trimmed, 10) === spec.answer;
+      return /^\d+$/.test(trimmed) && Number.parseInt(trimmed, 10) === spec.answer;
     },
 
     recordOutcome(progress, spec, outcome, ctx) {
-      recordOutcome(progress[spec.skillId], spec.factKey, outcome, ctx, config);
+      recordOutcome(skillProgress(progress, spec.skillId), spec.factKey, outcome, ctx, adaptive);
     },
 
-    summarize(progress: MathProgress) {
-      const [mul, div] = pools(progress);
-      return { multiplication: summarizeSkill(mul!), division: summarizeSkill(div!) };
+    progressReport(progress: MathProgress): string[] {
+      const summary = (id: string, s: SkillSummary) =>
+        `${operation(id).label}: ${s.mastered} mastered · ${s.practicing} practicing · ${s.learning} learning · ${s.unseen} not seen yet`;
+      const lines = pools(progress).map((pool) => summary(pool.skillId, summarizeSkill(pool)));
+      const tricky = trickyFacts(progress).map((key) => {
+        const fact = factByKey(key, operations);
+        return fact ? operation(fact.operation).formatKey(key) : key;
+      });
+      return [...lines, `Facts to practice: ${tricky.length ? tricky.join(', ') : 'none yet'}`];
     },
   };
+}
+
+/** Facts that needed help and are not yet mastered, most troublesome first. */
+function trickyFacts(progress: MathProgress, limit = 6): string[] {
+  const trouble = (r: { missed: number; retryCorrect: number }) => r.missed * 2 + r.retryCorrect;
+  return Object.values(progress)
+    .flatMap((skill) => Object.values(skill.facts))
+    .filter((r) => trouble(r) > 0 && r.state !== 'mastered')
+    .sort((a, b) => trouble(b) - trouble(a))
+    .slice(0, limit)
+    .map((r) => r.key);
 }
 
 export const mathSubject = createMathSubject();

@@ -10,10 +10,12 @@ import Phaser from 'phaser';
 import { CharacterView } from '../characters/characterManager';
 import type { LayerId } from '../characters/sprites';
 import { SERVICES_KEY, type GameServices } from '../game/services';
+import { GAME_CONFIG } from '../config/gameConfig';
 import { createProfile } from '../save/saveManager';
+import { resetSubjectProgress, subjectProgress } from '../save/saveTypes';
 import type { RoundSummary } from '../save/saveTypes';
 import { itemById } from '../shop/catalog';
-import { lineFor } from '../shop/customerManager';
+import { lineFor, type CustomerDef } from '../shop/customerManager';
 import { OrderManager, type ActiveOrder } from '../shop/orderManager';
 import type { AttemptOutcome, ChallengePresentation } from '../learning/types';
 import { Button } from '../ui/Button';
@@ -121,8 +123,19 @@ export class ShopScene extends Phaser.Scene {
     this.busy = true;
     this.updateStatus(active);
     this.ticket.clearOrder();
+    const customer = await this.customerArrives(active.customer);
+    await this.placeOrder(active, customer);
 
-    const { customer: def, presentation } = active;
+    if (active.phase === 'resolved') {
+      // Reloaded after paying but before serving: finish the animation only.
+      await this.celebrateOrExplain(active.order.outcome!, active.order.sprinklesPaid, active.presentation, '');
+      return;
+    }
+    if (active.phase === 'retrying') this.showHint(active.presentation);
+    this.readyForAnswer();
+  }
+
+  private async customerArrives(def: CustomerDef): Promise<CharacterView> {
     const customer = new CharacterView(this, LAYOUT.doorSpot.x, LAYOUT.customerSpot.y, {
       species: def.species,
       palette: def.palette,
@@ -133,20 +146,21 @@ export class ShopScene extends Phaser.Scene {
     this.tweens.add({ targets: customer, alpha: 1, duration: 250 });
     await customer.walkTo(LAYOUT.customerSpot.x);
     customer.idle(true);
+    return customer;
+  }
 
+  private async placeOrder(active: ActiveOrder, customer: CharacterView): Promise<void> {
+    const { customer: def, presentation } = active;
     this.bubble.say(lineFor(def.greetings, active.index), customer.x);
-    await this.wait(900);
+    await this.wait(GAME_CONFIG.timing.greetingMs);
     this.bubble.say(presentation.orderLine, customer.x);
     this.ticket.showOrder(`${def.name}'s order`, presentation.expression);
     this.keypad.setMaxDigits(presentation.answerInput.maxDigits);
     this.keypad.clear();
+  }
 
-    if (active.phase === 'resolved') {
-      // Reloaded after paying but before serving: finish the animation only.
-      await this.celebrateOrExplain(active.order.outcome!, active.order.sprinklesPaid, presentation, '');
-      return;
-    }
-    if (active.phase === 'retrying') this.showHint(presentation);
+  /** Hands control back to the player (unless the grown-ups area is open). */
+  private readyForAnswer(): void {
     this.busy = false;
     if (!this.gateOpen) this.keypad.setEnabled(true);
   }
@@ -168,8 +182,7 @@ export class ShopScene extends Phaser.Scene {
       this.showHint(result.presentation);
       await this.wait(450);
       this.keypad.clear();
-      this.busy = false;
-      if (!this.gateOpen) this.keypad.setEnabled(true);
+      this.readyForAnswer();
       return;
     }
 
@@ -233,32 +246,40 @@ export class ShopScene extends Phaser.Scene {
   private async serve(presentation: ChallengePresentation, sprinkles: number, flavor: string): Promise<void> {
     const customer = this.customer!;
     customer.setExpression('happy');
+    const treat = await this.scoopTreat(Number(presentation.correctAnswer), flavor);
+    await this.tween({ targets: treat, x: customer.x + 52, y: customer.y - 62, duration: 450, ease: 'Quad.easeInOut' });
+    treat.setData('follow', true);
+    await this.thankAndPay(customer, Number(presentation.correctAnswer), sprinkles);
+    await this.customerLeaves(customer, treat);
+    this.nextOrder();
+  }
 
-    // Shopkeeper scoops the order onto a cone on the counter.
+  /** Shopkeeper stacks up to four scoops on a cone on the counter. */
+  private async scoopTreat(answer: number, flavor: string): Promise<Phaser.GameObjects.Container> {
     const treat = this.add.container(LAYOUT.counter.x + 80, LAYOUT.counter.y - 40).setDepth(45);
     this.treat = treat;
     treat.add(this.add.image(0, 0, 'cone').setScale(6).setOrigin(0.5, 0));
     void this.shopkeeper.hop();
-    const scoops = Phaser.Math.Clamp(Number(presentation.correctAnswer) || 1, 1, 4);
+    const scoops = Phaser.Math.Clamp(answer || 1, 1, 4);
     for (let i = 0; i < scoops; i++) {
-      const s = this.add.image(0, -i * 22 + 4, `scoop-${flavor}`).setScale(6).setOrigin(0.5, 1);
+      const s = this.add.image(0, -i * 22 + 4, `scoop-${flavor}`).setScale(0).setOrigin(0.5, 1);
       treat.add(s);
-      s.setScale(0);
       this.tweens.add({ targets: s, scale: 6, duration: 160, ease: 'Back.easeOut' });
       await this.wait(170);
     }
-    await this.tween({ targets: treat, x: customer.x + 52, y: customer.y - 62, duration: 450, ease: 'Quad.easeInOut' });
-    treat.setData('follow', true);
+    return treat;
+  }
 
-    // Customer reacts, Sprinkles fly up.
+  private async thankAndPay(customer: CharacterView, answer: number, sprinkles: number): Promise<void> {
     const def = this.manager.current()?.customer;
-    this.bubble.say(lineFor(def?.thanks ?? ['Thank you!'], Number(presentation.correctAnswer)), customer.x);
+    this.bubble.say(lineFor(def?.thanks ?? ['Thank you!'], answer), customer.x);
     void customer.hop();
     this.sprinklePopup(customer.x, customer.y - 170, sprinkles);
     this.status.setSprinkles(this.manager.profile.sprinkles, true);
     await this.wait(1300);
+  }
 
-    // Customer leaves; next one comes in.
+  private async customerLeaves(customer: CharacterView, treat: Phaser.GameObjects.Container): Promise<void> {
     this.bubble.hide();
     this.ticket.clearOrder();
     customer.idle(false);
@@ -268,7 +289,9 @@ export class ShopScene extends Phaser.Scene {
     treat.destroy();
     this.customer = null;
     this.treat = null;
+  }
 
+  private nextOrder(): void {
     const outcomes = this.roundOutcomes(); // the round is cleared once it finishes
     const finish = this.manager.finishOrder();
     if (finish.kind === 'round-complete') this.showResults(finish.summary, outcomes);
@@ -311,22 +334,13 @@ export class ShopScene extends Phaser.Scene {
 
   private parentInfo(): string[] {
     const p = this.manager.profile;
-    const s = this.services.subject.summarize(p.learning.math);
-    const line = (name: string, x: typeof s.multiplication) =>
-      `${name}: ${x.mastered} mastered · ${x.practicing} practicing · ${x.learning} learning · ${x.unseen} not seen yet`;
-    const tricky = (['multiplication', 'division'] as const)
-      .flatMap((op) => Object.values(p.learning.math[op].facts))
-      .filter((r) => r.missed + r.retryCorrect > 0 && r.state !== 'mastered')
-      .sort((a, b) => b.missed * 2 + b.retryCorrect - (a.missed * 2 + a.retryCorrect))
-      .slice(0, 6)
-      .map((r) => r.key.replace('mul:', '').replace('x', '×').replace('div:', '').replace('/', '÷'));
+    const subject = this.services.subject;
     const last = p.roundHistory[p.roundHistory.length - 1];
+    const lastRound = last ? `   ·   Last round: ${last.firstTryCorrect}/${last.ordersCompleted} first try` : '';
     return [
       `Player: ${p.displayName}   ·   Sprinkles: ${p.sprinkles} (earned in total: ${p.lifetimeSprinkles})`,
-      `Rounds finished: ${p.roundHistory.length}${last ? `   ·   Last round: ${last.firstTryCorrect}/10 first try` : ''}`,
-      line('Multiplication', s.multiplication),
-      line('Division', s.division),
-      `Facts to practice: ${tricky.length ? tricky.join(', ') : 'none yet'}`,
+      `Rounds finished: ${p.roundHistory.length}${lastRound}`,
+      ...subject.progressReport(subjectProgress(p, subject)),
       this.services.persistent
         ? 'Progress is saved in this browser on this device.'
         : 'This browser is not allowing saves; progress will be lost on reload.',
@@ -339,14 +353,14 @@ export class ShopScene extends Phaser.Scene {
     return [
       {
         label: 'Reset learning progress',
-        confirm: 'Clears multiplication and division progress. Sprinkles and items are kept.',
+        confirm: 'Clears all practice progress. Sprinkles and items are kept.',
         enabled: true,
         run: () => {
           const p = this.manager.profile;
-          p.learning = { ...p.learning, roundsStarted: 0, math: this.services.subject.createProgress() };
+          resetSubjectProgress(p, this.services.subject);
+          p.learning.roundsStarted = 0;
           p.currentRound = null;
-          saves.write(save);
-          this.scene.restart();
+          this.saveAndRestart();
         },
       },
       {
@@ -357,8 +371,7 @@ export class ShopScene extends Phaser.Scene {
           const fresh = createProfile(this.manager.profile.displayName, Date.now());
           save.profiles = { [fresh.id]: fresh };
           save.activeProfileId = fresh.id;
-          saves.write(save);
-          this.scene.restart();
+          this.saveAndRestart();
         },
       },
       {
@@ -377,6 +390,11 @@ export class ShopScene extends Phaser.Scene {
   // -------------------------------------------------------------------------
   // Helpers
   // -------------------------------------------------------------------------
+
+  private saveAndRestart(): void {
+    this.services.saves.write(this.services.load.save);
+    this.scene.restart();
+  }
 
   private updateStatus(active: ActiveOrder): void {
     this.status.setProgress(active.index, this.roundOutcomes());

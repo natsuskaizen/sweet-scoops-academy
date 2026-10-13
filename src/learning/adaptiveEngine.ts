@@ -9,45 +9,13 @@
  *   recordOutcome()  updates one fact after it is answered
  *   planRound()      picks the facts for the next round
  */
+import { GAME_CONFIG, type AdaptiveConfig } from '../config/gameConfig';
 import type { Rng } from '../core/rng';
 import type { AttemptOutcome, FactRecord, LearningState, SkillProgress } from './types';
 
-export interface AdaptiveConfig {
-  /** How many recent outcomes to remember per fact. */
-  recentWindow: number;
-  /** Consecutive first-try rounds needed before a fact is mastered (must be >= 2). */
-  masterySessions: number;
-  /** Rounds before a mastered fact is reviewed again, growing to the max. */
-  masteredBaseInterval: number;
-  masteredMaxInterval: number;
-  /** Stop introducing new facts in a skill while this many are still "learning". */
-  maxLearningBeforeNew: number;
-  /** Soft cap on new facts per round (ignored if nothing else is available). */
-  maxNewPerRound: number;
-  /** How many easiest unseen facts to choose between when introducing one. */
-  newFactChoices: number;
-  /** Target composition of a 10-question round. Flexible, not quotas. */
-  composition: Record<SlotKind, number>;
-  /**
-   * Skip-ahead for fluent learners: when recent first-try accuracy in a skill
-   * is at least `accuracy` (over at least `minSamples` facts), new facts come
-   * from `step` difficulty levels above the hardest fact already answered
-   * first try, instead of from the easiest unseen facts.
-   */
-  stretch: { minSamples: number; accuracy: number; step: number; lookbackRounds: number };
-}
+export type { AdaptiveConfig };
 
-export const DEFAULT_ADAPTIVE_CONFIG: AdaptiveConfig = {
-  recentWindow: 6,
-  masterySessions: 3,
-  masteredBaseInterval: 3,
-  masteredMaxInterval: 8,
-  maxLearningBeforeNew: 8,
-  maxNewPerRound: 6,
-  newFactChoices: 3,
-  composition: { learning: 4, practicing: 3, mastered: 2, new: 1 },
-  stretch: { minSamples: 4, accuracy: 0.85, step: 4, lookbackRounds: 2 },
-};
+export const DEFAULT_ADAPTIVE_CONFIG: AdaptiveConfig = GAME_CONFIG.adaptive;
 
 export type SlotKind = LearningState | 'new';
 
@@ -165,9 +133,9 @@ function nextInterval(rec: FactRecord, outcome: AttemptOutcome, config: Adaptive
       return 1;
     case 'practicing': {
       // A clean first-try fact can wait a round; one that needed help comes back next round.
-      const struggled = rec.recent.some((o) => o !== 'first');
-      if (rec.successStreak >= 2) return 3;
-      return struggled ? 1 : 2;
+      const { afterStreak, struggled, clean } = config.practicingInterval;
+      if (rec.successStreak >= 2) return afterStreak;
+      return rec.recent.some((o) => o !== 'first') ? struggled : clean;
     }
     case 'mastered':
       return Math.min(
@@ -246,41 +214,38 @@ export function skillPace(pool: SkillPool, round: number, config: AdaptiveConfig
   return { samples, accuracy, frontier, fluent };
 }
 
-function pickFromCategory(
-  pool: SkillPool,
-  category: SlotKind,
-  st: PickState,
-  strict: boolean,
-): string | null {
+function pickFromCategory(pool: SkillPool, category: SlotKind, st: PickState, strict: boolean): string | null {
+  return category === 'new' ? pickNewFact(pool, st, strict) : pickKnownFact(pool, category, st, strict);
+}
+
+/** In strict mode, holds back new facts while too many are new or still being learned. */
+function newFactsAllowed(pool: SkillPool, st: PickState): boolean {
+  if (st.newCount >= st.config.maxNewPerRound) return false;
+  const learningCount = Object.values(pool.progress.facts).filter((r) => r.state === 'learning').length;
+  return learningCount < st.config.maxLearningBeforeNew;
+}
+
+function pickNewFact(pool: SkillPool, st: PickState, strict: boolean): string | null {
   const { round, rng, config, used } = st;
+  if (strict && !newFactsAllowed(pool, st)) return null;
+  const unseen = pool.catalog
+    .filter((f) => !pool.progress.facts[f.key] && !used.has(f.key))
+    .sort((a, b) => a.difficulty - b.difficulty || (a.key < b.key ? -1 : 1));
+  if (unseen.length === 0) return null;
+  // Fluent learners skip ahead past facts that are clearly below their level.
+  const pace = skillPace(pool, round, config);
+  const target = pace.fluent ? pace.frontier + config.stretch.step : -Infinity;
+  const stretched = unseen.filter((f) => f.difficulty >= target);
+  const window = stretched.length > 0 ? stretched : unseen.slice(-config.newFactChoices);
+  st.newCount += 1;
+  return rng.pick(window.slice(0, config.newFactChoices)).key;
+}
 
-  if (category === 'new') {
-    if (strict) {
-      if (st.newCount >= config.maxNewPerRound) return null;
-      const learningCount = Object.values(pool.progress.facts).filter((r) => r.state === 'learning').length;
-      if (learningCount >= config.maxLearningBeforeNew) return null;
-    }
-    const unseen = pool.catalog
-      .filter((f) => !pool.progress.facts[f.key] && !used.has(f.key))
-      .sort((a, b) => a.difficulty - b.difficulty || (a.key < b.key ? -1 : 1));
-    if (unseen.length === 0) return null;
-    // Fluent learners skip ahead past facts that are clearly below their level.
-    const pace = skillPace(pool, round, config);
-    const target = pace.fluent ? pace.frontier + config.stretch.step : -Infinity;
-    const stretched = unseen.filter((f) => f.difficulty >= target);
-    const window = stretched.length > 0 ? stretched : unseen.slice(-config.newFactChoices);
-    const choice = rng.pick(window.slice(0, config.newFactChoices));
-    st.newCount += 1;
-    return choice.key;
-  }
-
-  let candidates = Object.values(pool.progress.facts).filter(
-    (r) => r.state === category && !used.has(r.key),
-  );
-  if (strict && category !== 'learning') {
-    // Practicing and mastered facts wait until they are due.
-    candidates = candidates.filter((r) => r.nextDueRound <= round);
-  }
+function pickKnownFact(pool: SkillPool, state: LearningState, st: PickState, strict: boolean): string | null {
+  const { round, rng, used } = st;
+  let candidates = Object.values(pool.progress.facts).filter((r) => r.state === state && !used.has(r.key));
+  // Practicing and mastered facts wait until they are due.
+  if (strict && state !== 'learning') candidates = candidates.filter((r) => r.nextDueRound <= round);
   if (candidates.length === 0) return null;
 
   // Highest need first; small seeded jitter breaks ties reproducibly.
@@ -289,6 +254,23 @@ function pickFromCategory(
     .map((r) => ({ r, score: needScore(r, round) + rng.next() * 0.5 }));
   scored.sort((a, b) => b.score - a.score);
   return scored[0]!.r.key;
+}
+
+/**
+ * Fills one slot: strict pass (due dates and new-fact caps) then relaxed pass,
+ * trying each fallback category, primary skill first.
+ */
+function pickForSlot(slot: SlotKind, primary: SkillPool, pools: SkillPool[], st: PickState): PlannedItem | null {
+  const order = [primary, ...pools.filter((p) => p !== primary)];
+  for (const strict of [true, false]) {
+    for (const category of FALLBACKS[slot]) {
+      for (const pool of order) {
+        const key = pickFromCategory(pool, category, st, strict);
+        if (key) return { skillId: pool.skillId, factKey: key, slot, source: category };
+      }
+    }
+  }
+  return null;
 }
 
 export function planRound(pools: SkillPool[], opts: PlanOptions): PlannedItem[] {
@@ -301,34 +283,13 @@ export function planRound(pools: SkillPool[], opts: PlanOptions): PlannedItem[] 
   const poolById = new Map(pools.map((p) => [p.skillId, p]));
   const st: PickState = { round: roundNumber, rng, config, used: new Set(), newCount: 0 };
 
-  const items: PlannedItem[] = [];
-  slots.forEach((slot, i) => {
+  const items = slots.map((slot, i) => {
     const primary = poolById.get(skillSeq[i]!)!;
-    const others = pools.filter((p) => p !== primary);
-    let picked: PlannedItem | null = null;
-
-    // Strict pass respects due dates and new-fact caps; relaxed pass ignores them.
-    for (const strict of [true, false]) {
-      for (const category of FALLBACKS[slot]) {
-        for (const pool of [primary, ...others]) {
-          const key = pickFromCategory(pool, category, st, strict);
-          if (key) {
-            picked = { skillId: pool.skillId, factKey: key, slot, source: category };
-            break;
-          }
-        }
-        if (picked) break;
-      }
-      if (picked) break;
-    }
-
     // Catalog exhausted (tiny catalogs only): allow a repeat rather than fail.
-    if (!picked) {
-      const fact = rng.pick(primary.catalog);
-      picked = { skillId: primary.skillId, factKey: fact.key, slot, source: 'learning' };
-    }
+    const picked = pickForSlot(slot, primary, pools, st)
+      ?? { skillId: primary.skillId, factKey: rng.pick(primary.catalog).key, slot, source: 'learning' as const };
     st.used.add(picked.factKey);
-    items.push(picked);
+    return picked;
   });
 
   return rng.shuffle(items);
