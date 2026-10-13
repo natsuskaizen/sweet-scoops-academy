@@ -48,11 +48,19 @@ rec.nextDueRound = round + nextInterval(rec, outcome, config); // a miss is due 
 
 ```ts
 const FALLBACKS: Record<SlotKind, SlotKind[]> = {
-  learning:   ['learning', 'practicing', 'new', 'mastered'],
-  practicing: ['practicing', 'learning', 'mastered', 'new'],
+  learning:   ['learning', 'new', 'practicing', 'mastered'],  // keeping up? introduce something new
+  practicing: ['practicing', 'learning', 'new', 'mastered'],
   mastered:   ['mastered', 'practicing', 'learning', 'new'],
   new:        ['new', 'learning', 'practicing', 'mastered'],
 };
+```
+
+New facts normally come from the easiest unseen ones, but `skillPace()` lets a fluent child skip ahead:
+
+```ts
+const pace = skillPace(pool, round, config);          // recent first-try accuracy + hardest known fact
+const target = pace.fluent ? pace.frontier + config.stretch.step : -Infinity;
+const stretched = unseen.filter((f) => f.difficulty >= target);
 ```
 
 The engine only sees string keys and difficulty numbers, so a vocabulary subject can reuse it unchanged.

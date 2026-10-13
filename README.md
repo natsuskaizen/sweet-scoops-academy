@@ -62,7 +62,7 @@ src/
 
 ### Adaptive learning in one paragraph
 
-Each child has separate `multiplication` and `division` records. A fact starts in **learning** the first time it is shown. A first-try correct answer moves it to **practicing**; it becomes **mastered** only after first-try success in three separate rounds (a round is one "session", so the streak can grow at most once per round). Retry-assisted answers count as progress but lower the streak; a miss schedules the fact for next round and drops it one level at most, keeping its history. Each round is planned from a target mix (4 learning, 3 practicing, 2 mastered, 1 new), split evenly between the two operations, with fallbacks when a pool is empty, so it works for a brand-new child and for one who knows everything. New facts stop being introduced while too many are still in learning. All tunables are in `DEFAULT_ADAPTIVE_CONFIG`. Every round's seed is derived from the profile seed and round number, so the same state and seed always reproduce the same questions.
+Each child has separate `multiplication` and `division` records. A fact starts in **learning** the first time it is shown. A first-try correct answer moves it to **practicing**; it becomes **mastered** only after first-try success in three separate rounds (a round is one "session", so the streak can grow at most once per round). Retry-assisted answers count as progress but lower the streak; a miss schedules the fact for next round and drops it one level at most, keeping its history. Each round is planned from a target mix (4 learning, 3 practicing, 2 mastered, 1 new), split evenly between the two operations, with fallbacks when a pool is empty, so it works for a brand-new child and for one who knows everything. When a child is keeping up, empty learning slots are filled with new facts rather than repeats, and while recent first-try accuracy in an operation stays at 85% or more, new facts skip ahead to a few difficulty levels above the hardest fact already answered first try. After misses it falls back to the easiest unseen facts, and new facts stop being introduced while too many are still in learning. All tunables are in `DEFAULT_ADAPTIVE_CONFIG`. Every round's seed is derived from the profile seed and round number, so the same state and seed always reproduce the same questions.
 
 ### Saving
 
@@ -74,7 +74,7 @@ Press and hold the ⚙ button in the top-right corner for about a second, then t
 
 ## Milestone 1 status
 
-All items in the spec's acceptance checklist are implemented. Verified automatically: 86 unit tests, the production build, a scripted Chromium playthrough of a full 10-order round with touch input (including a wrong answer, a retry, a revealed answer, triple-tapped submit, a reload mid-order, a corrupted save, and the parent reset), the build served from a `/<repo>/` sub-path, and the portrait rotate message.
+All items in the spec's acceptance checklist are implemented. Verified automatically: 89 unit tests, the production build, a scripted Chromium playthrough of a full 10-order round with touch input (including a wrong answer, a retry, a revealed answer, triple-tapped submit, a reload mid-order, a corrupted save, and the parent reset), the build served from a `/<repo>/` sub-path, and the portrait rotate message.
 
 ## Known limitations
 

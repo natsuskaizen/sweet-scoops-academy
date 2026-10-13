@@ -28,6 +28,13 @@ export interface AdaptiveConfig {
   newFactChoices: number;
   /** Target composition of a 10-question round. Flexible, not quotas. */
   composition: Record<SlotKind, number>;
+  /**
+   * Skip-ahead for fluent learners: when recent first-try accuracy in a skill
+   * is at least `accuracy` (over at least `minSamples` facts), new facts come
+   * from `step` difficulty levels above the hardest fact already answered
+   * first try, instead of from the easiest unseen facts.
+   */
+  stretch: { minSamples: number; accuracy: number; step: number; lookbackRounds: number };
 }
 
 export const DEFAULT_ADAPTIVE_CONFIG: AdaptiveConfig = {
@@ -36,9 +43,10 @@ export const DEFAULT_ADAPTIVE_CONFIG: AdaptiveConfig = {
   masteredBaseInterval: 3,
   masteredMaxInterval: 8,
   maxLearningBeforeNew: 8,
-  maxNewPerRound: 4,
+  maxNewPerRound: 6,
   newFactChoices: 3,
   composition: { learning: 4, practicing: 3, mastered: 2, new: 1 },
+  stretch: { minSamples: 4, accuracy: 0.85, step: 4, lookbackRounds: 2 },
 };
 
 export type SlotKind = LearningState | 'new';
@@ -155,8 +163,12 @@ function nextInterval(rec: FactRecord, outcome: AttemptOutcome, config: Adaptive
   switch (rec.state) {
     case 'learning':
       return 1;
-    case 'practicing':
-      return rec.successStreak >= 2 ? 2 : 1;
+    case 'practicing': {
+      // A clean first-try fact can wait a round; one that needed help comes back next round.
+      const struggled = rec.recent.some((o) => o !== 'first');
+      if (rec.successStreak >= 2) return 3;
+      return struggled ? 1 : 2;
+    }
     case 'mastered':
       return Math.min(
         config.masteredMaxInterval,
@@ -170,8 +182,10 @@ function nextInterval(rec: FactRecord, outcome: AttemptOutcome, config: Adaptive
 // ---------------------------------------------------------------------------
 
 const FALLBACKS: Record<SlotKind, SlotKind[]> = {
-  learning: ['learning', 'practicing', 'new', 'mastered'],
-  practicing: ['practicing', 'learning', 'mastered', 'new'],
+  // An empty learning pile means the child is keeping up: introduce something new
+  // rather than repeating facts that are not due yet.
+  learning: ['learning', 'new', 'practicing', 'mastered'],
+  practicing: ['practicing', 'learning', 'new', 'mastered'],
   mastered: ['mastered', 'practicing', 'learning', 'new'],
   new: ['new', 'learning', 'practicing', 'mastered'],
 };
@@ -213,6 +227,25 @@ function needScore(rec: FactRecord, round: number): number {
   return round - rec.nextDueRound + misses * 2 + retries;
 }
 
+/** Recent first-try accuracy and the hardest fact known first-try, for one skill. */
+export function skillPace(pool: SkillPool, round: number, config: AdaptiveConfig = DEFAULT_ADAPTIVE_CONFIG) {
+  const difficulty = new Map(pool.catalog.map((f) => [f.key, f.difficulty]));
+  let samples = 0;
+  let firstTry = 0;
+  let frontier = -Infinity;
+  for (const rec of Object.values(pool.progress.facts)) {
+    const last = rec.recent[rec.recent.length - 1];
+    if (last === 'first') frontier = Math.max(frontier, difficulty.get(rec.key) ?? -Infinity);
+    if (rec.lastPresentedRound >= round - config.stretch.lookbackRounds && last) {
+      samples += 1;
+      if (last === 'first') firstTry += 1;
+    }
+  }
+  const accuracy = samples > 0 ? firstTry / samples : 0;
+  const fluent = samples >= config.stretch.minSamples && accuracy >= config.stretch.accuracy;
+  return { samples, accuracy, frontier, fluent };
+}
+
 function pickFromCategory(
   pool: SkillPool,
   category: SlotKind,
@@ -231,7 +264,12 @@ function pickFromCategory(
       .filter((f) => !pool.progress.facts[f.key] && !used.has(f.key))
       .sort((a, b) => a.difficulty - b.difficulty || (a.key < b.key ? -1 : 1));
     if (unseen.length === 0) return null;
-    const choice = rng.pick(unseen.slice(0, config.newFactChoices));
+    // Fluent learners skip ahead past facts that are clearly below their level.
+    const pace = skillPace(pool, round, config);
+    const target = pace.fluent ? pace.frontier + config.stretch.step : -Infinity;
+    const stretched = unseen.filter((f) => f.difficulty >= target);
+    const window = stretched.length > 0 ? stretched : unseen.slice(-config.newFactChoices);
+    const choice = rng.pick(window.slice(0, config.newFactChoices));
     st.newCount += 1;
     return choice.key;
   }
