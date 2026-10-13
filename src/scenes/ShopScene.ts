@@ -28,6 +28,9 @@ import { VisualAidView } from '../ui/VisualAidView';
 import { ResultsOverlay } from './ResultsOverlay';
 import { drawDecorations, drawShopRoom, flavorColor } from './shopArt';
 
+/** Test hooks (`window.__ssa`, `?fast`) exist in dev, and in a build only when opened with `?e2e`. */
+const testHooksEnabled = (): boolean => import.meta.env.DEV || new URLSearchParams(window.location.search).has('e2e');
+
 const PRAISE = ["Yum! That's right!", 'Sweet! You got it!', 'Scoop-tastic!', 'Perfect order!'];
 const RETRY_PRAISE = ['You got it! Great thinking!', 'Yes! Nice try-again!'];
 
@@ -58,7 +61,7 @@ export class ShopScene extends Phaser.Scene {
     this.busy = false;
     this.gateOpen = false;
 
-    if (import.meta.env.DEV && new URLSearchParams(window.location.search).has('fast')) {
+    if (testHooksEnabled() && new URLSearchParams(window.location.search).has('fast')) {
       this.tweens.timeScale = 6;
       this.time.timeScale = 6;
     }
@@ -96,7 +99,7 @@ export class ShopScene extends Phaser.Scene {
     this.keypad.setDepth(70);
 
     this.showLoadNotices();
-    if (import.meta.env.DEV)
+    if (testHooksEnabled())
       (window as unknown as Record<string, unknown>).__ssa = { scene: this, manager: () => this.manager };
 
     this.manager.ensureRound();

@@ -1,6 +1,7 @@
 // Lint rules that keep the code in the shape we agreed on: small functions,
 // shallow nesting, no unused code. Run with `npm run lint`.
 import js from '@eslint/js';
+import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
@@ -19,6 +20,11 @@ export default tseslint.config(
       eqeqeq: ['error', 'always'],
       'no-console': ['error', { allow: ['warn', 'error'] }],
     },
+  },
+  {
+    // Node scripts (CI helpers).
+    files: ['scripts/**/*.mjs'],
+    languageOptions: { globals: globals.node },
   },
   {
     // Tests read best as one long scenario per `it`.

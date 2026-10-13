@@ -18,5 +18,13 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['src/tests/**/*.test.ts'],
+    coverage: {
+      provider: 'v8',
+      // The Phaser-free game logic; scenes and UI are covered by the browser smoke test.
+      include: ['src/config/**', 'src/core/**', 'src/learning/**', 'src/shop/**', 'src/save/**'],
+      reporter: ['text-summary', 'text'],
+      // Floors just under today's numbers: CI fails if game-logic tests are lost.
+      thresholds: { statements: 85, branches: 80, functions: 88, lines: 90 },
+    },
   },
 });
