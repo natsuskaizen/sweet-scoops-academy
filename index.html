@@ -61,6 +61,32 @@
       <div class="phone"></div>
       <div>Please turn your device sideways<br />to open the ice cream shop!</div>
     </div>
+    <script>
+      // After a redeploy, a cached copy of this page can point at script files
+      // that no longer exist, leaving a blank screen until the player reloads.
+      // If one of our own files fails to load, reload once, bypassing the cache.
+      (function () {
+        var KEY = 'ssa-asset-reload';
+        window.addEventListener('error', function (e) {
+          var el = e.target;
+          if (!el || (el.tagName !== 'SCRIPT' && el.tagName !== 'LINK')) return;
+          try {
+            if (sessionStorage.getItem(KEY)) return;
+            sessionStorage.setItem(KEY, '1');
+          } catch (_) {
+            return;
+          }
+          var url = new URL(location.href);
+          url.searchParams.set('v', String(Date.now()));
+          location.replace(url.toString());
+        }, true);
+        window.addEventListener('load', function () {
+          setTimeout(function () {
+            try { sessionStorage.removeItem(KEY); } catch (_) {}
+          }, 5000);
+        });
+      })();
+    </script>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

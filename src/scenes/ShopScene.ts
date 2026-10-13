@@ -191,6 +191,7 @@ export class ShopScene extends Phaser.Scene {
   ): Promise<void> {
     const active = this.manager.current();
     const flavor = active?.customer.favoriteFlavor ?? 'vanilla';
+    if (active) this.updateStatus(active);
 
     if (outcome === 'miss') {
       // Show the answer and why, then let the child continue when ready.
@@ -268,13 +269,14 @@ export class ShopScene extends Phaser.Scene {
     this.customer = null;
     this.treat = null;
 
+    const outcomes = this.roundOutcomes(); // the round is cleared once it finishes
     const finish = this.manager.finishOrder();
-    if (finish.kind === 'round-complete') this.showResults(finish.summary);
+    if (finish.kind === 'round-complete') this.showResults(finish.summary, outcomes);
     else void this.runOrder();
   }
 
-  private showResults(summary: RoundSummary): void {
-    this.status.setProgress(summary.ordersCompleted - 1, summary.ordersCompleted, summary.ordersCompleted);
+  private showResults(summary: RoundSummary, outcomes: (AttemptOutcome | null)[]): void {
+    this.status.setProgress(outcomes.length - 1, outcomes);
     this.status.setSprinkles(this.manager.profile.sprinkles, true);
     this.shopkeeper.setExpression('happy');
     let closed = false;
@@ -377,7 +379,11 @@ export class ShopScene extends Phaser.Scene {
   // -------------------------------------------------------------------------
 
   private updateStatus(active: ActiveOrder): void {
-    this.status.setProgress(active.index, active.total, active.index);
+    this.status.setProgress(active.index, this.roundOutcomes());
+  }
+
+  private roundOutcomes(): (AttemptOutcome | null)[] {
+    return this.manager.profile.currentRound?.orders.map((o) => o.outcome) ?? [];
   }
 
   private drawRegisterPanel(): void {
