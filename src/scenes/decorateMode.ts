@@ -1,18 +1,28 @@
 /**
  * Decorate: the register slides away so the room fills the screen, a tray
- * of decorations runs along the bottom, and the colour card picks a tier.
- * Whatever is picked stands in its spot right away as a preview; buying
+ * of decorations runs along the bottom (a page at a time, with big arrows),
+ * and the colour card picks a tier. Whatever is picked shows in the room
+ * right away as a preview (wall paint and doors repaint the room); buying
  * (or using an owned one) keeps it there. Rules live in shop/purchases.ts;
  * this only shows them.
  */
 import type Phaser from 'phaser';
 import type { Profile } from '../save/saveTypes';
-import { designsIn, itemById, itemId, TIERS, type CatalogDesign, type TierId } from '../shop/catalog';
+import {
+  designsIn,
+  isRoomSurface,
+  itemById,
+  itemId,
+  TIERS,
+  type CatalogDesign,
+  type CatalogItem,
+  type TierId,
+} from '../shop/catalog';
 import { ownedTiers, takeOffer } from '../shop/purchases';
 import { Button } from '../ui/Button';
 import { TierCard } from '../ui/TierCard';
-import { COLORS, CSS, decorTrayRect, LAYOUT, text, tierCardRect } from '../ui/theme';
-import { decorationTexture, drawDecoration, type PlacedDecorations } from './decorArt';
+import { COLORS, CSS, decorTrayRect, decorTraySlots, LAYOUT, text, tierCardRect, type Rect } from '../ui/theme';
+import { decorationTexture, drawDecoration, pieceRect, type PlacedDecorations } from './decorArt';
 
 export interface DecorateHost {
   scene: Phaser.Scene;
@@ -30,18 +40,20 @@ export class DecorateMode {
   private readonly card: TierCard;
   private readonly balance: Phaser.GameObjects.Text;
   private tray: Phaser.GameObjects.Container;
-  private preview: Phaser.GameObjects.Container | null = null;
+  private preview: Phaser.GameObjects.Container | Phaser.GameObjects.Graphics | null = null;
   private design: CatalogDesign;
   private tier: TierId = 'pink';
+  private page = 0;
+  private readonly designs = designsIn('decorate');
 
   constructor(private readonly host: DecorateHost) {
     const { scene } = host;
     this.root = scene.add.container(0, 0).setDepth(450);
     this.balance = this.drawTopBar();
-    this.design = designsIn('decorate')[0]!;
+    this.design = this.designs[0]!;
     this.tray = scene.add.container(0, 0);
     this.root.add(this.tray);
-    this.card = new TierCard(scene, tierCardRect(LAYOUT, this.spot()), {
+    this.card = new TierCard(scene, tierCardRect(LAYOUT, pieceRect(this.design)), {
       useLabel: 'Put it in the shop',
       removeLabel: 'Take it away',
       onPick: (tier) => this.pick(tier),
@@ -54,14 +66,30 @@ export class DecorateMode {
   /** Shows a design, in the tier standing in the room if there is one, else the first owned, else pink. */
   select(design: CatalogDesign): void {
     this.design = design;
+    this.page = Math.max(0, Math.floor(this.designs.indexOf(design) / decorTraySlots(LAYOUT).perPage));
     const placed = this.host.profile().decorations.find((d) => d.itemId.startsWith(`${design.id}.`));
     const standing = placed ? itemById(placed.itemId)?.tier : undefined;
     this.pick(standing ?? ownedTiers(this.host.profile(), design)[0] ?? TIERS[0]);
   }
 
+  /** Selects a design by its id (the e2e tests drive Decorate this way). */
+  selectById(id: string): void {
+    const design = this.designs.find((d) => d.id === id);
+    if (design) this.select(design);
+  }
+
+  /** Shows another page of the tray. */
+  turnPage(step: number): void {
+    const pages = Math.ceil(this.designs.length / decorTraySlots(LAYOUT).perPage);
+    const page = Math.min(pages - 1, Math.max(0, this.page + step));
+    if (page === this.page) return;
+    this.page = page;
+    this.drawTray();
+  }
+
   pick(tier: TierId): void {
     this.tier = tier;
-    this.card.placeAt(tierCardRect(LAYOUT, this.spot()));
+    this.card.placeAt(tierCardRect(LAYOUT, pieceRect(this.design)));
     this.card.show(this.design, tier, this.host.profile());
     this.drawTray();
     this.showPreview();
@@ -69,9 +97,8 @@ export class DecorateMode {
 
   /** The big button: buy, put in the shop, or take away. */
   act(): void {
-    const item = itemById(itemId(this.design.id, this.tier))!;
     const profile = this.host.profile();
-    if (takeOffer(profile, item) === 'none') return;
+    if (takeOffer(profile, this.item()) === 'none') return;
     if (!this.host.save()) return;
     this.balance.setText(`✦ ${profile.sprinkles}`);
     this.host.placed.draw(profile.decorations);
@@ -85,8 +112,8 @@ export class DecorateMode {
     this.host.onClose();
   }
 
-  private spot() {
-    return LAYOUT.decorSpots[this.spotId()];
+  private item(): CatalogItem {
+    return itemById(itemId(this.design.id, this.tier))!;
   }
 
   private spotId() {
@@ -121,12 +148,43 @@ export class DecorateMode {
     g.fillStyle(COLORS.cream, 0.94).fillRect(rect.x, rect.y, rect.w, rect.h);
     g.fillStyle(COLORS.lavenderDark, 1).fillRect(rect.x, rect.y, rect.w, 6);
     this.tray.add(g);
-    designsIn('decorate').forEach((design, i) => this.bubble(design, i));
+    const { perPage } = decorTraySlots(LAYOUT);
+    const first = this.page * perPage;
+    this.designs.slice(first, first + perPage).forEach((design, i) => this.bubble(design, i));
+    this.drawPager();
+  }
+
+  /** The ◀ ▶ arrows and a dot per page (only when there is more than one page). */
+  private drawPager(): void {
+    const { scene } = this.host;
+    const { perPage, prev, next, dotsY } = decorTraySlots(LAYOUT);
+    const pages = Math.ceil(this.designs.length / perPage);
+    if (pages < 2) return;
+    const arrow = (r: Rect, label: string, step: number) => {
+      const b = new Button(scene, r.x + r.w / 2, r.y + r.h / 2, {
+        width: r.w,
+        height: r.h,
+        label,
+        fontSize: 40,
+        fill: COLORS.lavender,
+        shade: COLORS.lavenderDark,
+        onTap: () => this.turnPage(step),
+      });
+      const end = step < 0 ? this.page === 0 : this.page === pages - 1;
+      return b.setEnabled(!end);
+    };
+    const dots = scene.add.graphics();
+    for (let i = 0; i < pages; i++) {
+      dots.fillStyle(i === this.page ? COLORS.lavenderDark : COLORS.creamDark, 1);
+      dots.fillCircle(LAYOUT.width / 2 + (i - (pages - 1) / 2) * 28, dotsY, 8);
+    }
+    this.tray.add([arrow(prev, '◀', -1), arrow(next, '▶', 1), dots]);
   }
 
   private bubble(design: CatalogDesign, i: number): void {
     const { scene } = this.host;
-    const { x, y, d } = bubbleSpot(i);
+    const { slots, d } = decorTraySlots(LAYOUT);
+    const { x, y } = slots[i]!;
     const on = design.id === this.design.id;
     const g = scene.add.graphics();
     g.fillStyle(0xb0805e, 1).fillCircle(x, y + 5, d / 2);
@@ -147,35 +205,39 @@ export class DecorateMode {
     this.tray.add([...parts, hit]);
   }
 
+  /** Shows the picked item in the room, outlined: standing on its spot, or painted into the room. */
   private showPreview(): void {
     this.clearPreview();
+    const item = this.item();
+    const spot = this.spotId();
+    if (isRoomSurface(spot)) {
+      this.host.placed.tryOn(item);
+      // The whole wall changes colour, so only a door needs pointing out.
+      if (spot === 'door') this.preview = this.outline(pieceRect(this.design), 3);
+      return;
+    }
+    this.host.placed.setSpotVisible(spot, false);
+    const piece = drawDecoration(this.host.scene, item, LAYOUT.decorSpots[spot]);
+    const b = piece.getBounds();
+    const outline = this.outline({ x: b.x, y: b.y, w: b.width, h: b.height }, piece.depth + 0.1);
+    this.preview = this.host.scene.add.container(0, 0, [piece, outline]).setDepth(piece.depth);
+  }
+
+  private outline(r: Rect, depth: number): Phaser.GameObjects.Graphics {
     const { scene } = this.host;
-    const item = itemById(itemId(this.design.id, this.tier))!;
-    const at = this.spot();
-    this.host.placed.setSpotVisible(this.spotId(), false);
-    const piece = drawDecoration(scene, item, at);
-    const bounds = piece.getBounds();
-    const outline = scene.add.graphics().setDepth(piece.depth + 0.1);
+    const outline = scene.add.graphics().setDepth(depth);
     outline.lineStyle(4, COLORS.lavenderDark, 1);
-    outline.strokeRoundedRect(bounds.x - 12, bounds.y - 12, bounds.width + 24, bounds.height + 24, 14);
+    outline.strokeRoundedRect(r.x - 12, r.y - 12, r.w + 24, r.h + 24, 14);
     scene.tweens.add({ targets: outline, alpha: 0.3, duration: 600, yoyo: true, repeat: -1 });
-    this.preview = scene.add.container(0, 0, [piece, outline]).setDepth(piece.depth);
+    return outline;
   }
 
   private clearPreview(): void {
     this.preview?.destroy();
     this.preview = null;
+    this.host.placed.tryOn(null);
     for (const spot of Object.keys(LAYOUT.decorSpots)) {
       this.host.placed.setSpotVisible(spot as keyof typeof LAYOUT.decorSpots, true);
     }
   }
-}
-
-/** Where the i-th tray bubble sits: one row in landscape, rows of three in portrait. */
-function bubbleSpot(i: number): { x: number; y: number; d: number } {
-  const rect = decorTrayRect(LAYOUT);
-  if (LAYOUT.orientation === 'landscape') return { x: 105 + i * 165, y: rect.y + 88, d: 130 };
-  const step = 220;
-  const x0 = (LAYOUT.width - 2 * step) / 2;
-  return { x: x0 + (i % 3) * step, y: rect.y + 78 + Math.floor(i / 3) * 140, d: 116 };
 }

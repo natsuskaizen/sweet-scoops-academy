@@ -27,3 +27,13 @@ export function tierPixel(tier: TierId, ch: string, x: number, width: number): s
   const band = Math.max(2, Math.ceil(width / colors.length));
   return colors[Math.floor(x / band) % colors.length]!;
 }
+
+/** `hex` mixed towards white by `amount` (0 keeps it, 1 is white). */
+export function tint(hex: string, amount: number): string {
+  const n = parseInt(hex.slice(1), 16);
+  const mix = (shift: number) => {
+    const c = (n >> shift) & 0xff;
+    return Math.round(c + (255 - c) * amount);
+  };
+  return `#${((mix(16) << 16) | (mix(8) << 8) | mix(0)).toString(16).padStart(6, '0')}`;
+}

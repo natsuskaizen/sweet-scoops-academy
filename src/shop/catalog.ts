@@ -7,13 +7,30 @@
  * id like `hat-beret.golden`.
  *
  * Wearables and scoopers are sold in Momo's Closet; decorations in Decorate.
+ * Most decorations stand in a spot in the room; wall paint and doors are
+ * room surfaces, which repaint the room itself.
  */
 export type EquipSlot = 'outfit' | 'hat' | 'bow' | 'glasses' | 'hearing' | 'handheld';
 
 export type ItemCategory = EquipSlot | 'decoration' | 'furniture' | 'wallpaper' | 'sign' | 'collectible';
 
 export type ShopSpot =
-  'wall-left' | 'wall-right' | 'floor-left' | 'floor-center' | 'floor-right' | 'counter-top' | 'window';
+  | 'wall-left'
+  | 'wall-right'
+  | 'floor-left'
+  | 'floor-center'
+  | 'floor-right'
+  | 'floor-back'
+  | 'counter-top'
+  | 'counter-end'
+  | 'window'
+  | 'wall'
+  | 'door';
+
+/** Spots that are part of the room itself: what is used there repaints the room instead of standing in it. */
+export const ROOM_SURFACES: readonly ShopSpot[] = ['wall', 'door'];
+
+export const isRoomSurface = (spot: ShopSpot): boolean => ROOM_SURFACES.includes(spot);
 
 export type Placement = { kind: 'equip'; slot: EquipSlot } | { kind: 'shop'; spot: ShopSpot };
 
@@ -64,11 +81,17 @@ const wear = (id: string, name: string, basePrice: number, slot: EquipSlot): Cat
   placement: { kind: 'equip', slot },
 });
 
-const decoration = (id: string, name: string, basePrice: number, spot: ShopSpot): CatalogDesign => ({
+const decoration = (
+  id: string,
+  name: string,
+  basePrice: number,
+  spot: ShopSpot,
+  category: ItemCategory = 'decoration',
+): CatalogDesign => ({
   id,
   name,
   basePrice,
-  category: 'decoration',
+  category,
   asset: id,
   placement: { kind: 'shop', spot },
 });
@@ -96,6 +119,13 @@ export const DESIGNS: readonly CatalogDesign[] = [
   decoration('deco-rug', 'Heart Rug', 100, 'floor-center'),
   decoration('deco-cafe', 'Café Set', 100, 'floor-right'),
   decoration('deco-frame', 'Cone Picture', 120, 'wall-right'),
+  decoration('deco-sign', 'Cone Sign', 70, 'wall-left', 'sign'),
+  decoration('deco-balloons', 'Balloon Bunch', 80, 'floor-back'),
+  decoration('deco-cupcakes', 'Cupcake Stand', 90, 'counter-end'),
+  decoration('wall-paint', 'Wall Paint', 150, 'wall', 'wallpaper'),
+  decoration('door-cottage', 'Cottage Door', 180, 'door', 'furniture'),
+  decoration('door-candy', 'Candy Door', 200, 'door', 'furniture'),
+  decoration('door-arch', 'Arched Door', 220, 'door', 'furniture'),
 ];
 
 export const itemId = (designId: string, tier: TierId): string => `${designId}.${tier}`;

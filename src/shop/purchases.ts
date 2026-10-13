@@ -3,8 +3,17 @@
  * owned for good: nothing here ever removes one from `ownedItems`. A bought
  * item is put to use straight away (worn, held or placed in the room).
  */
-import type { Profile } from '../save/saveTypes';
-import { CATALOG, itemById, TIERS, itemId, type CatalogDesign, type CatalogItem, type TierId } from './catalog';
+import type { PlacedDecoration, Profile } from '../save/saveTypes';
+import {
+  CATALOG,
+  itemById,
+  TIERS,
+  itemId,
+  type CatalogDesign,
+  type CatalogItem,
+  type ShopSpot,
+  type TierId,
+} from './catalog';
 import { spend } from './rewards';
 
 export type BuyResult =
@@ -57,6 +66,12 @@ export function isInUse(profile: Profile, item: CatalogItem): boolean {
   const { placement } = item;
   if (placement.kind === 'equip') return profile.equipped[placement.slot] === item.id;
   return profile.decorations.some((d) => d.itemId === item.id);
+}
+
+/** The item in use in a spot of the room, if any (for a room surface: the wall paint or door in use). */
+export function itemInSpot(decorations: readonly PlacedDecoration[], spot: ShopSpot): CatalogItem | undefined {
+  const placed = decorations.find((d) => d.spot === spot);
+  return placed ? itemById(placed.itemId) : undefined;
 }
 
 /** The tiers of a design the player owns, in tier order. */

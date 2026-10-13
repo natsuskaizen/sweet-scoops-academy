@@ -329,16 +329,17 @@ new CharacterView(scene, x, y, look).setExpression('happy'); // frame 1, or stan
 The room is pixel art too. It is painted once onto a canvas the size of the whole screen under the status bar (one texel per art pixel) and shown at 4×, so its pixels match the characters'. While serving, the register covers the right side (landscape) or the bottom (portrait); Decorate slides it away and shows the whole room. Painting uses a tiny helper, `Pixels` in `roomPixels.ts`; the door, wall line and counter are placed from `LAYOUT`:
 
 ```ts
-function paintDoor(p: Pixels): void {
+function paintPlainDoor(p: Pixels): void {
   const d = doorArt(); // LAYOUT.door in art pixels
   p.box(d.x - 2, d.y - 2, d.w + 4, d.wall - d.y + 2, C.wood); // frame, plum outline
   p.ring(cx, d.y + 13, 8, C.sky); // round window
 }
 
-// shopArt.ts: one texture per screen shape, so a rotation repaints at the new size
-const room = roomArt();
-paintTexture(scene, `room-${room.w}x${room.h}`, room, paintRoom);
+// shopArt.ts: one texture per screen shape and per look (wall paint, door), painted when first needed
+const key = roomTexture(scene, { wall: 'sky', door: itemById('door-arch.golden') });
 ```
+
+Wall paint and doors bought in Decorate repaint the room rather than standing in it: `wallColors(tier)` gives the wallpaper's stripes, valance and panels in the tier's colours (Sparkly Rainbow in bands), and a bought door's grid from `doorArt.ts` is painted over the door frame. Every door keeps the OPEN sign and the customers' `LAYOUT.doorSpot` where they were.
 
 The counter is a second canvas on a higher layer so it hides the shopkeeper's legs.
 
@@ -359,7 +360,12 @@ offerFor(profile, item); // { kind: 'buy', price } | { kind: 'short', short } | 
 takeOffer(profile, item); // buys, puts in the shop, or takes away; the scene then saves
 ```
 
-Decorate opens from the results card. Each decoration has a spot (`LAYOUT.decorSpots`); its art is a text grid in `decorArt.ts` whose `L`/`l` pixels take the tier's colours (`tierColors.ts`), and Sparkly Rainbow pieces twinkle. Tapping a colour shows the piece in its spot right away; `TierCard` (shared with the coming closet) shows the swatches and the button.
+Decorate opens from the results card. Each decoration has a spot (`LAYOUT.decorSpots`); its art is a text grid in `decorArt.ts` whose `L`/`l` pixels take the tier's colours (`tierColors.ts`), and Sparkly Rainbow pieces twinkle. Two spots are room surfaces (`isRoomSurface`): `'wall'` for wall paint and `'door'` for the doors. What is used there repaints the room (`PlacedDecorations.tryOn` previews it), and taking it away brings back the plain wall or door. Tapping a colour shows the piece in the room right away; `TierCard` (shared with the coming closet) shows the swatches and the button, placed by `tierCardRect` clear of what the piece covers (`pieceRect`). The tray shows a page of big bubbles between ◀ ▶ arrows (`decorTraySlots` in `theme.ts`).
+
+```ts
+(decoration('door-arch', 'Arched Door', 220, 'door', 'furniture'), // a new door design: add its grid to DOOR_ART
+  itemInSpot(profile.decorations, 'wall')); // the wall paint in use, if any
+```
 
 ## Tests
 

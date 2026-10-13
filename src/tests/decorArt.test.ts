@@ -1,0 +1,72 @@
+import { describe, expect, it } from 'vitest';
+import { tierSwatch, tint } from '../characters/tierColors';
+import { DECOR_ART, decorSize, roomLookOf } from '../scenes/decorArt';
+import { DOOR_ART, DOOR_H, DOOR_W } from '../scenes/doorArt';
+import { doorFrame, wallColors } from '../scenes/shopRoom';
+import { DESIGNS, itemById, shopOf, TIERS } from '../shop/catalog';
+
+const HEX = /^#[0-9a-f]{6}$/;
+
+describe('decoration art', () => {
+  it('has a rectangular grid of known pixels for every design sold in Decorate', () => {
+    for (const design of DESIGNS.filter((d) => shopOf(d) === 'decorate')) {
+      const rows = DECOR_ART[design.asset];
+      expect(rows, design.id).toBeDefined();
+      const width = rows![0]!.length;
+      expect(
+        rows!.every((r) => r.length === width),
+        design.id,
+      ).toBe(true);
+      expect(rows!.join('').replace(/[.oLlwgGBpPkxtsSr]/g, ''), design.id).toBe('');
+      expect(rows!.join('')).toMatch(/[Ll]/); // something takes the tier's colours
+    }
+  });
+
+  it('draws every door the size of the room door frame', () => {
+    const frame = doorFrame();
+    expect([frame.w, frame.h]).toEqual([DOOR_W, DOOR_H]);
+    for (const rows of Object.values(DOOR_ART)) {
+      expect(rows).toHaveLength(DOOR_H);
+      // The OPEN sign is in the same place on every door.
+      expect(rows[33]!.slice(8, 29)).toBe('S'.repeat(21));
+    }
+  });
+
+  it('reports the drawn size of a design', () => {
+    expect(decorSize('deco-plant')).toEqual({ w: 80, h: 95 });
+    expect(decorSize('no-such-art')).toEqual({ w: 0, h: 0 });
+  });
+});
+
+describe('room look', () => {
+  it('reads the wall paint and door in use from the placed decorations', () => {
+    expect(roomLookOf([])).toEqual({ wall: null, door: null });
+    const look = roomLookOf([
+      { itemId: 'deco-plant.pink', spot: 'floor-left' },
+      { itemId: 'wall-paint.golden', spot: 'wall' },
+      { itemId: 'door-arch.sky', spot: 'door' },
+    ]);
+    expect(look).toEqual({ wall: 'golden', door: itemById('door-arch.sky') });
+  });
+
+  it('paints the wall in the tier colours, Sparkly Rainbow in bands, and keeps the plain wall otherwise', () => {
+    const plain = wallColors(null);
+    expect(plain.base).toBe('#fff6e8');
+    for (const tier of TIERS) {
+      const c = wallColors(tier);
+      for (const color of [c.base, c.heart, c.rail, c.wainscot, c.stripe(0), c.valance(3), c.panel(1.2)]) {
+        expect(color, tier).toMatch(HEX);
+      }
+      expect(c.stripe(0)).not.toBe(plain.stripe(0));
+    }
+    expect(wallColors('mint').valance(0)).toBe(tierSwatch('mint'));
+    const rainbow = wallColors('rainbow');
+    expect(new Set([0, 1, 2, 3, 4, 5].map(rainbow.stripe)).size).toBe(6);
+  });
+
+  it('mixes colours towards white', () => {
+    expect(tint('#ff0000', 0)).toBe('#ff0000');
+    expect(tint('#ff0000', 1)).toBe('#ffffff');
+    expect(tint('#000000', 0.5)).toBe('#808080');
+  });
+});
