@@ -7,7 +7,7 @@ import type { AttemptOutcome, ChallengeSpec, LearningSubject } from '../learning
 import type { EquipSlot, ShopSpot } from '../shop/catalog';
 import type { RoundBonus } from '../shop/rewards';
 
-export const SAVE_SCHEMA_VERSION = 1;
+export const SAVE_SCHEMA_VERSION = 2;
 
 export interface OrderState {
   /** Checked by the owning subject's isValidSpec on load. */
@@ -25,6 +25,10 @@ export interface RoundState {
   roundNumber: number;
   seed: number;
   startedAt: number;
+  /** Active play time so far; null for a round started before play time was recorded. */
+  playMs: number | null;
+  /** Last answer or step, so the next one knows how long the gap was. */
+  lastActiveAt: number;
   orders: OrderState[];
   currentIndex: number;
   bonusPaid: boolean;
@@ -33,7 +37,11 @@ export interface RoundState {
 
 export interface RoundSummary {
   roundNumber: number;
+  /** Null for rounds saved before start times were recorded. */
+  startedAt: number | null;
   finishedAt: number;
+  /** Active play time (see GAME_CONFIG.round.playTimeIdleCapMs); null if not recorded. */
+  playMs: number | null;
   ordersCompleted: number;
   firstTryCorrect: number;
   retryCorrect: number;
@@ -43,6 +51,10 @@ export interface RoundSummary {
   perfectBonus: number;
   total: number;
   perfect: boolean;
+  /** Questions as shown on the ticket (e.g. "7 × 8"), answered on the second try. */
+  retryFacts: string[];
+  /** Questions whose answer was shown after two misses. */
+  missFacts: string[];
 }
 
 export interface PlacedDecoration {

@@ -131,4 +131,39 @@ describe('OrderManager', () => {
     expect(next.roundNumber).toBe(2);
     expect(manager.profile.sprinkles).toBe(30); // 10 x 2 + completion bonus
   });
+
+  it('records play time, capping long pauses, and which questions needed help', () => {
+    let t = 1_800_000_000_000;
+    const saves = new SaveManager(new MemoryStorage(), () => t);
+    const manager = new OrderManager({ save: saves.load().save, persister: saves, subject: mathSubject, now: () => t });
+    const start = manager.ensureRound().startedAt;
+    t += 10 * 60_000; // the tablet sat for ten minutes before the first answer: counts as 2
+    const expressions: string[] = [];
+    for (let i = 0; i < 10; i++) {
+      const { presentation } = manager.current()!;
+      expressions.push(presentation.expression);
+      if (i < 2) manager.submit(wrong(presentation.correctAnswer));
+      t += 5000;
+      manager.submit(i === 1 ? wrong(presentation.correctAnswer) : presentation.correctAnswer);
+      t += 3000; // serving animation
+      manager.finishOrder();
+      t += 2000; // next customer walks in
+    }
+    const summary = manager.profile.roundHistory[0]!;
+    expect(summary.startedAt).toBe(start);
+    expect(summary.playMs).toBe(120_000 + 10 * 10_000 - 2000);
+    expect(summary.retryFacts).toEqual([expressions[0]]);
+    expect(summary.missFacts).toEqual([expressions[1]]);
+  });
+
+  it('leaves play time unrecorded for a round started before timing existed', () => {
+    const { manager } = boot();
+    const round = manager.ensureRound();
+    round.playMs = null;
+    for (let i = 0; i < 10; i++) {
+      manager.submit(manager.current()!.presentation.correctAnswer);
+      manager.finishOrder();
+    }
+    expect(manager.profile.roundHistory[0]!.playMs).toBeNull();
+  });
 });

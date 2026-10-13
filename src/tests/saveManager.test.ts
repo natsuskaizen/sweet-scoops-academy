@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ChallengeSpec } from '../learning/types';
-import { MemoryStorage, SAVE_KEYS, SaveManager, createSaveFile } from '../save/saveManager';
+import { MemoryStorage, SAVE_KEYS, SaveManager, createSaveFile, parseSave } from '../save/saveManager';
+import { migrateToVersion } from '../save/migrations';
 import { SAVE_SCHEMA_VERSION } from '../save/saveTypes';
 import { validateSaveFile } from '../save/saveValidation';
 
@@ -85,6 +86,8 @@ describe('SaveManager', () => {
       roundNumber: 1,
       seed: 1,
       startedAt: 1,
+      playMs: 0,
+      lastActiveAt: 1,
       currentIndex: 0,
       bonusPaid: false,
       bonus: null,
@@ -139,5 +142,59 @@ describe('SaveManager', () => {
     const restored = saves.restoreBackup();
     expect(restored!.profiles[save.activeProfileId]!.sprinkles).toBe(5);
     expect(saves.quarantineKeys()).toHaveLength(1);
+  });
+
+  it('upgrades a version 1 save: older rounds keep their results but have no time', () => {
+    const v1 = {
+      ...createSaveFile(1),
+      schemaVersion: 1,
+    };
+    const p = v1.profiles[v1.activeProfileId]!;
+    const { roundHistory, currentRound } = {
+      roundHistory: [
+        { roundNumber: 1, finishedAt: 5000, ordersCompleted: 10, firstTryCorrect: 9, retryCorrect: 1, missed: 0 },
+      ].map((r) => ({ ...r, orderSprinkles: 95, completionBonus: 10, perfectBonus: 0, total: 105, perfect: false })),
+      currentRound: {
+        id: 'r2',
+        roundNumber: 2,
+        seed: 1,
+        startedAt: 6000,
+        currentIndex: 0,
+        bonusPaid: false,
+        bonus: null,
+      },
+    };
+    const order = { customerId: 'berry', attempts: 0, outcome: null, paid: false, sprinklesPaid: 0 };
+    const spec = { subjectId: 'math', skillId: 'multiplication', factKey: 'mul:2x3', left: 2, right: 3, answer: 6 };
+    Object.assign(p, { roundHistory, currentRound: { ...currentRound, orders: [{ ...order, spec }] } });
+
+    const parsed = parseSave(JSON.stringify(v1));
+    if (!parsed.ok) throw new Error(parsed.problems.join());
+    expect(parsed.save.schemaVersion).toBe(SAVE_SCHEMA_VERSION);
+    const profile = parsed.save.profiles[parsed.save.activeProfileId]!;
+    expect(profile.roundHistory[0]).toMatchObject({
+      total: 105,
+      startedAt: null,
+      playMs: null,
+      retryFacts: [],
+      missFacts: [],
+    });
+    expect(profile.currentRound).toMatchObject({ playMs: null, lastActiveAt: 6000 });
+  });
+
+  it('refuses a save whose version has no migration step', () => {
+    expect(migrateToVersion({ schemaVersion: 0 }, SAVE_SCHEMA_VERSION)).toBe(false);
+    expect(parseSave(JSON.stringify({ ...createSaveFile(1), schemaVersion: 0 }))).toMatchObject({ ok: false });
+  });
+
+  it('rejects round history with a malformed play time', () => {
+    const save = createSaveFile(1);
+    const p = save.profiles[save.activeProfileId]!;
+    p.roundHistory = [{ playMs: -1 } as never, 'oops' as never];
+    const problems = validateSaveFile(save).join();
+    expect(problems).toMatch(/roundHistory\[0\]\.playMs invalid/);
+    expect(problems).toMatch(/roundHistory\[1\] not an object/);
+    (p as unknown as { roundHistory: unknown }).roundHistory = 'none';
+    expect(validateSaveFile(save).join()).toMatch(/roundHistory invalid/);
   });
 });

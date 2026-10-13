@@ -10,6 +10,7 @@
  */
 import { mathSubject } from '../learning/mathSubject';
 import { randomSeed } from '../core/rng';
+import { migrateToVersion } from './migrations';
 import { SAVE_SCHEMA_VERSION, type Profile, type SaveFile } from './saveTypes';
 import { validateSaveFile } from './saveValidation';
 
@@ -70,17 +71,16 @@ export function createSaveFile(now: number, profile = createProfile('Player 1', 
   };
 }
 
-/**
- * Upgrades older saves in place. Version 1 is the first format, so there is
- * nothing to migrate yet; future versions add `case` steps here.
- */
+/** Upgrades older saves in place (steps live in migrations.ts), then validates. */
 function migrate(data: Record<string, unknown>): Parsed {
   const version = data.schemaVersion;
   if (typeof version !== 'number') return { ok: false, problems: ['schemaVersion missing'] };
   if (version > SAVE_SCHEMA_VERSION) {
     return { ok: false, problems: [`save is from a newer game version (${version})`] };
   }
-  // while (data.schemaVersion < SAVE_SCHEMA_VERSION) { ...step... }
+  if (!migrateToVersion(data, SAVE_SCHEMA_VERSION)) {
+    return { ok: false, problems: [`no migration from save version ${version}`] };
+  }
   const problems = validateSaveFile(data);
   return problems.length === 0 ? { ok: true, save: data as unknown as SaveFile } : { ok: false, problems };
 }

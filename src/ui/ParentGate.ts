@@ -175,6 +175,29 @@ export class ParentGate {
     );
   }
 
+  /** A read-only report, one page at a time, with a way back to the menu. */
+  report(title: string, pages: readonly string[][], index = 0): void {
+    if (this.closed) return;
+    this.reset();
+    this.add(this.scene.add.text(640, 90, title, text(40)).setOrigin(0.5, 0));
+    this.closeButton();
+    const body = (pages[index] ?? []).join('\n');
+    this.add(this.scene.add.text(200, 160, body, text(21, CSS.ink, { lineSpacing: 6, wordWrap: { width: 880 } })));
+    if (pages.length > 1) {
+      const pageNote = `Page ${index + 1} of ${pages.length}`;
+      this.add(this.scene.add.text(640, 680, pageNote, text(22, CSS.inkSoft)).setOrigin(0.5, 0));
+    }
+    this.reportButton('Newer', 420, index > 0, () => this.report(title, pages, index - 1));
+    this.reportButton('Back', 640, true, () => this.showMenu());
+    this.reportButton('Older', 860, index < pages.length - 1, () => this.report(title, pages, index + 1));
+  }
+
+  private reportButton(label: string, x: number, enabled: boolean, onTap: () => void): void {
+    this.add(new Button(this.scene, x, 750, { width: 200, height: 76, label, fontSize: 28, onTap })).setEnabled(
+      enabled,
+    );
+  }
+
   /** A message with a way back to the menu, e.g. after saving a backup or refusing a file. */
   notice(title: string, body: string): void {
     if (this.closed) return;
