@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createRng } from '../core/rng';
-import { planRound, recordOutcome } from '../learning/adaptiveEngine';
+import { planRound, recordOutcome, skillPace } from '../learning/adaptiveEngine';
 import { mathSubject, type MathProgress } from '../learning/mathSubject';
 import { factsFor } from '../learning/questionGenerator';
 import type { SkillProgress } from '../learning/types';
@@ -166,6 +166,39 @@ describe('planRound', () => {
     while (!anyMastered() && round < 20) simulate(p, 1, () => 'first', 1, ++round);
     expect(round).toBeGreaterThanOrEqual(3);
     expect(anyMastered()).toBe(true);
+  });
+
+  it('moves a child who gets everything right up to the harder tables quickly', () => {
+    const p = freshProgress();
+    const plans = simulate(p, 3, () => 'first');
+    const keys = plans.flat();
+    // Facts seen grows well beyond one new fact per round.
+    expect(new Set(keys).size).toBeGreaterThanOrEqual(20);
+    // By round 3 the 6/7/8 tables show up in both operations.
+    const hard = (key: string) => {
+      const [a, b] = key.slice(4).split(/[x/]/).map(Number) as [number, number];
+      const factors = key.startsWith('mul:') ? [a, b] : [b, a / b];
+      return factors.some((n) => n >= 6 && n <= 8);
+    };
+    expect(plans.slice(0, 3).flat().filter((k) => k.startsWith('mul:')).some(hard)).toBe(true);
+    expect(plans.slice(0, 3).flat().filter((k) => k.startsWith('div:')).some(hard)).toBe(true);
+  });
+
+  it('keeps a struggling child on gentle questions', () => {
+    const p = freshProgress();
+    const plans = simulate(p, 5, () => 'miss');
+    const difficulty = new Map([...factsFor('multiplication'), ...factsFor('division')].map((f) => [f.key, f.difficulty]));
+    // Nothing from the 6, 7, 8 or 9 tables (6 × 2 already scores 7).
+    for (const key of plans.flat()) expect(difficulty.get(key)).toBeLessThanOrEqual(5);
+  });
+
+  it('eases back after a run of misses', () => {
+    const p = freshProgress();
+    simulate(p, 3, () => 'first');
+    const pool = { skillId: 'multiplication', progress: p.multiplication, catalog: factsFor('multiplication') };
+    expect(skillPace(pool, 4).fluent).toBe(true);
+    simulate(p, 1, () => 'miss', 1, 4);
+    expect(skillPace(pool, 5).fluent).toBe(false);
   });
 
   it('works on a single generic skill (subject-agnostic)', () => {
