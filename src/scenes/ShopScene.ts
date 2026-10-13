@@ -22,6 +22,7 @@ import { Button } from '../ui/Button';
 import { NumberKeypad } from '../ui/NumberKeypad';
 import { OrderPanel, SpeechBubble } from '../ui/OrderPanel';
 import { ParentGate, type ParentGateOptions } from '../ui/ParentGate';
+import { ShopMenu } from '../ui/ShopMenu';
 import { StatusBar } from '../ui/StatusBar';
 import { COLORS, CSS, LAYOUT, text } from '../ui/theme';
 import { delay, tweenAsync } from '../ui/tweenAsync';
@@ -67,6 +68,10 @@ export class ShopScene extends Phaser.Scene {
   private decorate: DecorateMode | null = null;
   /** Momo's Closet, while it is open (the e2e test drives it through `__ssa`). */
   private closet: ClosetMode | null = null;
+  /** The Sprinkle Shop's menu, while it is open. */
+  private shopMenu: ShopMenu | null = null;
+  /** The results card and any parade, hidden while Decorate is open over them. */
+  private resultsCover: Phaser.GameObjects.GameObject[] = [];
 
   constructor() {
     super('Shop');
@@ -97,7 +102,11 @@ export class ShopScene extends Phaser.Scene {
 
     this.shopkeeper = this.makeShopkeeper();
 
-    this.status = new StatusBar(this, () => this.openParentGate());
+    this.status = new StatusBar(
+      this,
+      () => this.openParentGate(),
+      () => this.openShopMenu(),
+    );
     this.status.setSprinkles(this.manager.profile.sprinkles);
     this.ticket = new OrderPanel(this, LAYOUT.ticket.x, LAYOUT.ticket.y, LAYOUT.ticket.w, LAYOUT.ticket.h).setDepth(70);
     this.bubble = new SpeechBubble(this, LAYOUT.bubble.x, 455, LAYOUT.bubble.w, LAYOUT.bubble.h).setDepth(60);
@@ -198,6 +207,10 @@ export class ShopScene extends Phaser.Scene {
     this.gate = null;
     this.parade = new Parade(this);
     this.results = null;
+    this.resultsCover = [];
+    this.shopMenu = null;
+    this.decorate = null;
+    this.closet = null;
   }
 
   /** Hands control back to the player. */
@@ -208,7 +221,8 @@ export class ShopScene extends Phaser.Scene {
 
   /** The keypad takes answers only while the shop waits for one and the grown-ups area is closed. */
   private syncInput(): void {
-    this.keypad.setEnabled(!this.busy && !this.gate);
+    const away = this.gate || this.decorate || this.closet || this.shopMenu;
+    this.keypad.setEnabled(!this.busy && !away);
   }
 
   private async handleSubmit(value: string): Promise<void> {
@@ -360,13 +374,14 @@ export class ShopScene extends Phaser.Scene {
     const parade = summary.perfect ? await this.parade.play(stickers.map((s) => s.look)) : [];
     let closed = false;
     const overlay = new ResultsOverlay(this, summary, stickers, {
-      onDecorate: () => this.openDecorate([overlay, ...parade]),
+      onDecorate: () => this.openDecorate(this.resultsCover),
       onCloset: () => this.openCloset(),
       onContinue: () => {
         if (closed) return;
         closed = true;
         overlay.destroy();
         this.results = null;
+        this.resultsCover = [];
         parade.forEach((c) => c.destroy());
         this.shopkeeper.setExpression('neutral');
         this.manager.ensureRound();
@@ -374,14 +389,33 @@ export class ShopScene extends Phaser.Scene {
       },
     });
     this.results = overlay;
+    this.resultsCover = [overlay, ...parade];
   }
 
   // -------------------------------------------------------------------------
-  // Decorate
+  // Sprinkle Shop: Decorate and Momo's Closet
   // -------------------------------------------------------------------------
 
   /**
-   * Opens Decorate from the results card: the register and `cover` hide until
+   * The Sprinkles balance opens the shop between rounds and while a customer
+   * waits for an answer, never in the middle of serving.
+   */
+  private openShopMenu(): void {
+    if (this.shopMenu || this.gate || this.decorate || this.closet) return;
+    if (this.busy && !this.results) return;
+    this.shopMenu = new ShopMenu(this, {
+      onDecorate: () => this.openDecorate(this.resultsCover),
+      onCloset: () => this.openCloset(),
+      onClose: () => {
+        this.shopMenu = null;
+        this.syncInput();
+      },
+    });
+    this.syncInput();
+  }
+
+  /**
+   * Opens Decorate: the register and `cover` (the results card, if open) hide until
    * it closes. Each comes back as it was, so what was already hidden (the
    * hint board, the speech bubble) stays hidden.
    */
@@ -412,8 +446,10 @@ export class ShopScene extends Phaser.Scene {
         this.decorate = null;
         hidden.forEach((o, i) => o.setVisible(wasVisible[i]!));
         this.status.setSprinkles(this.manager.profile.sprinkles);
+        this.syncInput();
       },
     });
+    this.syncInput();
   }
 
   /** Opens Momo's Closet over everything; Momo comes back to the counter in what she chose. */
@@ -426,10 +462,12 @@ export class ShopScene extends Phaser.Scene {
       onClose: () => {
         this.closet = null;
         this.shopkeeper.destroy();
-        this.shopkeeper = this.makeShopkeeper().setExpression('happy');
+        this.shopkeeper = this.makeShopkeeper().setExpression(this.results ? 'happy' : 'neutral');
         this.status.setSprinkles(this.manager.profile.sprinkles);
+        this.syncInput();
       },
     });
+    this.syncInput();
   }
 
   private saveNow(): boolean {

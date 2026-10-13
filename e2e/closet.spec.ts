@@ -50,3 +50,32 @@ test("Momo's Closet opens from the results card, and what she buys she wears in 
   });
   expect(errors).toEqual([]);
 });
+
+test('the Sprinkles balance opens the shop while a customer waits, and the order carries on after', async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await page.goto('/?e2e&fast');
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.waitForFunction(() => (window as HookWindow).__ssa?.scene.keypad.isEnabled, null, { timeout: 30_000 });
+  const pill = await page.evaluate(() => {
+    const { width } = (window as HookWindow).__ssa!.scene.scale.gameSize;
+    return width > 1000 ? { x: 1025, y: 34 } : { x: 632, y: 34 }; // the middle of the balance pill
+  });
+  await tapAt(page, pill.x, pill.y);
+  await page.waitForFunction(() => (window as HookWindow).__ssa!.scene.shopMenu !== null);
+  expect(await page.evaluate(() => (window as HookWindow).__ssa!.scene.keypad.isEnabled)).toBe(false);
+
+  // The menu's card is 380 tall in the middle of the screen; Momo's Closet is its second button.
+  const closetButton = await page.evaluate(() => {
+    const { width, height } = (window as HookWindow).__ssa!.scene.scale.gameSize;
+    return { x: width / 2, y: (height - 380) / 2 + 286 };
+  });
+  await tapAt(page, closetButton.x, closetButton.y);
+  await page.waitForFunction(() => (window as HookWindow).__ssa!.scene.closet !== null);
+  await page.evaluate(() => (window as HookWindow).__ssa!.scene.closet!.close());
+  await page.waitForFunction(() => (window as HookWindow).__ssa!.scene.keypad.isEnabled);
+  expect(errors).toEqual([]);
+});

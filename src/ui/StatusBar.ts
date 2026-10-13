@@ -10,8 +10,9 @@ const OUTCOME_COLORS: Record<AttemptOutcome, [number, number]> = {
 };
 
 /**
- * Top strip: order number, round progress dots, Sprinkles balance, and the
- * grown-ups button (press and hold so a stray tap does nothing).
+ * Top strip: order number, round progress dots, Sprinkles balance (tap it
+ * for the Sprinkle Shop), and the grown-ups button (press and hold so a
+ * stray tap does nothing).
  */
 export class StatusBar extends Phaser.GameObjects.Container {
   private orderText: Phaser.GameObjects.Text;
@@ -20,7 +21,7 @@ export class StatusBar extends Phaser.GameObjects.Container {
   private balance = 0;
   private holdRing: Phaser.GameObjects.Graphics;
 
-  constructor(scene: Phaser.Scene, onParentHold: () => void) {
+  constructor(scene: Phaser.Scene, onParentHold: () => void, onShop: () => void) {
     super(scene, 0, 0);
     const { w, h, orderFont, pillX, pillW, gearX } = LAYOUT.statusBar;
     const bg = scene.add.graphics();
@@ -35,11 +36,17 @@ export class StatusBar extends Phaser.GameObjects.Container {
     const icon = scene.add.image(pillX + 34, h / 2 - 3, 'sprinkle-icon').setScale(4);
     this.sprinklesText = scene.add.text(pillX + pillW - 16, h / 2 - 3, '0', text(30, CSS.strawberry)).setOrigin(1, 0.5);
 
+    const shop = scene.add
+      .zone(pillX, 4, pillW, h - 8)
+      .setOrigin(0)
+      .setInteractive({ useHandCursor: true });
+    shop.on('pointerup', onShop);
+
     const gear = scene.add.text(gearX, h / 2 - 3, '⚙', text(40, CSS.inkSoft)).setOrigin(0.5);
     this.holdRing = scene.add.graphics();
     const hit = this.holdButton(gearX, h / 2 - 3, onParentHold);
 
-    this.add([bg, this.orderText, this.dots, pill, icon, this.sprinklesText, gear, this.holdRing, hit]);
+    this.add([bg, this.orderText, this.dots, pill, icon, this.sprinklesText, shop, gear, this.holdRing, hit]);
     this.setDepth(400);
     scene.add.existing(this);
   }
