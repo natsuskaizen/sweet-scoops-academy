@@ -28,7 +28,7 @@ Before pushing, run everything CI runs: `typecheck`, `test:coverage`, `lint`, `f
 ## Testing
 
 - Every meaningful logic change comes with a unit test in `src/tests/` (one suite per module). Skip tests for trivial or low-priority logic: no tests just for the sake of tests.
-- Target at least 90% coverage of game logic. The CI floors in `vite.config.ts` are lower today (statements 85, branches 80, functions 88, lines 90); don't let a change push coverage down, and raise a floor when coverage clears it.
+- Keep game-logic coverage at 80% or more on every measure. CI enforces the floors in `vite.config.ts` (statements 85, branches 80, functions 88, lines 90); don't lower them.
 - Scenes and UI are covered by the Playwright smoke test (`e2e/smoke.spec.ts`), not unit tests.
 - Don't repeat yourself: look for an existing helper (for example in `src/learning/math/operation.ts`) before writing a new one.
 
