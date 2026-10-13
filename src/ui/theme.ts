@@ -1,4 +1,5 @@
 /** Shared look-and-feel constants: palette, type, and the screen layouts. */
+import type { ShopSpot } from '../shop/catalog';
 
 export const COLORS = {
   strawberry: 0xff8fb3,
@@ -92,7 +93,26 @@ export interface Layout {
   panel: Rect;
   ticket: Rect;
   keypad: { x: number; y: number; cellW: number; cellH: number; gap: number };
+  /**
+   * Where each decoration stands (bottom centre). Spots past the shop room
+   * (under the register) only show while decorating, when the register
+   * slides away and the room fills the screen.
+   */
+  decorSpots: Record<ShopSpot, Point>;
 }
+
+export interface Point {
+  x: number;
+  y: number;
+}
+
+const DECOR_SPOTS: Omit<Record<ShopSpot, Point>, 'wall-right' | 'floor-right'> = {
+  'wall-left': { x: 105, y: 280 },
+  'floor-left': { x: 232, y: 640 },
+  'floor-center': { x: 360, y: 812 },
+  'counter-top': { x: 528, y: 496 },
+  window: { x: 324, y: 236 },
+};
 
 const SHOP_PARTS = {
   shop: { x: 0, y: 72, w: SHOP_W, h: SHOP_H - 72 },
@@ -127,6 +147,13 @@ function landscapeLayout(): Layout {
       gearX: 1214,
     },
     ...SHOP_PARTS,
+    decorSpots: {
+      ...DECOR_SPOTS,
+      'wall-right': { x: 1040, y: 340 },
+      'floor-right': { x: 1040, y: 690 },
+      // Clear of Decorate's tray, just behind where customers stand.
+      'floor-center': { x: 360, y: 696 },
+    },
     registerArea: { x: SHOP_W, y: 72, w: width - SHOP_W, h: height - 72 },
     panel: { x: 812, y: 80, w: 458, h: 790 },
     ticket: { x: 832, y: 92, w: 418, h: 300 },
@@ -169,6 +196,7 @@ function portraitLayout(screenAspect: number): Layout {
       gearX: 762,
     },
     ...SHOP_PARTS,
+    decorSpots: { ...DECOR_SPOTS, 'wall-right': { x: 708, y: 300 }, 'floor-right': { x: 420, y: 940 } },
     registerArea: area,
     panel,
     ticket: { x: panel.x + pad, y: panel.y + (panel.h - ticketH) / 2, w: keypadX - panel.x - 2 * pad, h: ticketH },
@@ -199,4 +227,24 @@ export let LAYOUT: Layout = landscapeLayout();
 
 export function setLayout(layout: Layout): void {
   LAYOUT = layout;
+}
+
+/** Decorate's tray of items along the bottom of the screen. */
+export function decorTrayRect(layout: Layout): Rect {
+  const h = layout.orientation === 'landscape' ? 180 : 300;
+  return { x: 0, y: layout.height - h, w: layout.width, h };
+}
+
+/**
+ * Where the shop's colour card goes so it never hides the item being tried:
+ * on the other side in landscape, above or below it in portrait.
+ */
+export function tierCardRect(layout: Layout, spot: Point): Rect {
+  if (layout.orientation === 'landscape') {
+    const w = 700;
+    return { x: spot.x > layout.width / 2 ? 20 : layout.width - w - 20, y: 88, w, h: 260 };
+  }
+  const h = 270;
+  const below = spot.y < 420;
+  return { x: 20, y: below ? decorTrayRect(layout).y - h - 16 : 88, w: layout.width - 40, h };
 }

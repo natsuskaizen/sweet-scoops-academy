@@ -2,6 +2,7 @@
  * The single reward module. Every Sprinkle the game hands out is computed
  * and paid here, and every payout is guarded by a persisted `paid` flag so a
  * double tap, a reload or an interrupted animation can never pay twice.
+ * Spending at the Sprinkle Shop also goes through here (`spend`).
  */
 import { GAME_CONFIG, type RewardConfig } from '../config/gameConfig';
 import type { AttemptOutcome } from '../learning/types';
@@ -69,4 +70,15 @@ export function payRoundBonus(wallet: Wallet, round: PayableRound): RoundBonus |
   round.bonus = bonus;
   credit(wallet, bonus.completion + bonus.perfect);
   return bonus;
+}
+
+/**
+ * Takes Sprinkles for a purchase. Takes nothing and returns false if the
+ * wallet is short, so the balance never goes below zero. The lifetime total
+ * counts what was earned, so spending never lowers it.
+ */
+export function spend(wallet: Wallet, amount: number): boolean {
+  if (!Number.isInteger(amount) || amount < 0 || amount > wallet.sprinkles) return false;
+  wallet.sprinkles -= amount;
+  return true;
 }

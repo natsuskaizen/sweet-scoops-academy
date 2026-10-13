@@ -1,15 +1,13 @@
 /**
- * Shop art: small prop textures, the pixel-art room (painted in shopRoom.ts)
- * and the decorations placed in it.
+ * Shop art: small prop textures and the pixel-art room (painted in
+ * shopRoom.ts). Decorations are drawn by decorArt.ts.
  */
 import type Phaser from 'phaser';
 import { makePixelTexture } from '../characters/pixelArt';
 import { FLAVOR_COLORS } from '../characters/sprites';
-import { itemById, type ShopSpot } from '../shop/catalog';
-import type { PlacedDecoration } from '../save/saveTypes';
 import { Pixels } from './roomPixels';
-import { COUNTER_ART, paintCounter, paintRoom, ROOM_ART, ROOM_OUTLINE, ROOM_SCALE, ROOM_TEXT } from './shopRoom';
-import { COLORS, CSS, text } from '../ui/theme';
+import { COUNTER_ART, paintCounter, paintRoom, roomArt, ROOM_OUTLINE, ROOM_SCALE, ROOM_TEXT } from './shopRoom';
+import { CSS, text } from '../ui/theme';
 
 /** Small pixel textures used across the scene. */
 export function createPropTextures(scene: Phaser.Scene): void {
@@ -52,9 +50,12 @@ function paintTexture(scene: Phaser.Scene, key: string, size: { w: number; h: nu
 }
 
 export function drawShopRoom(scene: Phaser.Scene): void {
-  paintTexture(scene, 'room', ROOM_ART, paintRoom);
+  const room = roomArt();
+  // One texture per screen shape, so a rotation repaints at the new size.
+  const key = `room-${room.w}x${room.h}`;
+  paintTexture(scene, key, room, paintRoom);
   paintTexture(scene, 'room-counter', COUNTER_ART, paintCounter);
-  scene.add.image(ROOM_ART.x, ROOM_ART.y, 'room').setOrigin(0).setScale(ROOM_SCALE).setDepth(0);
+  scene.add.image(room.x, room.y, key).setOrigin(0).setScale(ROOM_SCALE).setDepth(0);
   // The counter sits on a higher layer so it hides the shopkeeper's legs.
   scene.add.image(COUNTER_ART.x, COUNTER_ART.y, 'room-counter').setOrigin(0).setScale(ROOM_SCALE).setDepth(30);
   const { sign, open } = ROOM_TEXT;
@@ -63,40 +64,4 @@ export function drawShopRoom(scene: Phaser.Scene): void {
     .setOrigin(0.5)
     .setDepth(1);
   scene.add.text(open.x, open.y, 'OPEN', text(20, CSS.white)).setOrigin(0.5).setDepth(1);
-}
-
-const SPOTS: Record<ShopSpot, { x: number; y: number }> = {
-  'wall-left': { x: 200, y: 420 },
-  'wall-right': { x: 450, y: 250 },
-  'floor-left': { x: 200, y: 640 },
-  'counter-top': { x: 760, y: 486 },
-  window: { x: 324, y: 330 },
-};
-
-/** Places owned decorations in the room (Milestone 3 adds buying them). */
-export function drawDecorations(scene: Phaser.Scene, decorations: readonly PlacedDecoration[]): void {
-  for (const deco of decorations) {
-    const item = itemById(deco.itemId);
-    if (!item) continue;
-    const { x, y } = SPOTS[deco.spot];
-    const g = scene.add.graphics().setDepth(deco.spot === 'counter-top' ? 31 : 2);
-    if (item.asset === 'deco-plant') {
-      g.fillStyle(COLORS.peach, 1).fillRoundedRect(x - 26, y - 40, 52, 44, 8);
-      g.fillStyle(COLORS.mintDark, 1)
-        .fillEllipse(x, y - 64, 70, 50)
-        .fillEllipse(x - 22, y - 86, 34, 40)
-        .fillEllipse(x + 20, y - 90, 30, 44);
-    } else if (item.asset === 'deco-lamp') {
-      g.fillStyle(COLORS.lavenderDark, 1).fillRect(x - 4, y - 50, 8, 50);
-      g.fillStyle(COLORS.white, 1)
-        .fillCircle(x - 14, y - 60, 16)
-        .fillCircle(x + 8, y - 64, 20)
-        .fillCircle(x + 22, y - 56, 13);
-    } else if (item.asset === 'deco-frame') {
-      g.fillStyle(COLORS.brown, 1).fillRect(x - 40, y - 50, 80, 100);
-      g.fillStyle(COLORS.sky, 1).fillRect(x - 32, y - 42, 64, 84);
-      g.fillStyle(COLORS.peach, 1).fillTriangle(x - 12, y, x + 12, y, x, y + 30);
-      g.fillStyle(COLORS.strawberry, 1).fillCircle(x, y - 8, 14);
-    }
-  }
 }

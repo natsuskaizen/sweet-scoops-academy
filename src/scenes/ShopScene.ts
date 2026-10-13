@@ -27,7 +27,9 @@ import { Parade } from './parade';
 import { parentArea } from './parentArea';
 import { ResultsOverlay } from './ResultsOverlay';
 import { scoopOntoCone } from './serveAnimation';
-import { drawDecorations, drawShopRoom } from './shopArt';
+import { PlacedDecorations } from './decorArt';
+import { DecorateMode } from './decorateMode';
+import { drawShopRoom } from './shopArt';
 
 /** Test hooks (`window.__ssa`, `?fast`) exist in dev, and in a build only when opened with `?e2e`. */
 const testHooksEnabled = (): boolean => import.meta.env.DEV || new URLSearchParams(window.location.search).has('e2e');
@@ -55,6 +57,10 @@ export class ShopScene extends Phaser.Scene {
   /** What the grown-ups area shows (the e2e tests run its actions through `__ssa`). */
   private parentArea!: Pick<ParentGateOptions, 'info' | 'actions'>;
   private results: ResultsOverlay | null = null;
+  private placed!: PlacedDecorations;
+  private registerPanel!: Phaser.GameObjects.Graphics;
+  /** Decorate, while it is open (the e2e test drives it through `__ssa`). */
+  private decorate: DecorateMode | null = null;
 
   constructor() {
     super('Shop');
@@ -80,8 +86,9 @@ export class ShopScene extends Phaser.Scene {
     this.parentArea = parentArea({ scene: this, services: this.services, profile: () => this.manager.profile });
 
     drawShopRoom(this);
-    drawDecorations(this, this.manager.profile.decorations);
-    this.drawRegisterPanel();
+    this.placed = new PlacedDecorations(this);
+    this.placed.draw(this.manager.profile.decorations);
+    this.registerPanel = this.drawRegisterPanel();
 
     this.shopkeeper = new CharacterView(this, LAYOUT.shopkeeper.x, 530, this.shopkeeperLook()).setDepth(20).idle(true);
 
@@ -343,17 +350,56 @@ export class ShopScene extends Phaser.Scene {
     // A perfect round brings every customer back for a parade before the card.
     const parade = summary.perfect ? await this.parade.play(stickers.map((s) => s.look)) : [];
     let closed = false;
-    const overlay = new ResultsOverlay(this, summary, stickers, () => {
-      if (closed) return;
-      closed = true;
-      overlay.destroy();
-      this.results = null;
-      parade.forEach((c) => c.destroy());
-      this.shopkeeper.setExpression('neutral');
-      this.manager.ensureRound();
-      void this.runOrder();
+    const overlay = new ResultsOverlay(this, summary, stickers, {
+      onDecorate: () => this.openDecorate([overlay, ...parade]),
+      onContinue: () => {
+        if (closed) return;
+        closed = true;
+        overlay.destroy();
+        this.results = null;
+        parade.forEach((c) => c.destroy());
+        this.shopkeeper.setExpression('neutral');
+        this.manager.ensureRound();
+        void this.runOrder();
+      },
     });
     this.results = overlay;
+  }
+
+  // -------------------------------------------------------------------------
+  // Decorate
+  // -------------------------------------------------------------------------
+
+  /** Opens Decorate from the results card: the register and `cover` hide until it closes. */
+  private openDecorate(cover: Phaser.GameObjects.GameObject[]): void {
+    if (this.decorate) return;
+    const hidden = [this.registerPanel, this.ticket, this.aid, this.bubble, this.customer, this.treat, ...cover].filter(
+      (o) => o !== null,
+    ) as unknown as {
+      setVisible: (v: boolean) => void;
+    }[];
+    const show = (visible: boolean) => {
+      hidden.forEach((o) => o.setVisible(visible));
+      this.keypad.setVisible(visible);
+    };
+    show(false);
+    this.decorate = new DecorateMode({
+      scene: this,
+      profile: () => this.manager.profile,
+      placed: this.placed,
+      save: () => this.saveNow(),
+      onClose: () => {
+        this.decorate = null;
+        show(true);
+        this.status.setSprinkles(this.manager.profile.sprinkles);
+      },
+    });
+  }
+
+  private saveNow(): boolean {
+    const result = this.services.saves.write(this.services.save);
+    if (!result.ok) this.toast('That could not be saved just now.');
+    return result.ok;
   }
 
   // -------------------------------------------------------------------------
@@ -384,7 +430,7 @@ export class ShopScene extends Phaser.Scene {
     return this.manager.profile.currentRound?.orders.map((o) => o.outcome) ?? [];
   }
 
-  private drawRegisterPanel(): void {
+  private drawRegisterPanel(): Phaser.GameObjects.Graphics {
     const { x, y, w, h } = LAYOUT.panel;
     const area = LAYOUT.registerArea;
     const g = this.add.graphics().setDepth(5);
@@ -392,6 +438,7 @@ export class ShopScene extends Phaser.Scene {
     if (LAYOUT.orientation === 'portrait') g.fillStyle(COLORS.brownDark, 1).fillRect(area.x, area.y, area.w, 8);
     g.fillStyle(0xffe9d6, 1).fillRoundedRect(x, y, w, h - 10, 26);
     g.lineStyle(5, COLORS.brownDark, 1).strokeRoundedRect(x, y, w, h - 10, 26);
+    return g;
   }
 
   private showLoadNotices(): void {
