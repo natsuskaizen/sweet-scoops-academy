@@ -369,7 +369,7 @@ offerFor(profile, item); // { kind: 'buy', price } | { kind: 'short', short } | 
 takeOffer(profile, item); // buys, puts in the shop, or takes away; the scene then saves
 ```
 
-Decorate opens from the results card. Each decoration has a spot (`LAYOUT.decorSpots`); its art is a text grid in `decorArt.ts` whose `L`/`l` pixels take the tier's colours (`tierColors.ts`), and Sparkly Rainbow pieces twinkle. Two spots are room surfaces (`isRoomSurface`): `'wall'` for wall paint and `'door'` for the doors. What is used there repaints the room (`PlacedDecorations.tryOn` previews it), and taking it away brings back the plain wall or door. Tapping a colour shows the piece in the room right away; `TierCard` shows the swatches and the button, placed by `tierCardRect` clear of what the piece covers (`pieceRect`). The tray shows a page of big bubbles between ◀ ▶ arrows (`decorTraySlots` in `theme.ts`).
+Decorate opens from the results card, or from the Sprinkle Shop menu (`ShopMenu`) that the Sprinkles balance in the top bar opens between rounds or while a customer waits; the keypad is off while any of them is open (`syncInput`). Each decoration has a spot (`LAYOUT.decorSpots`); its art is a text grid in `decorArt.ts` whose `L`/`l` pixels take the tier's colours (`tierColors.ts`), and Sparkly Rainbow pieces twinkle. Two spots are room surfaces (`isRoomSurface`): `'wall'` for wall paint and `'door'` for the doors. What is used there repaints the room (`PlacedDecorations.tryOn` previews it), and taking it away brings back the plain wall or door. Tapping a colour shows the piece in the room right away; `TierCard` shows the swatches and the button, placed by `tierCardRect` clear of what the piece covers (`pieceRect`). The tray shows a page of big bubbles between ◀ ▶ arrows (`decorTraySlots` in `theme.ts`).
 
 ```ts
 (decoration('door-arch', 'Arched Door', 220, 'door', 'furniture'), // a new door design: add its grid to DOOR_ART
@@ -386,7 +386,7 @@ new TierCard(scene, rect, {
 });
 ```
 
-Momo's Closet also opens from the results card and covers the whole screen (`closetLayout()` in `theme.ts`): Momo on a stage, three tabs (Clothing: hats, T-shirt, dress, skirt, shoes; Accessories: glasses, sunglasses, hearing aids, bow; Ice Cream Tools: the scooper), a tile per design and the same `TierCard`. A dress is worn instead of a T-shirt and skirt (`SLOT_CLASHES` in `catalog.ts`), and `wornWith(profile, item)` gives what Momo would have on while trying something. Whatever colour is picked is shown on Momo at once; buying keeps it on, and when the Closet closes the shop rebuilds her in what she now has on.
+Momo's Closet opens the same two ways and covers the whole screen (`closetLayout()` in `theme.ts`): Momo on a stage, three tabs (Clothing: hats, T-shirt, dress, skirt, shoes; Accessories: glasses, sunglasses, hearing aids, bow; Ice Cream Tools: the scooper), a tile per design and the same `TierCard`. A dress is worn instead of a T-shirt and skirt (`SLOT_CLASHES` in `catalog.ts`), and `wornWith(profile, item)` gives what Momo would have on while trying something. Whatever colour is picked is shown on Momo at once; buying keeps it on, and when the Closet closes the shop rebuilds her in what she now has on.
 
 ## Tests
 

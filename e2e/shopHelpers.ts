@@ -20,6 +20,7 @@ export interface Hook {
       close: () => void;
     } | null;
     shopkeeper: { list: { texture: { key: string } }[] };
+    shopMenu: { close: () => void } | null;
     placed: { room: { texture: { key: string } } };
     aid: { visible: boolean };
     bubble: { visible: boolean; hide: () => void };

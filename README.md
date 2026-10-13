@@ -119,7 +119,7 @@ src/
     shopRoom.ts              the pixel-art room and counter (strawberry parlour), repainted for wall paint and doors
     roomPixels.ts            tiny pixel painter the room is drawn with
   ui/                        NumberKeypad, OrderPanel (+ SpeechBubble), VisualAidView,
-                             StatusBar, ParentGate, ProgressScreen, Button, TierCard, theme,
+                             StatusBar, ShopMenu, ParentGate, ProgressScreen, Button, TierCard, theme,
                              CharacterDialog (a DOM form for adding characters);
                              tweenAsync.ts turns tweens and timers into awaitable promises;
                              aidLayout.ts sizes the hint board's scoops and cups (unit tested)
@@ -200,7 +200,7 @@ All items in the spec's acceptance checklist are implemented. Verified automatic
 - **Not yet tested on a real iPad or iPhone.** It was checked in desktop Chromium at iPad and iPhone viewport sizes with touch emulation. Safari on a real device still needs a look.
 - Art is original pixel art: the room is painted at 1/4 resolution and scaled up so it matches the characters; the built-in cast waddles on stepping feet, breathes and blinks while waiting, cheers or tilts their head at an answer, and Momo scoops from the tubs. Timings are in `GAME_CONFIG.animation`.
 - There is one profile ("Player 1"). Multiple profiles and profile names are Milestone 4; JSON backup files are already in the grown-ups area. The save format already supports several profiles.
-- Decorate and Momo's Closet (Milestone 3) open from the results card. Decorate sells furniture and little decorations, wall paint and three doors; the Closet sells clothes, accessories and scoopers; everything comes in six tiers. Only Momo wears Closet items; a shopkeeper added from a picture serves with the chosen scooper but does not wear clothes or accessories.
+- Decorate and Momo's Closet (Milestone 3) open from the results card, or by tapping the Sprinkles balance in the top bar (between rounds or while a customer waits, not while serving). Decorate sells furniture and little decorations, wall paint and three doors; the Closet sells clothes, accessories and scoopers; everything comes in six tiers. Only Momo wears Closet items; a shopkeeper added from a picture serves with the chosen scooper but does not wear clothes or accessories.
 - Division practice uses divisors 1-12 (`GAME_CONFIG.math.division.divisor`); the spec itself only requires a positive divisor.
 - Addition and subtraction are built and tested but switched off, since Milestone 1 is multiplication and division. Their hints use simple piles of scoops; the difficulty curve for them is a first guess.
 - localStorage is per browser and per device (and the Home Screen app has its own); backup files move progress between them. If the browser blocks storage (some private modes), the game still plays but warns that progress will not be kept.
