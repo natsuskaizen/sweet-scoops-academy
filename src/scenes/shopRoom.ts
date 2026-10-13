@@ -12,7 +12,7 @@
  * moves the art too.
  */
 import { FLAVOR_COLORS } from '../characters/sprites';
-import { LAYOUT, SHOP_H, SHOP_W } from '../ui/theme';
+import { LAYOUT } from '../ui/theme';
 import type { Pixels } from './roomPixels';
 
 export const ROOM_SCALE = 4;
@@ -53,12 +53,14 @@ const C = {
 const artY = (y: number): number => Math.round((y - LAYOUT.shop.y) / ROOM_SCALE);
 const artX = (x: number): number => Math.round(x / ROOM_SCALE);
 
-export const ROOM_ART = {
-  x: 0,
-  y: LAYOUT.shop.y,
-  w: SHOP_W / ROOM_SCALE,
-  h: (SHOP_H - LAYOUT.shop.y) / ROOM_SCALE,
-};
+/**
+ * The room canvas fills the whole screen under the status bar, wider than
+ * the shop area: the register covers the rest while serving, and slides
+ * away to show it all while decorating.
+ */
+export function roomArt(): { x: number; y: number; w: number; h: number } {
+  return { x: 0, y: LAYOUT.shop.y, w: LAYOUT.width / ROOM_SCALE, h: (LAYOUT.height - LAYOUT.shop.y) / ROOM_SCALE };
+}
 
 /** Counter canvas: a little wider than the counter, from its top lip down. */
 export const COUNTER_ART = {
@@ -95,7 +97,7 @@ export function paintRoom(p: Pixels): void {
 const HEART = ['p.p', 'ppp', '.p.'];
 
 function paintWall(p: Pixels): void {
-  const w = ROOM_ART.w;
+  const { w } = roomArt();
   const wall = artY(LAYOUT.wallBottom);
   // Striped wallpaper with little hearts.
   p.rect(0, 0, w, wall, C.cream);
@@ -117,12 +119,13 @@ function paintWall(p: Pixels): void {
 
 function paintFloor(p: Pixels): void {
   const wall = artY(LAYOUT.wallBottom);
-  for (let y = wall; y < ROOM_ART.h; y += 6) {
+  const { w, h } = roomArt();
+  for (let y = wall; y < h; y += 6) {
     const row = (y - wall) / 6;
-    p.rect(0, y, ROOM_ART.w, 6, row % 2 === 0 ? C.board : C.boardAlt).rect(0, y + 5, ROOM_ART.w, 1, C.seam);
-    for (let x = (row % 3) * 14; x < ROOM_ART.w; x += 42) p.rect(x, y, 1, 5, C.seam);
+    p.rect(0, y, w, 6, row % 2 === 0 ? C.board : C.boardAlt).rect(0, y + 5, w, 1, C.seam);
+    for (let x = (row % 3) * 14; x < w; x += 42) p.rect(x, y, 1, 5, C.seam);
   }
-  p.rect(0, wall, ROOM_ART.w, 2, C.seam);
+  p.rect(0, wall, w, 2, C.seam);
 }
 
 const FLOWER = ['.p.', 'pyp', '.p.', '.g.'];

@@ -1,6 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { tubSpot } from '../scenes/shopRoom';
-import { layoutFor, paradeSpots, PORTRAIT_MAX_H, PORTRAIT_MIN_H, SHOP_H, SHOP_W, type Rect } from '../ui/theme';
+import {
+  decorTrayRect,
+  layoutFor,
+  paradeSpots,
+  PORTRAIT_MAX_H,
+  PORTRAIT_MIN_H,
+  SHOP_H,
+  SHOP_W,
+  tierCardRect,
+  type Rect,
+} from '../ui/theme';
 
 const inside = (inner: Rect, outer: Rect) =>
   inner.x >= outer.x &&
@@ -77,5 +87,25 @@ describe('tubSpot', () => {
       expect(s.y).toBeLessThan(SHOP_H);
     }
     expect(tubSpot('vanilla')).toEqual(tubSpot('honey-lavender'));
+  });
+});
+
+describe('decorating layout', () => {
+  const overlaps = (a: Rect, b: Rect) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+  const screens = [layoutFor(1180, 820), layoutFor(393, 852), layoutFor(820, 1180)];
+
+  it('keeps every decoration spot on screen and clear of the tray and the colour card', () => {
+    for (const l of screens) {
+      const tray = decorTrayRect(l);
+      for (const [spot, at] of Object.entries(l.decorSpots)) {
+        // A generous box for the biggest piece standing on the spot.
+        const piece = { x: at.x - 130, y: at.y - 100, w: 260, h: 100 };
+        expect(at.x, spot).toBeGreaterThan(0);
+        expect(at.x, spot).toBeLessThan(l.width);
+        expect(at.y, spot).toBeLessThanOrEqual(tray.y);
+        expect(overlaps(piece, tierCardRect(l, at)), `${l.orientation} ${spot}`).toBe(false);
+        expect(overlaps(tierCardRect(l, at), tray)).toBe(false);
+      }
+    }
   });
 });

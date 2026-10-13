@@ -326,7 +326,7 @@ new CharacterView(scene, x, y, look).setExpression('happy'); // frame 1, or stan
 
 ## 8. The room: `src/scenes/shopRoom.ts`
 
-The room is pixel art too. It is painted once onto a 200×202 canvas (one texel per art pixel) and shown at 4×, so its pixels match the characters'. Painting uses a tiny helper, `Pixels` in `roomPixels.ts`; the door, wall line and counter are placed from `LAYOUT`:
+The room is pixel art too. It is painted once onto a canvas the size of the whole screen under the status bar (one texel per art pixel) and shown at 4×, so its pixels match the characters'. While serving, the register covers the right side (landscape) or the bottom (portrait); Decorate slides it away and shows the whole room. Painting uses a tiny helper, `Pixels` in `roomPixels.ts`; the door, wall line and counter are placed from `LAYOUT`:
 
 ```ts
 function paintDoor(p: Pixels): void {
@@ -335,12 +335,31 @@ function paintDoor(p: Pixels): void {
   p.ring(cx, d.y + 13, 8, C.sky); // round window
 }
 
-// shopArt.ts
-paintTexture(scene, 'room', ROOM_ART, paintRoom);
-scene.add.image(ROOM_ART.x, ROOM_ART.y, 'room').setOrigin(0).setScale(ROOM_SCALE);
+// shopArt.ts: one texture per screen shape, so a rotation repaints at the new size
+const room = roomArt();
+paintTexture(scene, `room-${room.w}x${room.h}`, room, paintRoom);
 ```
 
 The counter is a second canvas on a higher layer so it hides the shopkeeper's legs.
+
+## 9. Buying and decorating: `src/shop/catalog.ts`, `purchases.ts`, `src/scenes/decorateMode.ts`
+
+The catalog lists designs; each comes in six tiers, and each tier is its own item to buy and own (`hat-beret.golden`). Plain colours cost the base price, then Silver ×2.5, Golden ×5 and Sparkly Rainbow ×10:
+
+```ts
+(wear('hat-beret', 'Beret', 80, 'hat'), // 80 / 80 / 80 / 200 / 400 / 800
+  decoration('deco-cafe', 'Café Set', 100, 'floor-right'),
+  itemById('hat-beret.golden')); // { name: 'Golden Beret', price: 400, tier: 'golden', ... }
+```
+
+`purchases.ts` holds the rules: buying spends once (through `spend` in `rewards.ts`, which never touches the lifetime total), owned items are kept for good, and a bought item is put to use at once, replacing what was in its slot or spot. The shop's one big button asks `offerFor` what it should do:
+
+```ts
+offerFor(profile, item); // { kind: 'buy', price } | { kind: 'short', short } | { kind: 'use' } | { kind: 'in-use' }
+takeOffer(profile, item); // buys, puts in the shop, or takes away; the scene then saves
+```
+
+Decorate opens from the results card. Each decoration has a spot (`LAYOUT.decorSpots`); its art is a text grid in `decorArt.ts` whose `L`/`l` pixels take the tier's colours (`tierColors.ts`), and Sparkly Rainbow pieces twinkle. Tapping a colour shows the piece in its spot right away; `TierCard` (shared with the coming closet) shows the swatches and the button.
 
 ## Tests
 

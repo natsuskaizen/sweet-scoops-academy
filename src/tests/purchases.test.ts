@@ -11,7 +11,17 @@ import {
   variantsOf,
   type CatalogItem,
 } from '../shop/catalog';
-import { buyItem, isInUse, owns, ownedTiers, sprinklesShort, stopUsing, useItem } from '../shop/purchases';
+import {
+  buyItem,
+  isInUse,
+  offerFor,
+  owns,
+  ownedTiers,
+  sprinklesShort,
+  stopUsing,
+  takeOffer,
+  useItem,
+} from '../shop/purchases';
 import { spend } from '../shop/rewards';
 import { createSaveFile } from '../save/saveManager';
 import { validateSaveFile } from '../save/saveValidation';
@@ -137,6 +147,14 @@ describe('buyItem', () => {
 });
 
 describe('using owned items', () => {
+  it('wears glasses and hearing aids alongside a hat, each in its own slot', () => {
+    const { p } = player(500);
+    buyItem(p, 'hat-beret.pink');
+    buyItem(p, 'glasses-round.sky');
+    buyItem(p, 'hearing-aids.golden');
+    expect(p.equipped).toEqual({ hat: 'hat-beret.pink', glasses: 'glasses-round.sky', hearing: 'hearing-aids.golden' });
+  });
+
   it('swaps a worn item for another in the same slot', () => {
     const { p } = player(500);
     buyItem(p, 'hat-beret.pink');
@@ -175,5 +193,23 @@ describe('using owned items', () => {
     buyItem(p, 'hat-beret.pink');
     expect(sprinklesShort(p, item('hat-beret.pink'))).toBe(0);
     expect(itemId('scooper', 'golden')).toBe('scooper.golden');
+  });
+});
+
+describe('offerFor and takeOffer', () => {
+  it('walks an item from too dear, to buy, to in use, to put away and back', () => {
+    const { p } = player(50);
+    const lamp = item('deco-lamp.pink');
+    expect(offerFor(p, lamp)).toEqual({ kind: 'short', short: 40 });
+    expect(takeOffer(p, lamp)).toBe('none');
+    p.sprinkles = 90;
+    expect(offerFor(p, lamp)).toEqual({ kind: 'buy', price: 90 });
+    expect(takeOffer(p, lamp)).toBe('bought');
+    expect(offerFor(p, lamp)).toEqual({ kind: 'in-use' });
+    expect(takeOffer(p, lamp)).toBe('removed');
+    expect(offerFor(p, lamp)).toEqual({ kind: 'use' });
+    expect(takeOffer(p, lamp)).toBe('used');
+    expect(p.decorations).toEqual([{ itemId: 'deco-lamp.pink', spot: 'counter-top' }]);
+    expect(p.sprinkles).toBe(0);
   });
 });

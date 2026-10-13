@@ -23,8 +23,13 @@ const GOLD = '#f5b400';
  * sticker, with a gold star for a first-try answer and a heart otherwise.
  * Only positive framing: no misses are counted on the card.
  */
+export interface ResultsActions {
+  onDecorate: () => void;
+  onContinue: () => void;
+}
+
 export class ResultsOverlay extends Phaser.GameObjects.Container {
-  constructor(scene: Phaser.Scene, summary: RoundSummary, stickers: readonly ResultSticker[], onContinue: () => void) {
+  constructor(scene: Phaser.Scene, summary: RoundSummary, stickers: readonly ResultSticker[], actions: ResultsActions) {
     // Centred over the shop room in landscape, over the whole screen in portrait.
     const x = LAYOUT.orientation === 'landscape' ? SHOP_W / 2 - W / 2 + 40 : (LAYOUT.width - W) / 2;
     super(scene, x, (LAYOUT.height - H) / 2 + 30);
@@ -32,17 +37,26 @@ export class ResultsOverlay extends Phaser.GameObjects.Container {
     this.drawCard(summary);
     this.drawStickers(stickers);
     this.drawSprinkles(summary);
-    this.add(
-      new Button(scene, W / 2, H - 70, {
-        width: 360,
+    this.add([
+      new Button(scene, 150, H - 70, {
+        width: 240,
+        height: 96,
+        label: 'Decorate',
+        fontSize: 30,
+        fill: COLORS.lavender,
+        shade: COLORS.lavenderDark,
+        onTap: actions.onDecorate,
+      }),
+      new Button(scene, W - 190, H - 70, {
+        width: 320,
         height: 96,
         label: 'Keep scooping!',
         fontSize: 34,
         fill: COLORS.mint,
         shade: COLORS.mintDark,
-        onTap: onContinue,
+        onTap: actions.onContinue,
       }),
-    );
+    ]);
 
     this.setDepth(500).setScale(0.8).setAlpha(0);
     scene.add.existing(this);

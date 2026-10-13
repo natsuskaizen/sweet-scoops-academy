@@ -8,10 +8,9 @@
  *
  * Wearables and scoopers are sold in Momo's Closet; decorations in Decorate.
  */
-export type ItemCategory =
-  'outfit' | 'hat' | 'bow' | 'handheld' | 'decoration' | 'furniture' | 'wallpaper' | 'sign' | 'collectible';
+export type EquipSlot = 'outfit' | 'hat' | 'bow' | 'glasses' | 'hearing' | 'handheld';
 
-export type EquipSlot = 'outfit' | 'hat' | 'bow' | 'handheld';
+export type ItemCategory = EquipSlot | 'decoration' | 'furniture' | 'wallpaper' | 'sign' | 'collectible';
 
 export type ShopSpot =
   'wall-left' | 'wall-right' | 'floor-left' | 'floor-center' | 'floor-right' | 'counter-top' | 'window';
@@ -56,7 +55,7 @@ export interface CatalogItem {
 
 export type ShopId = 'closet' | 'decorate';
 
-const wear = (id: string, name: string, basePrice: number, slot: 'hat' | 'bow'): CatalogDesign => ({
+const wear = (id: string, name: string, basePrice: number, slot: EquipSlot): CatalogDesign => ({
   id,
   name,
   basePrice,
@@ -80,6 +79,9 @@ export const DESIGNS: readonly CatalogDesign[] = [
   wear('hat-berry', 'Berry Hat', 120, 'hat'),
   wear('hat-flowers', 'Flower Crown', 150, 'hat'),
   wear('hat-crown', 'Little Crown', 200, 'hat'),
+  wear('glasses-round', 'Round Glasses', 60, 'glasses'),
+  wear('glasses-heart', 'Heart Glasses', 90, 'glasses'),
+  wear('hearing-aids', 'Hearing Aids', 60, 'hearing'),
   {
     id: 'scooper',
     name: 'Scooper',

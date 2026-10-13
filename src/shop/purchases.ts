@@ -63,3 +63,29 @@ export function isInUse(profile: Profile, item: CatalogItem): boolean {
 export function ownedTiers(profile: Profile, design: CatalogDesign): TierId[] {
   return TIERS.filter((tier) => profile.ownedItems.includes(itemId(design.id, tier)));
 }
+
+/** What the shop's big button does for an item right now. */
+export type Offer =
+  { kind: 'buy'; price: number } | { kind: 'short'; short: number } | { kind: 'use' } | { kind: 'in-use' };
+
+export function offerFor(profile: Profile, item: CatalogItem): Offer {
+  if (isInUse(profile, item)) return { kind: 'in-use' };
+  if (owns(profile, item)) return { kind: 'use' };
+  const short = sprinklesShort(profile, item);
+  return short > 0 ? { kind: 'short', short } : { kind: 'buy', price: item.price };
+}
+
+/** Does the shop's big button for an item. Returns what happened, for the scene to save and show. */
+export function takeOffer(profile: Profile, item: CatalogItem): 'bought' | 'used' | 'removed' | 'none' {
+  const offer = offerFor(profile, item);
+  if (offer.kind === 'in-use') {
+    stopUsing(profile, item);
+    return 'removed';
+  }
+  if (offer.kind === 'use') {
+    useItem(profile, item);
+    return 'used';
+  }
+  if (offer.kind === 'buy') return buyItem(profile, item.id).ok ? 'bought' : 'none';
+  return 'none';
+}
