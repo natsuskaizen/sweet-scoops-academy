@@ -95,6 +95,7 @@ src/
   characters/
     friendArt.ts             the built-in cast (Momo and 13 customers): 32x40 text grids; faces, walking steps and a blink drawn per pose
     reactions.ts             hearts for a right answer, a "?" bubble for a first miss
+    scooperArt.ts            Momo's scooper held in her paw: wooden now, silver, golden and rainbow drawn for the Milestone 3 shop
     sprites.ts               16x20 species and clothing layers (Milestone 3 equipment)
     characterManager.ts      layered species rendering (body + outfit/hat/bow/handheld), sprite sheets for the cast and added characters
   scenes/
@@ -105,7 +106,7 @@ src/
     characterActions.ts      grown-ups area action that opens the Characters dialog
     ResultsOverlay.ts        end-of-round sticker card (one sticker per customer, confetti)
     parade.ts                a perfect round's parade before the card, with Skip
-    serveAnimation.ts        the shopkeeper's paw carries each scoop from its tub to the cone
+    serveAnimation.ts        the shopkeeper's scooper carries each scoop from its tub to the cone
     shopArt.ts               prop textures, draws the room, places decorations
     shopRoom.ts              the pixel-art room and counter (strawberry parlour)
     roomPixels.ts            tiny pixel painter the room is drawn with
