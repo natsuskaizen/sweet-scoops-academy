@@ -1,7 +1,7 @@
 import type { MathConfig } from '../../config/gameConfig';
 import {
   cached, checkAnswer, fail, firstFailure, inRange, isInt, plural, variantOf,
-  type MathFact, type MathOperation,
+  type MathChallengeSpec, type MathFact, type MathOperation, type OrderWording,
 } from './operation';
 
 /** 5 × 6 and 6 × 5 share one mastery record. */
@@ -14,6 +14,27 @@ export function timesDifficulty(a: number, b: number, tiers: MathConfig['factorT
   const tier = (n: number) => tiers[n] ?? 6;
   const [easy, hard] = [Math.min(tier(a), tier(b)), Math.max(tier(a), tier(b))];
   return easy * 2 + hard + (a * b >= 100 ? 4 : 0);
+}
+
+function wordTimes(spec: MathChallengeSpec, flavor: string): OrderWording {
+  const groups = spec.left;
+  const each = spec.right;
+  const scoops = plural(each, 'scoop', 'scoops');
+  return {
+    orderLine: variantOf([
+      `Can I get ${plural(groups, 'cone', 'cones')} with ${scoops} each?`,
+      `I'd love ${plural(groups, `${flavor} cone`, `${flavor} cones`)} with ${scoops} on each!`,
+      `${plural(groups, 'cup', 'cups')} please, ${scoops} in every cup!`,
+    ], spec),
+    hint: {
+      kind: 'groups', groups, perGroup: each, showTotal: false,
+      caption: `${plural(groups, 'cup', 'cups')} with ${each} in each. Count them all!`,
+    },
+    explanation: {
+      kind: 'groups', groups, perGroup: each, showTotal: true,
+      caption: `${plural(groups, 'group', 'groups')} of ${each} make${groups === 1 ? 's' : ''} ${spec.answer}.  ${groups} × ${each} = ${spec.answer}`,
+    },
+  };
 }
 
 export function createMultiplication(math: MathConfig): MathOperation {
@@ -54,27 +75,7 @@ export function createMultiplication(math: MathConfig): MathOperation {
     orient: (fact, rng) =>
       fact.left !== fact.right && rng.next() < 0.5 ? [fact.right, fact.left] : [fact.left, fact.right],
 
-    word(spec, flavor) {
-      const groups = spec.left;
-      const each = spec.right;
-      const scoops = plural(each, 'scoop', 'scoops');
-      return {
-        orderLine: variantOf([
-          `Can I get ${plural(groups, 'cone', 'cones')} with ${scoops} each?`,
-          `I'd love ${plural(groups, `${flavor} cone`, `${flavor} cones`)} with ${scoops} on each!`,
-          `${plural(groups, 'cup', 'cups')} please, ${scoops} in every cup!`,
-        ], spec),
-        hint: {
-          kind: 'groups', groups, perGroup: each, showTotal: false,
-          caption: `${plural(groups, 'cup', 'cups')} with ${each} in each. Count them all!`,
-        },
-        explanation: {
-          kind: 'groups', groups, perGroup: each, showTotal: true,
-          caption: `${plural(groups, 'group', 'groups')} of ${each} make${groups === 1 ? 's' : ''} ${spec.answer}.  ${groups} × ${each} = ${spec.answer}`,
-        },
-      };
-    },
-
+    word: wordTimes,
     formatKey: (key) => key.replace('mul:', '').replace('x', '×'),
   };
 }

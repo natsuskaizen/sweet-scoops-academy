@@ -112,8 +112,8 @@ describe('planRound', () => {
     const p = freshProgress();
     const [round1] = simulate(p, 1, () => 'first');
     const missedKey = round1![0]!;
-    p.multiplication.facts[missedKey] && recordOutcome(p.multiplication, missedKey, 'miss', ctx(1));
-    p.division.facts[missedKey] && recordOutcome(p.division, missedKey, 'miss', ctx(1));
+    const skill = missedKey.startsWith('mul:') ? p.multiplication : p.division;
+    recordOutcome(skill, missedKey, 'miss', ctx(1));
     const next = mathSubject.planRound(p, { roundNumber: 2, rng: createRng(99), now: 0, count: 10 });
     expect(next.map((q) => q.factKey)).toContain(missedKey);
   });

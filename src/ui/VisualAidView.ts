@@ -22,8 +22,9 @@ export class VisualAidView extends Phaser.GameObjects.Container {
   private art: Phaser.GameObjects.Graphics;
   private caption: Phaser.GameObjects.Text;
   private labels: Phaser.GameObjects.Text[] = [];
+  private scoopColor = 0xff9ec0;
 
-  constructor(scene: Phaser.Scene, x: number, y: number, private boxW: number, private boxH: number, private scoopColor = 0xff9ec0) {
+  constructor(scene: Phaser.Scene, x: number, y: number, private boxW: number, private boxH: number) {
     super(scene, x, y);
     const w = boxW;
     this.board = scene.add.graphics();

@@ -35,10 +35,19 @@ export class StatusBar extends Phaser.GameObjects.Container {
     const icon = scene.add.image(pillX + 34, h / 2 - 3, 'sprinkle-icon').setScale(4);
     this.sprinklesText = scene.add.text(pillX + pillW - 16, h / 2 - 3, '0', text(30, CSS.strawberry)).setOrigin(1, 0.5);
 
-    // Grown-ups button: press and hold.
     const gear = scene.add.text(gearX, h / 2 - 3, '⚙', text(40, CSS.inkSoft)).setOrigin(0.5);
     this.holdRing = scene.add.graphics();
-    const hit = scene.add.zone(gearX, h / 2 - 3, 76, 64).setInteractive();
+    const hit = this.holdButton(gearX, h / 2 - 3, onParentHold);
+
+    this.add([bg, this.orderText, this.dots, pill, icon, this.sprinklesText, gear, this.holdRing, hit]);
+    this.setDepth(400);
+    scene.add.existing(this);
+  }
+
+  /** Grown-ups button: a ring fills while held, and only a full hold opens it. */
+  private holdButton(x: number, y: number, onParentHold: () => void): Phaser.GameObjects.Zone {
+    const scene = this.scene;
+    const hit = scene.add.zone(x, y, 76, 64).setInteractive();
     let holdTween: Phaser.Tweens.Tween | undefined;
     const cancel = () => {
       holdTween?.stop();
@@ -55,7 +64,7 @@ export class StatusBar extends Phaser.GameObjects.Container {
           this.holdRing.clear();
           this.holdRing.lineStyle(5, COLORS.strawberryDark, 1);
           this.holdRing.beginPath();
-          this.holdRing.arc(gearX, h / 2 - 3, 28, -Math.PI / 2, -Math.PI / 2 + progress.t * Math.PI * 2);
+          this.holdRing.arc(x, y, 28, -Math.PI / 2, -Math.PI / 2 + progress.t * Math.PI * 2);
           this.holdRing.strokePath();
         },
         onComplete: () => {
@@ -66,10 +75,7 @@ export class StatusBar extends Phaser.GameObjects.Container {
     });
     hit.on('pointerup', cancel);
     hit.on('pointerout', cancel);
-
-    this.add([bg, this.orderText, this.dots, pill, icon, this.sprinklesText, gear, this.holdRing, hit]);
-    this.setDepth(400);
-    scene.add.existing(this);
+    return hit;
   }
 
   /**

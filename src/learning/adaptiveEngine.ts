@@ -87,43 +87,40 @@ export function recordOutcome(
   rec.lastPresentedRound = round;
   rec.recent = [...rec.recent, outcome].slice(-config.recentWindow);
 
-  switch (outcome) {
-    case 'first': {
-      rec.firstTryCorrect += 1;
-      if (!alreadySeenThisRound) rec.successStreak += 1;
-      if (rec.state === 'learning') rec.state = 'practicing';
-      // A single correct answer can never master a fact: needs N separate rounds.
-      if (rec.state === 'practicing' && rec.successStreak >= config.masterySessions) {
-        rec.state = 'mastered';
-      }
-      break;
-    }
-    case 'retry': {
-      // Progress, but weaker evidence than a first-try answer.
-      rec.retryCorrect += 1;
-      rec.successStreak = Math.max(0, rec.successStreak - 1);
-      if (rec.state === 'learning' && (previous === 'first' || previous === 'retry')) {
-        rec.state = 'practicing';
-      }
-      break;
-    }
-    case 'miss': {
-      // Raise priority without wiping history: counts are kept, state drops one level at most.
-      rec.missed += 1;
-      if (rec.state === 'mastered') {
-        rec.state = 'practicing';
-        rec.successStreak = Math.max(0, config.masterySessions - 2);
-      } else {
-        rec.successStreak = 0;
-        const recentMisses = rec.recent.slice(-3).filter((o) => o === 'miss').length;
-        if (rec.state === 'practicing' && recentMisses >= 2) rec.state = 'learning';
-      }
-      break;
-    }
-  }
+  if (outcome === 'first') applyFirstTry(rec, alreadySeenThisRound, config);
+  else if (outcome === 'retry') applyRetry(rec, previous);
+  else applyMiss(rec, config);
 
   rec.nextDueRound = round + nextInterval(rec, outcome, config);
   return rec;
+}
+
+function applyFirstTry(rec: FactRecord, alreadySeenThisRound: boolean, config: AdaptiveConfig): void {
+  rec.firstTryCorrect += 1;
+  if (!alreadySeenThisRound) rec.successStreak += 1;
+  if (rec.state === 'learning') rec.state = 'practicing';
+  // A single correct answer can never master a fact: needs N separate rounds.
+  if (rec.state === 'practicing' && rec.successStreak >= config.masterySessions) rec.state = 'mastered';
+}
+
+/** Progress, but weaker evidence than a first-try answer. */
+function applyRetry(rec: FactRecord, previous: AttemptOutcome | undefined): void {
+  rec.retryCorrect += 1;
+  rec.successStreak = Math.max(0, rec.successStreak - 1);
+  if (rec.state === 'learning' && (previous === 'first' || previous === 'retry')) rec.state = 'practicing';
+}
+
+/** Raises priority without wiping history: counts are kept, state drops one level at most. */
+function applyMiss(rec: FactRecord, config: AdaptiveConfig): void {
+  rec.missed += 1;
+  if (rec.state === 'mastered') {
+    rec.state = 'practicing';
+    rec.successStreak = Math.max(0, config.masterySessions - 2);
+    return;
+  }
+  rec.successStreak = 0;
+  const recentMisses = rec.recent.slice(-3).filter((o) => o === 'miss').length;
+  if (rec.state === 'practicing' && recentMisses >= 2) rec.state = 'learning';
 }
 
 function nextInterval(rec: FactRecord, outcome: AttemptOutcome, config: AdaptiveConfig): number {
@@ -262,13 +259,12 @@ function pickKnownFact(pool: SkillPool, state: LearningState, st: PickState, str
  */
 function pickForSlot(slot: SlotKind, primary: SkillPool, pools: SkillPool[], st: PickState): PlannedItem | null {
   const order = [primary, ...pools.filter((p) => p !== primary)];
-  for (const strict of [true, false]) {
-    for (const category of FALLBACKS[slot]) {
-      for (const pool of order) {
-        const key = pickFromCategory(pool, category, st, strict);
-        if (key) return { skillId: pool.skillId, factKey: key, slot, source: category };
-      }
-    }
+  const attempts = [true, false].flatMap((strict) =>
+    FALLBACKS[slot].flatMap((category) => order.map((pool) => ({ strict, category, pool }))),
+  );
+  for (const { strict, category, pool } of attempts) {
+    const key = pickFromCategory(pool, category, st, strict);
+    if (key) return { skillId: pool.skillId, factKey: key, slot, source: category };
   }
   return null;
 }

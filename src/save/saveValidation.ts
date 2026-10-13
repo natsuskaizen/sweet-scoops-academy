@@ -60,19 +60,28 @@ function checkRound(v: unknown, path: string, out: string[]): void {
   });
 }
 
+/** Simple per-field shape checks for a profile. */
+const PROFILE_FIELDS: Record<string, (v: unknown) => boolean> = {
+  createdAt: isNonNegInt,
+  sprinkles: isNonNegInt,
+  lifetimeSprinkles: isNonNegInt,
+  ownedItems: isStrArray,
+  achievements: isStrArray,
+  equipped: isObj,
+  decorations: Array.isArray,
+  roundHistory: Array.isArray,
+};
+
+function checkFields(v: Obj, path: string, out: string[], fields: Record<string, (v: unknown) => boolean>): void {
+  for (const [field, ok] of Object.entries(fields)) if (!ok(v[field])) out.push(`${path}.${field} invalid`);
+}
+
 function checkProfile(v: unknown, id: string, out: string[]): void {
   const path = `profiles[${id}]`;
   if (!isObj(v)) { out.push(`${path} not an object`); return; }
   if (v.id !== id) out.push(`${path}.id mismatch`);
   if (!isStr(v.displayName) || v.displayName.length === 0) out.push(`${path}.displayName invalid`);
-  for (const f of ['createdAt', 'sprinkles', 'lifetimeSprinkles']) {
-    if (!isNonNegInt(v[f])) out.push(`${path}.${f} invalid`);
-  }
-  if (!isStrArray(v.ownedItems)) out.push(`${path}.ownedItems invalid`);
-  if (!isStrArray(v.achievements)) out.push(`${path}.achievements invalid`);
-  if (!isObj(v.equipped)) out.push(`${path}.equipped invalid`);
-  if (!Array.isArray(v.decorations)) out.push(`${path}.decorations invalid`);
-  if (!Array.isArray(v.roundHistory)) out.push(`${path}.roundHistory invalid`);
+  checkFields(v, path, out, PROFILE_FIELDS);
   if (!isObj(v.settings) || typeof v.settings.showHints !== 'boolean' || typeof v.settings.reduceMotion !== 'boolean') {
     out.push(`${path}.settings invalid`);
   }

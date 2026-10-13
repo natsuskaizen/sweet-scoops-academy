@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+import type Phaser from 'phaser';
 
 /**
  * Turns a text pixel map into a Phaser canvas texture at 1 texel per pixel.

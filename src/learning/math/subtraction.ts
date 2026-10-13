@@ -1,7 +1,7 @@
 import type { MathConfig } from '../../config/gameConfig';
 import {
   cached, checkAnswer, fail, firstFailure, inRange, isInt, plural, variantOf,
-  type MathFact, type MathOperation,
+  type MathChallengeSpec, type MathFact, type MathOperation, type OrderWording,
 } from './operation';
 
 export function subtractionKey(minuend: number, subtrahend: number): string {
@@ -12,6 +12,22 @@ export function subtractionKey(minuend: number, subtrahend: number): string {
 function subtractionDifficulty(minuend: number, subtrahend: number): number {
   const crossesTen = minuend > 10 && minuend - subtrahend < 10;
   return Math.ceil(minuend / 4) + (crossesTen ? 3 : 0);
+}
+
+function wordTakeAway(spec: MathChallengeSpec, flavor: string): OrderWording {
+  const [total, taken] = [spec.left, spec.right];
+  return {
+    orderLine: variantOf([
+      `My cup had ${plural(total, 'scoop', 'scoops')} and I ate ${taken}. How many are left?`,
+      `I had ${total} ${flavor} scoops and gave ${taken} to a friend. How many do I have now?`,
+      `There were ${total} scoops, then ${taken} melted! How many are left?`,
+    ], spec),
+    hint: { kind: 'takeAway', total, remove: taken, showResult: false, caption: `Start with ${total} scoops and take away ${taken}.` },
+    explanation: {
+      kind: 'takeAway', total, remove: taken, showResult: true,
+      caption: `${total} take away ${taken} leaves ${spec.answer}.  ${total} − ${taken} = ${spec.answer}`,
+    },
+  };
 }
 
 export function createSubtraction(math: MathConfig): MathOperation {
@@ -46,22 +62,7 @@ export function createSubtraction(math: MathConfig): MathOperation {
       );
     },
 
-    word(spec, flavor) {
-      const [total, taken] = [spec.left, spec.right];
-      return {
-        orderLine: variantOf([
-          `My cup had ${plural(total, 'scoop', 'scoops')} and I ate ${taken}. How many are left?`,
-          `I had ${total} ${flavor} scoops and gave ${taken} to a friend. How many do I have now?`,
-          `There were ${total} scoops, then ${taken} melted! How many are left?`,
-        ], spec),
-        hint: { kind: 'takeAway', total, remove: taken, showResult: false, caption: `Start with ${total} scoops and take away ${taken}.` },
-        explanation: {
-          kind: 'takeAway', total, remove: taken, showResult: true,
-          caption: `${total} take away ${taken} leaves ${spec.answer}.  ${total} − ${taken} = ${spec.answer}`,
-        },
-      };
-    },
-
+    word: wordTakeAway,
     formatKey: (key) => key.replace('sub:', ''),
   };
 }
