@@ -1,6 +1,6 @@
 # Sweet Scoops Academy
 
-A cozy ice cream shop game where kids practise multiplication and division by serving customers. Built with Phaser 3, TypeScript and Vite, hosted as a static site on GitHub Pages. The full design is in [GAME_SPEC.md](GAME_SPEC.md); this repository currently implements **Milestone 1**.
+A cozy ice cream shop game where kids practise multiplication and division by serving customers. Built with Phaser 3, TypeScript and Vite, hosted as a static site on GitHub Pages. The full design is in [GAME_SPEC.md](GAME_SPEC.md) and a guided walk through the code is in [CODE_TOUR.md](CODE_TOUR.md). This repository currently implements **Milestone 1**.
 
 ## Quick start
 
