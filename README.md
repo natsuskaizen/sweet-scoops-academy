@@ -143,7 +143,7 @@ Each child has separate `multiplication` and `division` records. A fact starts i
 
 ### Saving
 
-Every meaningful change (a new round, each answer, each payout, moving to the next customer) is written immediately. Each write first copies the previous valid save into a backup slot. On load, invalid or newer-version data is copied to a `quarantine.<timestamp>` key before anything else happens, then the backup is used if it is valid. Saved rounds are re-validated question by question. Payouts are guarded by a persisted `paid` flag, so double taps and reloads cannot pay twice. Older saves are upgraded on load by the steps in `src/save/migrations.ts` (version 2 added round timing), and the result is validated like any other save.
+Every meaningful change (a new round, each answer, each payout, moving to the next customer) is written immediately. Each write first copies the previous valid save into a backup slot. On load, invalid or newer-version data is copied to a `quarantine.<timestamp>` key before anything else happens, then the backup is used if it is valid. Saved rounds are re-validated question by question; a round that no longer fits today's rules (say, after narrowing a factor range) is dropped so the rest of the save still loads. Payouts are guarded by a persisted `paid` flag, so double taps and reloads cannot pay twice. Older saves are upgraded on load by the steps in `src/save/migrations.ts` (version 2 added round timing), and the result is validated like any other save.
 
 ### Screen layouts
 

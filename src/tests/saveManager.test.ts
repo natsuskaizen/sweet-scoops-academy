@@ -77,10 +77,12 @@ describe('SaveManager', () => {
     expect(saves.quarantineKeys()).toHaveLength(1);
   });
 
-  it('rejects saved rounds containing invalid questions', () => {
+  it('drops a saved round the rules no longer allow, and keeps the rest of the save', () => {
     const { storage, saves } = setup();
     const save = createSaveFile(1);
     const p = save.profiles[save.activeProfileId]!;
+    p.sprinkles = 42;
+    p.lifetimeSprinkles = 42;
     p.currentRound = {
       id: 'r1',
       roundNumber: 1,
@@ -110,7 +112,11 @@ describe('SaveManager', () => {
       ],
     };
     storage.setItem(SAVE_KEYS.primary, JSON.stringify(save));
-    expect(saves.load().status).toBe('reset-after-corrupt');
+    const loaded = saves.load();
+    expect(loaded.status).toBe('loaded');
+    const profile = loaded.save.profiles[save.activeProfileId]!;
+    expect(profile.currentRound).toBeNull();
+    expect(profile.sprinkles).toBe(42);
   });
 
   it('does not load or overwrite a save from a newer game version', () => {

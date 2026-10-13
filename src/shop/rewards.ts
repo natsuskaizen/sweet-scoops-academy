@@ -6,12 +6,6 @@
 import { GAME_CONFIG, type RewardConfig } from '../config/gameConfig';
 import type { AttemptOutcome } from '../learning/types';
 
-/** Reward amounts (from GAME_CONFIG.rewards) plus the round size bonuses depend on. */
-export const REWARDS: RewardConfig & { ordersPerRound: number } = {
-  ...GAME_CONFIG.rewards,
-  ordersPerRound: GAME_CONFIG.round.ordersPerRound,
-};
-
 export interface Wallet {
   sprinkles: number;
   lifetimeSprinkles: number;
@@ -34,20 +28,20 @@ export interface PayableRound {
   bonus: RoundBonus | null;
 }
 
-export function orderReward(outcome: AttemptOutcome): number {
-  return REWARDS.perOrder[outcome];
+export function orderReward(outcome: AttemptOutcome, rules: RewardConfig = GAME_CONFIG.rewards): number {
+  return rules.perOrder[outcome];
 }
 
+/** Bonuses for a round: every one of its own orders served, and all of them first try. */
 export function computeRoundBonus(
   orders: readonly PayableOrder[],
-  ordersPerRound = REWARDS.ordersPerRound,
+  rules: RewardConfig = GAME_CONFIG.rewards,
 ): RoundBonus {
-  const completed = orders.filter((o) => o.outcome !== null).length;
-  const allDone = completed === ordersPerRound;
+  const allDone = orders.length > 0 && orders.every((o) => o.outcome !== null);
   const perfect = allDone && orders.every((o) => o.outcome === 'first');
   return {
-    completion: allDone ? REWARDS.completionBonus : 0,
-    perfect: perfect ? REWARDS.perfectBonus : 0,
+    completion: allDone ? rules.completionBonus : 0,
+    perfect: perfect ? rules.perfectBonus : 0,
   };
 }
 

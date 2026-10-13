@@ -68,11 +68,7 @@ export class ShopScene extends Phaser.Scene {
 
   create(): void {
     this.services = this.registry.get(SERVICES_KEY) as GameServices;
-    this.customer = null;
-    this.treat = null;
-    this.gotIt = null;
-    this.busy = false;
-    this.gate = null;
+    this.resetRunState();
 
     if (testHooksEnabled() && new URLSearchParams(window.location.search).has('fast')) {
       this.tweens.timeScale = 6;
@@ -179,10 +175,29 @@ export class ShopScene extends Phaser.Scene {
     this.keypad.clear();
   }
 
-  /** Hands control back to the player (unless the grown-ups area is open). */
+  /**
+   * A restart (rotation, restoring a save) reuses this object, so every
+   * per-run field goes back to its starting value here.
+   */
+  private resetRunState(): void {
+    this.customer = null;
+    this.treat = null;
+    this.gotIt = null;
+    this.busy = false;
+    this.gate = null;
+    this.skipButton = null;
+    this.results = null;
+  }
+
+  /** Hands control back to the player. */
   private readyForAnswer(): void {
     this.busy = false;
-    if (!this.gate) this.keypad.setEnabled(true);
+    this.syncInput();
+  }
+
+  /** The keypad takes answers only while the shop waits for one and the grown-ups area is closed. */
+  private syncInput(): void {
+    this.keypad.setEnabled(!this.busy && !this.gate);
   }
 
   private async handleSubmit(value: string): Promise<void> {
@@ -191,8 +206,7 @@ export class ShopScene extends Phaser.Scene {
     const result = this.manager.submit(value);
 
     if (result.kind === 'ignored') {
-      this.busy = false;
-      this.keypad.setEnabled(true);
+      this.readyForAnswer();
       return;
     }
 
@@ -396,16 +410,15 @@ export class ShopScene extends Phaser.Scene {
 
   private openParentGate(): void {
     if (this.gate) return;
-    const keypadWasEnabled = this.keypad.isEnabled;
-    this.keypad.setEnabled(false);
     this.gate = new ParentGate(this, {
       info: () => this.parentInfo(),
       actions: () => this.parentActions(),
       onClose: () => {
         this.gate = null;
-        if (keypadWasEnabled && !this.busy) this.keypad.setEnabled(true);
+        this.syncInput();
       },
     });
+    this.syncInput();
   }
 
   private parentInfo(): string[] {
