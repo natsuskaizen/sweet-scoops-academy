@@ -34,7 +34,10 @@ export class NumberKeypad {
   private submitButton!: Button;
   private keyHandler?: (e: KeyboardEvent) => void;
 
-  constructor(private scene: Phaser.Scene, private opts: KeypadOptions) {
+  constructor(
+    private scene: Phaser.Scene,
+    private opts: KeypadOptions,
+  ) {
     const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'back', '0', 'ok'];
     keys.forEach((key, i) => {
       const col = i % 3;

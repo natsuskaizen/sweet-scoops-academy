@@ -2,10 +2,16 @@ import { describe, expect, it } from 'vitest';
 import { layoutFor, PORTRAIT_MAX_H, PORTRAIT_MIN_H, SHOP_H, type Rect } from '../ui/theme';
 
 const inside = (inner: Rect, outer: Rect) =>
-  inner.x >= outer.x && inner.y >= outer.y && inner.x + inner.w <= outer.x + outer.w && inner.y + inner.h <= outer.y + outer.h;
+  inner.x >= outer.x &&
+  inner.y >= outer.y &&
+  inner.x + inner.w <= outer.x + outer.w &&
+  inner.y + inner.h <= outer.y + outer.h;
 
 const keypadRect = (k: { x: number; y: number; cellW: number; cellH: number; gap: number }): Rect => ({
-  x: k.x, y: k.y, w: 3 * k.cellW + 2 * k.gap, h: 4 * k.cellH + 3 * k.gap,
+  x: k.x,
+  y: k.y,
+  w: 3 * k.cellW + 2 * k.gap,
+  h: 4 * k.cellH + 3 * k.gap,
 });
 
 describe('layoutFor', () => {

@@ -2,7 +2,10 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -10,7 +13,8 @@
     <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
     <title>Sweet Scoops Academy</title>
     <style>
-      html, body {
+      html,
+      body {
         margin: 0;
         height: 100%;
         background: #c7b3f0;
@@ -22,7 +26,10 @@
         -webkit-tap-highlight-color: transparent;
         -webkit-touch-callout: none;
       }
-      #game { position: fixed; inset: 0; }
+      #game {
+        position: fixed;
+        inset: 0;
+      }
     </style>
   </head>
   <body>
@@ -33,22 +40,28 @@
       // If one of our own files fails to load, reload once, bypassing the cache.
       (function () {
         var KEY = 'ssa-asset-reload';
-        window.addEventListener('error', function (e) {
-          var el = e.target;
-          if (!el || (el.tagName !== 'SCRIPT' && el.tagName !== 'LINK')) return;
-          try {
-            if (sessionStorage.getItem(KEY)) return;
-            sessionStorage.setItem(KEY, '1');
-          } catch (_) {
-            return;
-          }
-          var url = new URL(location.href);
-          url.searchParams.set('v', String(Date.now()));
-          location.replace(url.toString());
-        }, true);
+        window.addEventListener(
+          'error',
+          function (e) {
+            var el = e.target;
+            if (!el || (el.tagName !== 'SCRIPT' && el.tagName !== 'LINK')) return;
+            try {
+              if (sessionStorage.getItem(KEY)) return;
+              sessionStorage.setItem(KEY, '1');
+            } catch (_) {
+              return;
+            }
+            var url = new URL(location.href);
+            url.searchParams.set('v', String(Date.now()));
+            location.replace(url.toString());
+          },
+          true,
+        );
         window.addEventListener('load', function () {
           setTimeout(function () {
-            try { sessionStorage.removeItem(KEY); } catch (_) {}
+            try {
+              sessionStorage.removeItem(KEY);
+            } catch (_) {}
           }, 5000);
         });
       })();

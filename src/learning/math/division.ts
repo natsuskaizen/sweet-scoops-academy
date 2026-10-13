@@ -1,8 +1,19 @@
 import type { MathConfig } from '../../config/gameConfig';
 import { timesDifficulty } from './multiplication';
 import {
-  OK, cached, checkAnswer, fail, firstFailure, inRange, isInt, plural, variantOf,
-  type MathChallengeSpec, type MathFact, type MathOperation, type OrderWording,
+  OK,
+  cached,
+  checkAnswer,
+  fail,
+  firstFailure,
+  inRange,
+  isInt,
+  plural,
+  variantOf,
+  type MathChallengeSpec,
+  type MathFact,
+  type MathOperation,
+  type OrderWording,
 } from './operation';
 
 export function divisionKey(dividend: number, divisor: number): string {
@@ -13,19 +24,29 @@ function wordShare(spec: MathChallengeSpec, flavor: string): OrderWording {
   const total = spec.left;
   const groups = spec.right;
   return {
-    orderLine: groups === 1
-      ? `Please put ${total} ${flavor} scoops in 1 big cup!`
-      : variantOf([
-        `Please share ${total} scoops equally between ${groups} friends.`,
-        `I have ${total} ${flavor} scoops for ${groups} cones. Same on each, please!`,
-        `Can you split ${total} scoops into ${groups} cups evenly?`,
-      ], spec),
+    orderLine:
+      groups === 1
+        ? `Please put ${total} ${flavor} scoops in 1 big cup!`
+        : variantOf(
+            [
+              `Please share ${total} scoops equally between ${groups} friends.`,
+              `I have ${total} ${flavor} scoops for ${groups} cones. Same on each, please!`,
+              `Can you split ${total} scoops into ${groups} cups evenly?`,
+            ],
+            spec,
+          ),
     hint: {
-      kind: 'share', total, groups, perGroup: null,
+      kind: 'share',
+      total,
+      groups,
+      perGroup: null,
       caption: `Share ${total} scoops into ${plural(groups, 'cup', 'cups')}, one at a time.`,
     },
     explanation: {
-      kind: 'share', total, groups, perGroup: spec.answer,
+      kind: 'share',
+      total,
+      groups,
+      perGroup: spec.answer,
       caption: `${total} shared into ${groups} is ${spec.answer} each.  ${total} ÷ ${groups} = ${spec.answer}`,
     },
   };
@@ -41,7 +62,10 @@ export function createDivision(math: MathConfig): MathOperation {
         const dividend = divisor * quotient;
         if (dividend < dividendRange.min || dividend > dividendRange.max) continue;
         out.push({
-          key: divisionKey(dividend, divisor), operation: 'division', left: dividend, right: divisor,
+          key: divisionKey(dividend, divisor),
+          operation: 'division',
+          left: dividend,
+          right: divisor,
           answer: quotient,
           // Division feels one step harder than the matching times fact.
           difficulty: timesDifficulty(divisor, quotient, math.factorTiers) + 1,

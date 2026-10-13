@@ -46,7 +46,12 @@ export function createMathSubject(options: MathSubjectOptions = {}): MathSubject
     createProgress: () => Object.fromEntries(operations.enabled.map((op) => [op.id, { facts: {} }])),
 
     planRound(progress: MathProgress, ctx: PlanContext): MathChallengeSpec[] {
-      const plan = planRound(pools(progress), { roundNumber: ctx.roundNumber, rng: ctx.rng, count: ctx.count, config: adaptive });
+      const plan = planRound(pools(progress), {
+        roundNumber: ctx.roundNumber,
+        rng: ctx.rng,
+        count: ctx.count,
+        config: adaptive,
+      });
       // buildQuestion validates every question and throws on anything invalid.
       return plan.map((item) => buildQuestion(item.factKey, ctx.rng, operations));
     },

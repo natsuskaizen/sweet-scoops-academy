@@ -10,7 +10,14 @@
 import { GAME_CONFIG } from '../config/gameConfig';
 import { createRng, mixSeed } from '../core/rng';
 import type { AttemptOutcome, ChallengePresentation, ChallengeSpec, LearningSubject } from '../learning/types';
-import { subjectProgress, type OrderState, type Profile, type RoundState, type RoundSummary, type SaveFile } from '../save/saveTypes';
+import {
+  subjectProgress,
+  type OrderState,
+  type Profile,
+  type RoundState,
+  type RoundSummary,
+  type SaveFile,
+} from '../save/saveTypes';
 import { customerById, lineup, type CustomerDef } from './customerManager';
 import { payOrder, payRoundBonus, type RoundBonus } from './rewards';
 
@@ -34,9 +41,7 @@ export type SubmitResult =
   | { kind: 'resolved'; outcome: AttemptOutcome; sprinkles: number; presentation: ChallengePresentation };
 
 export type FinishResult =
-  | { kind: 'ignored' }
-  | { kind: 'next-order' }
-  | { kind: 'round-complete'; summary: RoundSummary };
+  { kind: 'ignored' } | { kind: 'next-order' } | { kind: 'round-complete'; summary: RoundSummary };
 
 export interface Persister {
   write(save: SaveFile): { ok: true } | { ok: false; error: string };

@@ -69,7 +69,15 @@ export interface Layout {
   orientation: Orientation;
   width: number;
   height: number;
-  statusBar: Rect & { orderFont: number; dotsX: number; dotStep: number; dotR: number; pillX: number; pillW: number; gearX: number };
+  statusBar: Rect & {
+    orderFont: number;
+    dotsX: number;
+    dotStep: number;
+    dotR: number;
+    pillX: number;
+    pillW: number;
+    gearX: number;
+  };
   shop: Rect;
   wallBottom: number;
   door: Rect;
@@ -105,7 +113,19 @@ function landscapeLayout(): Layout {
     orientation: 'landscape',
     width,
     height,
-    statusBar: { x: 0, y: 0, w: width, h: 72, orderFont: 30, dotsX: 290, dotStep: 52, dotR: 16, pillX: 910, pillW: 230, gearX: 1214 },
+    statusBar: {
+      x: 0,
+      y: 0,
+      w: width,
+      h: 72,
+      orderFont: 30,
+      dotsX: 290,
+      dotStep: 52,
+      dotR: 16,
+      pillX: 910,
+      pillW: 230,
+      gearX: 1214,
+    },
     ...SHOP_PARTS,
     registerArea: { x: SHOP_W, y: 72, w: width - SHOP_W, h: height - 72 },
     panel: { x: 812, y: 80, w: 458, h: 790 },
@@ -135,7 +155,19 @@ function portraitLayout(screenAspect: number): Layout {
     orientation: 'portrait',
     width,
     height,
-    statusBar: { x: 0, y: 0, w: width, h: 72, orderFont: 26, dotsX: 226, dotStep: 32, dotR: 12, pillX: 552, pillW: 160, gearX: 762 },
+    statusBar: {
+      x: 0,
+      y: 0,
+      w: width,
+      h: 72,
+      orderFont: 26,
+      dotsX: 226,
+      dotStep: 32,
+      dotR: 12,
+      pillX: 552,
+      pillW: 160,
+      gearX: 762,
+    },
     ...SHOP_PARTS,
     registerArea: area,
     panel,

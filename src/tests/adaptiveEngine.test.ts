@@ -15,7 +15,13 @@ function freshProgress(): TwoOps {
 }
 
 /** Plays `rounds` rounds where `answer(key)` decides each outcome. */
-function simulate(p: TwoOps, rounds: number, answer: (key: string) => 'first' | 'retry' | 'miss', seed = 1, startRound = 1) {
+function simulate(
+  p: TwoOps,
+  rounds: number,
+  answer: (key: string) => 'first' | 'retry' | 'miss',
+  seed = 1,
+  startRound = 1,
+) {
   const plans: string[][] = [];
   for (let r = startRound; r < startRound + rounds; r++) {
     const plan = mathSubject.planRound(p, { roundNumber: r, rng: createRng(seed + r), now: r, count: 10 });
@@ -164,7 +170,9 @@ describe('planRound', () => {
   it('mastery takes several rounds of steady play', () => {
     const p = freshProgress();
     const anyMastered = () =>
-      [...Object.values(p.multiplication.facts), ...Object.values(p.division.facts)].some((r) => r.state === 'mastered');
+      [...Object.values(p.multiplication.facts), ...Object.values(p.division.facts)].some(
+        (r) => r.state === 'mastered',
+      );
     let round = 0;
     while (!anyMastered() && round < 20) simulate(p, 1, () => 'first', 1, ++round);
     expect(round).toBeGreaterThanOrEqual(3);
@@ -183,14 +191,28 @@ describe('planRound', () => {
       const factors = key.startsWith('mul:') ? [a, b] : [b, a / b];
       return factors.some((n) => n >= 6 && n <= 8);
     };
-    expect(plans.slice(0, 3).flat().filter((k) => k.startsWith('mul:')).some(hard)).toBe(true);
-    expect(plans.slice(0, 3).flat().filter((k) => k.startsWith('div:')).some(hard)).toBe(true);
+    expect(
+      plans
+        .slice(0, 3)
+        .flat()
+        .filter((k) => k.startsWith('mul:'))
+        .some(hard),
+    ).toBe(true);
+    expect(
+      plans
+        .slice(0, 3)
+        .flat()
+        .filter((k) => k.startsWith('div:'))
+        .some(hard),
+    ).toBe(true);
   });
 
   it('keeps a struggling child on gentle questions', () => {
     const p = freshProgress();
     const plans = simulate(p, 5, () => 'miss');
-    const difficulty = new Map([...factsFor('multiplication'), ...factsFor('division')].map((f) => [f.key, f.difficulty]));
+    const difficulty = new Map(
+      [...factsFor('multiplication'), ...factsFor('division')].map((f) => [f.key, f.difficulty]),
+    );
     // Nothing from the 6, 7, 8 or 9 tables (6 × 2 already scores 7).
     for (const key of plans.flat()) expect(difficulty.get(key)).toBeLessThanOrEqual(5);
   });
@@ -207,7 +229,9 @@ describe('planRound', () => {
   it('works on a single generic skill (subject-agnostic)', () => {
     const catalog = ['cat', 'dog', 'sun'].map((key, difficulty) => ({ key, difficulty }));
     const plan = planRound([{ skillId: 'vocab', progress: { facts: {} }, catalog }], {
-      roundNumber: 1, rng: createRng(1), count: 5,
+      roundNumber: 1,
+      rng: createRng(1),
+      count: 5,
     });
     expect(plan).toHaveLength(5); // tiny catalog: repeats allowed only when exhausted
   });

@@ -24,7 +24,13 @@ export class VisualAidView extends Phaser.GameObjects.Container {
   private labels: Phaser.GameObjects.Text[] = [];
   private scoopColor = 0xff9ec0;
 
-  constructor(scene: Phaser.Scene, x: number, y: number, private boxW: number, private boxH: number) {
+  constructor(
+    scene: Phaser.Scene,
+    x: number,
+    y: number,
+    private boxW: number,
+    private boxH: number,
+  ) {
     super(scene, x, y);
     const w = boxW;
     this.board = scene.add.graphics();
@@ -42,18 +48,28 @@ export class VisualAidView extends Phaser.GameObjects.Container {
     this.clear();
     this.drawBoard(revealsAnswer(aid));
     this.caption.setText(aid.caption);
-    this.drawAid(aid, { x: 20, y: this.caption.height + 30, w: this.boxW - 40, h: this.boxH - this.caption.height - 44 });
+    this.drawAid(aid, {
+      x: 20,
+      y: this.caption.height + 30,
+      w: this.boxW - 40,
+      h: this.boxH - this.caption.height - 44,
+    });
     this.setVisible(true).setAlpha(0).setY(this.y);
     this.scene.tweens.add({ targets: this, alpha: 1, duration: 220 });
   }
 
   private drawAid(aid: VisualAid, area: Area): void {
     switch (aid.kind) {
-      case 'groups': return this.drawGroups(aid.groups, aid.perGroup, aid.showTotal, area);
-      case 'share': return this.drawShare(aid.total, aid.groups, aid.perGroup, area);
-      case 'combine': return this.drawCombine(aid.parts, aid.showTotal, area);
-      case 'takeAway': return this.drawTakeAway(aid.total, aid.remove, aid.showResult, area);
-      case 'text': return;
+      case 'groups':
+        return this.drawGroups(aid.groups, aid.perGroup, aid.showTotal, area);
+      case 'share':
+        return this.drawShare(aid.total, aid.groups, aid.perGroup, area);
+      case 'combine':
+        return this.drawCombine(aid.parts, aid.showTotal, area);
+      case 'takeAway':
+        return this.drawTakeAway(aid.total, aid.remove, aid.showResult, area);
+      case 'text':
+        return;
     }
   }
 
@@ -73,7 +89,13 @@ export class VisualAidView extends Phaser.GameObjects.Container {
     g.clear();
     g.fillStyle(COLORS.shadow, 0.15).fillRoundedRect(6, 8, this.boxW, this.boxH, 20);
     g.fillStyle(COLORS.cream, 1).fillRoundedRect(0, 0, this.boxW, this.boxH, 20);
-    g.lineStyle(6, isExplanation ? COLORS.strawberry : COLORS.lavenderDark, 1).strokeRoundedRect(0, 0, this.boxW, this.boxH, 20);
+    g.lineStyle(6, isExplanation ? COLORS.strawberry : COLORS.lavenderDark, 1).strokeRoundedRect(
+      0,
+      0,
+      this.boxW,
+      this.boxH,
+      20,
+    );
   }
 
   private label(x: number, y: number, value: string, size = 22, color: string = CSS.ink): void {
@@ -105,7 +127,13 @@ export class VisualAidView extends Phaser.GameObjects.Container {
   }
 
   /** Centres of `count` scoops in a small grid, centred on cx, sitting on `bottom`. */
-  private gridPositions(cx: number, bottom: number, count: number, cols: number, r: number): { x: number; y: number }[] {
+  private gridPositions(
+    cx: number,
+    bottom: number,
+    count: number,
+    cols: number,
+    r: number,
+  ): { x: number; y: number }[] {
     const rows = Math.ceil(count / cols);
     return Array.from({ length: count }, (_, i) => {
       const row = Math.floor(i / cols);
@@ -147,7 +175,10 @@ export class VisualAidView extends Phaser.GameObjects.Container {
       const labelH = 26;
       const cupH = Math.min(26, cell.cellH * 0.18);
       const cupBottom = cell.top + cell.cellH - labelH;
-      const r = Math.max(4, Math.min(11, (cell.cellW - 16) / (cols * 2.1), (cell.cellH - labelH - cupH - 8) / (scoopRows * 2.05)));
+      const r = Math.max(
+        4,
+        Math.min(11, (cell.cellW - 16) / (cols * 2.1), (cell.cellH - labelH - cupH - 8) / (scoopRows * 2.05)),
+      );
       this.scoopGrid(cell.cx, cupBottom - cupH + r * 0.6, perGroup, cols, r);
       this.cup(cell.cx, cupBottom, Math.min(cell.cellW - 14, cols * r * 2.1 + 14), cupH);
       // Hint: how many in each cup. Explanation: skip-count running total.

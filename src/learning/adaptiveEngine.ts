@@ -275,15 +275,23 @@ export function planRound(pools: SkillPool[], opts: PlanOptions): PlannedItem[] 
   const { rng, roundNumber, count } = opts;
 
   const slots = slotsFor(count, config.composition);
-  const skillSeq = assignSkills(count, pools.map((p) => p.skillId), rng);
+  const skillSeq = assignSkills(
+    count,
+    pools.map((p) => p.skillId),
+    rng,
+  );
   const poolById = new Map(pools.map((p) => [p.skillId, p]));
   const st: PickState = { round: roundNumber, rng, config, used: new Set(), newCount: 0 };
 
   const items = slots.map((slot, i) => {
     const primary = poolById.get(skillSeq[i]!)!;
     // Catalog exhausted (tiny catalogs only): allow a repeat rather than fail.
-    const picked = pickForSlot(slot, primary, pools, st)
-      ?? { skillId: primary.skillId, factKey: rng.pick(primary.catalog).key, slot, source: 'learning' as const };
+    const picked = pickForSlot(slot, primary, pools, st) ?? {
+      skillId: primary.skillId,
+      factKey: rng.pick(primary.catalog).key,
+      slot,
+      source: 'learning' as const,
+    };
     st.used.add(picked.factKey);
     return picked;
   });

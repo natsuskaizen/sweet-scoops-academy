@@ -22,7 +22,12 @@ export class Button extends Phaser.GameObjects.Container {
   private enabled = true;
   private pressed = false;
 
-  constructor(scene: Phaser.Scene, x: number, y: number, private opts: ButtonOptions) {
+  constructor(
+    scene: Phaser.Scene,
+    x: number,
+    y: number,
+    private opts: ButtonOptions,
+  ) {
     super(scene, x, y);
     this.bg = scene.add.graphics();
     this.label = scene.add

@@ -23,11 +23,22 @@ describe('OrderManager', () => {
     for (let i = 0; i < 10; i++) {
       const active = manager.current()!;
       expect(active.index).toBe(i);
-      expect(manager.submit(active.presentation.correctAnswer)).toMatchObject({ kind: 'resolved', outcome: 'first', sprinkles: 10 });
+      expect(manager.submit(active.presentation.correctAnswer)).toMatchObject({
+        kind: 'resolved',
+        outcome: 'first',
+        sprinkles: 10,
+      });
       const done = manager.finishOrder();
       if (done.kind === 'round-complete') summary = done.summary;
     }
-    expect(summary).toMatchObject({ ordersCompleted: 10, firstTryCorrect: 10, completionBonus: 10, perfectBonus: 50, total: 160, perfect: true });
+    expect(summary).toMatchObject({
+      ordersCompleted: 10,
+      firstTryCorrect: 10,
+      completionBonus: 10,
+      perfectBonus: 50,
+      total: 160,
+      perfect: true,
+    });
     expect(manager.profile.sprinkles).toBe(160);
     expect(manager.profile.currentRound).toBeNull();
     expect(manager.profile.roundHistory).toHaveLength(1);
@@ -39,7 +50,11 @@ describe('OrderManager', () => {
     const { presentation } = manager.current()!;
     expect(manager.submit(wrong(presentation.correctAnswer))).toMatchObject({ kind: 'try-again' });
     expect(manager.current()!.phase).toBe('retrying');
-    expect(manager.submit(wrong(presentation.correctAnswer))).toMatchObject({ kind: 'resolved', outcome: 'miss', sprinkles: 2 });
+    expect(manager.submit(wrong(presentation.correctAnswer))).toMatchObject({
+      kind: 'resolved',
+      outcome: 'miss',
+      sprinkles: 2,
+    });
     expect(manager.profile.sprinkles).toBe(2);
   });
 

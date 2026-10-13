@@ -28,7 +28,7 @@ import { VisualAidView } from '../ui/VisualAidView';
 import { ResultsOverlay } from './ResultsOverlay';
 import { drawDecorations, drawShopRoom, flavorColor } from './shopArt';
 
-const PRAISE = ['Yum! That\'s right!', 'Sweet! You got it!', 'Scoop-tastic!', 'Perfect order!'];
+const PRAISE = ["Yum! That's right!", 'Sweet! You got it!', 'Scoop-tastic!', 'Perfect order!'];
 const RETRY_PRAISE = ['You got it! Great thinking!', 'Yes! Nice try-again!'];
 
 export class ShopScene extends Phaser.Scene {
@@ -96,7 +96,8 @@ export class ShopScene extends Phaser.Scene {
     this.keypad.setDepth(70);
 
     this.showLoadNotices();
-    if (import.meta.env.DEV) (window as unknown as Record<string, unknown>).__ssa = { scene: this, manager: () => this.manager };
+    if (import.meta.env.DEV)
+      (window as unknown as Record<string, unknown>).__ssa = { scene: this, manager: () => this.manager };
 
     this.manager.ensureRound();
     void this.runOrder();
@@ -262,7 +263,10 @@ export class ShopScene extends Phaser.Scene {
     void this.shopkeeper.hop();
     const scoops = Phaser.Math.Clamp(answer || 1, 1, 4);
     for (let i = 0; i < scoops; i++) {
-      const s = this.add.image(0, -i * 22 + 4, `scoop-${flavor}`).setScale(0).setOrigin(0.5, 1);
+      const s = this.add
+        .image(0, -i * 22 + 4, `scoop-${flavor}`)
+        .setScale(0)
+        .setOrigin(0.5, 1);
       treat.add(s);
       this.tweens.add({ targets: s, scale: 6, duration: 160, ease: 'Back.easeOut' });
       await this.wait(170);
@@ -417,7 +421,8 @@ export class ShopScene extends Phaser.Scene {
   private showLoadNotices(): void {
     const load = this.services.load;
     if (load.status === 'restored-from-backup') this.toast('Saved game restored from the backup copy.');
-    else if (load.status === 'reset-after-corrupt') this.toast('Saved game could not be read, so a new one was started.');
+    else if (load.status === 'reset-after-corrupt')
+      this.toast('Saved game could not be read, so a new one was started.');
     else if (!this.services.persistent) this.toast('This browser is not saving progress.');
     // Only show once per page load.
     this.services.load = { ...load, status: 'loaded', problems: [] };
@@ -434,8 +439,19 @@ export class ShopScene extends Phaser.Scene {
   private sprinklePopup(x: number, y: number, amount: number): void {
     const c = this.add.container(x, y).setDepth(90);
     c.add(this.add.image(-40, 0, 'sprinkle-icon').setScale(5));
-    c.add(this.add.text(-8, 0, `+${amount}`, text(44, CSS.strawberry, { stroke: '#ffffff', strokeThickness: 8 })).setOrigin(0, 0.5));
-    this.tweens.add({ targets: c, y: y - 70, alpha: { from: 1, to: 0 }, delay: 500, duration: 1000, onComplete: () => c.destroy() });
+    c.add(
+      this.add
+        .text(-8, 0, `+${amount}`, text(44, CSS.strawberry, { stroke: '#ffffff', strokeThickness: 8 }))
+        .setOrigin(0, 0.5),
+    );
+    this.tweens.add({
+      targets: c,
+      y: y - 70,
+      alpha: { from: 1, to: 0 },
+      delay: 500,
+      duration: 1000,
+      onComplete: () => c.destroy(),
+    });
   }
 
   private wait(ms: number): Promise<void> {

@@ -47,8 +47,13 @@ export class ResultsOverlay extends Phaser.GameObjects.Container {
 
     this.add(
       new Button(scene, w / 2, h - 70, {
-        width: 360, height: 96, label: 'Keep scooping!', fontSize: 34,
-        fill: COLORS.mint, shade: COLORS.mintDark, onTap: onContinue,
+        width: 360,
+        height: 96,
+        label: 'Keep scooping!',
+        fontSize: 34,
+        fill: COLORS.mint,
+        shade: COLORS.mintDark,
+        onTap: onContinue,
       }),
     );
 

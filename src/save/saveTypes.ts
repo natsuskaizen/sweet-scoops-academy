@@ -88,11 +88,17 @@ export interface SaveFile {
  * A subject's progress in a profile, stored under the subject's id and
  * created on first use, so new subjects need no save migration.
  */
-export function subjectProgress<P>(profile: Profile, subject: Pick<LearningSubject<ChallengeSpec, P>, 'id' | 'createProgress'>): P {
+export function subjectProgress<P>(
+  profile: Profile,
+  subject: Pick<LearningSubject<ChallengeSpec, P>, 'id' | 'createProgress'>,
+): P {
   const store = profile.learning as unknown as Record<string, unknown>;
   return (store[subject.id] ??= subject.createProgress()) as P;
 }
 
-export function resetSubjectProgress(profile: Profile, subject: Pick<LearningSubject<ChallengeSpec, unknown>, 'id' | 'createProgress'>): void {
+export function resetSubjectProgress(
+  profile: Profile,
+  subject: Pick<LearningSubject<ChallengeSpec, unknown>, 'id' | 'createProgress'>,
+): void {
   (profile.learning as unknown as Record<string, unknown>)[subject.id] = subject.createProgress();
 }

@@ -61,7 +61,7 @@ function drawWallAndFloor(g: Phaser.GameObjects.Graphics): void {
   const tile = 48;
   for (let y = wallBottom; y < shop.y + shop.h; y += tile) {
     for (let x = 0; x < shop.w; x += tile) {
-      const even = ((x / tile) + Math.floor((y - wallBottom) / tile)) % 2 === 0;
+      const even = (x / tile + Math.floor((y - wallBottom) / tile)) % 2 === 0;
       g.fillStyle(even ? 0xdff6ea : COLORS.cream, 1).fillRect(x, y, tile, tile);
     }
   }
@@ -82,8 +82,10 @@ function drawWindowAndDoor(scene: Phaser.Scene, g: Phaser.GameObjects.Graphics):
   g.fillStyle(0xcfe8ff, 1).fillRoundedRect(door.x + 22, door.y + 22, door.w - 44, 80, 30);
   g.fillStyle(COLORS.cream, 1).fillCircle(door.x + door.w - 22, door.y + door.h / 2 + 20, 7);
   g.fillStyle(COLORS.strawberry, 1).fillRoundedRect(door.x + 20, door.y + 120, door.w - 40, 34, 8);
-  scene.add.text(door.x + door.w / 2, door.y + 137, 'OPEN', text(20, CSS.white)).setOrigin(0.5).setDepth(1);
-
+  scene.add
+    .text(door.x + door.w / 2, door.y + 137, 'OPEN', text(20, CSS.white))
+    .setOrigin(0.5)
+    .setDepth(1);
 }
 
 function drawDisplayCase(g: Phaser.GameObjects.Graphics): void {
@@ -99,7 +101,6 @@ function drawDisplayCase(g: Phaser.GameObjects.Graphics): void {
     g.fillStyle(0xbfc7d6, 1).fillRect(tx, ty + 18, 82, 34);
     g.fillStyle(c, 1).fillEllipse(tx + 41, ty + 20, 80, 30);
   });
-
 }
 
 function drawSignAndCounter(scene: Phaser.Scene, g: Phaser.GameObjects.Graphics): void {
@@ -136,10 +137,16 @@ export function drawDecorations(scene: Phaser.Scene, decorations: readonly Place
     const g = scene.add.graphics().setDepth(deco.spot === 'counter-top' ? 31 : 2);
     if (item.asset === 'deco-plant') {
       g.fillStyle(COLORS.peach, 1).fillRoundedRect(x - 26, y - 40, 52, 44, 8);
-      g.fillStyle(COLORS.mintDark, 1).fillEllipse(x, y - 64, 70, 50).fillEllipse(x - 22, y - 86, 34, 40).fillEllipse(x + 20, y - 90, 30, 44);
+      g.fillStyle(COLORS.mintDark, 1)
+        .fillEllipse(x, y - 64, 70, 50)
+        .fillEllipse(x - 22, y - 86, 34, 40)
+        .fillEllipse(x + 20, y - 90, 30, 44);
     } else if (item.asset === 'deco-lamp') {
       g.fillStyle(COLORS.lavenderDark, 1).fillRect(x - 4, y - 50, 8, 50);
-      g.fillStyle(COLORS.white, 1).fillCircle(x - 14, y - 60, 16).fillCircle(x + 8, y - 64, 20).fillCircle(x + 22, y - 56, 13);
+      g.fillStyle(COLORS.white, 1)
+        .fillCircle(x - 14, y - 60, 16)
+        .fillCircle(x + 8, y - 64, 20)
+        .fillCircle(x + 22, y - 56, 13);
     } else if (item.asset === 'deco-frame') {
       g.fillStyle(COLORS.brown, 1).fillRect(x - 40, y - 50, 80, 100);
       g.fillStyle(COLORS.sky, 1).fillRect(x - 32, y - 42, 64, 84);

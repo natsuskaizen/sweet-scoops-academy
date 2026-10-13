@@ -107,7 +107,13 @@ export const EYES_PUPPY = { left: { x: 5, y: 9 }, right: { x: 10, y: 9 } } as co
 export type Expression = 'neutral' | 'happy' | 'thinking';
 
 export interface Palette {
-  o: string; B: string; A: string; k: string; c: string; n: string; b: string;
+  o: string;
+  B: string;
+  A: string;
+  k: string;
+  c: string;
+  n: string;
+  b: string;
 }
 
 export const SPECIES_PALETTE: Record<SpeciesId, Palette> = {
@@ -125,7 +131,13 @@ export const SPECIES_PALETTE: Record<SpeciesId, Palette> = {
 export type LayerId = 'apron' | 'chef-hat' | 'hat-beret' | 'bow-strawberry' | 'cone';
 
 export const LAYER_COLORS: Record<string, string> = {
-  p: '#ff8fb3', w: '#fffaf3', L: '#c7b3f0', r: '#ff5f7e', g: '#7fd6a8', y: '#f5c27a', o: '#5b4a6b',
+  p: '#ff8fb3',
+  w: '#fffaf3',
+  L: '#c7b3f0',
+  r: '#ff5f7e',
+  g: '#7fd6a8',
+  y: '#f5c27a',
+  o: '#5b4a6b',
 };
 
 const EMPTY_ROW = '................';
