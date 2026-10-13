@@ -19,7 +19,7 @@ interface Hook {
   scene: {
     gate: Gate | null;
     openParentGate: () => void;
-    parentActions: () => { label: string; run: (gate: Gate) => void }[];
+    parentArea: { actions: () => { label: string; run: (gate: Gate) => void }[] };
   };
 }
 type HookWindow = Window & { __ssa?: Hook };
@@ -105,8 +105,8 @@ test('grown-ups see round cards and an overview, switched from the top left', as
     const { scene } = (window as HookWindow).__ssa!;
     scene.openParentGate();
     scene.gate!.showMenu(); // skip the number challenge
-    scene
-      .parentActions()
+    scene.parentArea
+      .actions()
       .find((a) => a.label === 'Progress')!
       .run(scene.gate!);
   });

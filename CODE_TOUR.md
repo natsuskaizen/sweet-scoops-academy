@@ -239,7 +239,7 @@ private async runOrder(): Promise<void> {
 
 private async serve(presentation, sprinkles, flavor) {
   const treat = await this.scoopTreat(Number(presentation.correctAnswer), flavor);
-  await this.tween({ targets: treat, x: customer.x + 52, y: customer.y - 62, ... });
+  await tweenAsync(this, { targets: treat, x: customer.x + 52, y: customer.y - 62, duration: GAME_CONFIG.timing.handOffMs });
   await this.thankAndPay(customer, Number(presentation.correctAnswer), sprinkles);
   await this.customerLeaves(customer, treat);
   this.nextOrder();
@@ -256,6 +256,20 @@ if (finish.kind === 'round-complete') {
   finish.stickers; // [{ customer, firstTry: true }, ...] gold star for first tries, a heart otherwise
 }
 // A perfect round first brings everyone back: they walk in and line up at paradeSpots(10).
+const lineup = await this.parade.play(looks); // src/scenes/parade.ts, with its own Skip button
+```
+
+Animation steps are plain `await`s through `src/ui/tweenAsync.ts`. A tween's promise settles when it completes or is stopped early, so cutting an animation short (Skip, `arriveAt`) never leaves a caller waiting. Every pause in the order flow is a named number in `GAME_CONFIG.timing`.
+
+The grown-ups area's content lives in `src/scenes/parentArea.ts`, so the scene only opens and closes it. Changes to the save go through Phaser-free helpers that are unit tested, then the shop rebuilds itself from the save:
+
+```ts
+// services.save is the live save; services.loadNotice is how it was found at startup, shown once
+resetLearning(profile, services.subject); // src/save/profileActions.ts
+resetProfile(services.save, Date.now()); // replaces only the active player
+const result = services.saves.write(services.save);
+if (!result.ok) return gate.notice('Not saved', `The change could not be saved: ${result.error}`);
+scene.scene.restart();
 ```
 
 ## 7. Characters: `src/characters/`

@@ -11,7 +11,10 @@ interface FakeGate {
   asked: Action[];
 }
 type HookWindow = Window & {
-  __ssa?: { scene: { parentActions: () => Action[] }; manager: () => { profile: { sprinkles: number } } };
+  __ssa?: {
+    scene: { parentArea: { actions: () => Action[] } };
+    manager: () => { profile: { sprinkles: number } };
+  };
   __gate?: FakeGate;
 };
 
@@ -33,7 +36,7 @@ async function runAction(page: Page, label: string): Promise<void> {
       notice: (title: string) => gate.notices.push(title),
       ask: (action: Action) => gate.asked.push(action),
     });
-    w.__ssa!.scene.parentActions()
+    w.__ssa!.scene.parentArea.actions()
       .find((a) => a.label === label)!
       .run(w.__gate);
   }, label);

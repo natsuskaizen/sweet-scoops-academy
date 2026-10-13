@@ -84,6 +84,7 @@ src/
     migrations.ts            one upgrade step per save format version
     saveManager.ts           localStorage with backup slot and quarantine
     backup.ts                backup files: export, validated import, summary
+    profileActions.ts        grown-ups resets: clear learning progress, or start a player over
     characterLibrary.ts      added characters, kept in their own storage key
   pwa/
     sw.js                    service worker template (offline play, fresh page on each deploy)
@@ -98,10 +99,12 @@ src/
     characterManager.ts      layered species rendering (body + outfit/hat/bow/handheld), sprite sheets for the cast and added characters
   scenes/
     BootScene.ts             builds textures, loads the save
-    ShopScene.ts             the persistent shop: animates what OrderManager decides
+    ShopScene.ts             the persistent shop: runs the order flow, animating what OrderManager decides
+    parentArea.ts            what the grown-ups area shows and every action in it
     backupActions.ts         grown-ups area actions for saving and loading backup files
     characterActions.ts      grown-ups area action that opens the Characters dialog
-    ResultsOverlay.ts        end-of-round sticker card (one sticker per customer, confetti); a perfect round starts with a parade
+    ResultsOverlay.ts        end-of-round sticker card (one sticker per customer, confetti)
+    parade.ts                a perfect round's parade before the card, with Skip
     serveAnimation.ts        the shopkeeper's paw carries each scoop from its tub to the cone
     shopArt.ts               prop textures, draws the room, places decorations
     shopRoom.ts              the pixel-art room and counter (strawberry parlour)
@@ -109,6 +112,7 @@ src/
   ui/                        NumberKeypad, OrderPanel (+ SpeechBubble), VisualAidView,
                              StatusBar, ParentGate, ProgressScreen, Button, theme,
                              CharacterDialog (a DOM form for adding characters);
+                             tweenAsync.ts turns tweens and timers into awaitable promises;
                              aidLayout.ts sizes the hint board's scoops and cups (unit tested)
   tests/                     Vitest suites
 e2e/                         Playwright: smoke test, offline and backup, redeploy

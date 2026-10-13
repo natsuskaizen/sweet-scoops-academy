@@ -9,7 +9,7 @@ interface ShopHook {
     scale: { gameSize: { width: number; height: number } };
     aid: { visible: boolean };
     gotIt: { x: number; y: number } | null;
-    skipButton: { x: number; y: number } | null;
+    parade: { skipButton: { x: number; y: number } | null };
     busy: boolean;
     results: object | null;
     handleSubmit: (value: string) => Promise<void>;
@@ -125,9 +125,11 @@ test('a perfect round brings the customers back, and Skip goes straight to the r
       void ssa.scene.handleSubmit(ssa.manager().current()!.presentation.correctAnswer);
     });
   }
-  await page.waitForFunction(() => (window as HookWindow).__ssa!.scene.skipButton !== null, null, { timeout: 30_000 });
+  await page.waitForFunction(() => (window as HookWindow).__ssa!.scene.parade.skipButton !== null, null, {
+    timeout: 30_000,
+  });
   const skip = await page.evaluate(() => {
-    const { x, y } = (window as HookWindow).__ssa!.scene.skipButton!;
+    const { x, y } = (window as HookWindow).__ssa!.scene.parade.skipButton!;
     return { x, y };
   });
   await tapAt(page, skip.x, skip.y);
@@ -186,12 +188,12 @@ test('a grown-up can add a character from a picture', async ({ page }) => {
     const scene = (window as HookWindow).__ssa!.scene as unknown as {
       gate: Gate;
       openParentGate: () => void;
-      parentActions: () => { label: string; run: (gate: Gate) => void }[];
+      parentArea: { actions: () => { label: string; run: (gate: Gate) => void }[] };
     };
     scene.openParentGate();
     scene.gate.showMenu();
-    scene
-      .parentActions()
+    scene.parentArea
+      .actions()
       .find((a) => a.label === 'Characters')!
       .run(scene.gate);
   });

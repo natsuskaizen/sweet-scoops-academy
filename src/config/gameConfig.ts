@@ -116,6 +116,14 @@ export interface GameConfig {
     paradeStepMs: number;
     /** ...and how long they cheer before the results card appears. */
     paradeCheerMs: number;
+    /** After a first miss: pause on the hint before the keypad clears for another go. */
+    retryPauseMs: number;
+    /** How long the served treat takes to reach the customer. */
+    handOffMs: number;
+    /** How long the customer stays to thank and pay before leaving. */
+    payMs: number;
+    /** How long a notice (save problems) stays on screen before fading. */
+    toastMs: number;
   };
   /** Character animation in the shop. */
   animation: {
@@ -194,6 +202,10 @@ export const GAME_CONFIG: GameConfig = {
     aidDealMs: 650,
     paradeStepMs: 220,
     paradeCheerMs: 2600,
+    retryPauseMs: 450,
+    handOffMs: 450,
+    payMs: 1300,
+    toastMs: 4000,
   },
   animation: {
     stepMs: 160,
