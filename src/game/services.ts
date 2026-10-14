@@ -32,6 +32,8 @@ export interface GameServices {
    * screen (which restarts the scene) stays put.
    */
   stage: GameStage;
+  /** Set when changing the shop name or shopkeeper finishes, so My shop opens again once the shop is rebuilt. */
+  reopenMyShop?: boolean;
 }
 
 function browserStorage(): StorageLike | null {

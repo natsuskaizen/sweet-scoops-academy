@@ -181,7 +181,7 @@ All positions come from `LAYOUT` in `src/ui/theme.ts`, built by `layoutFor(scree
 
 ### My shop (kids' settings)
 
-Tap the ⚙ button in the top-right corner. The register panel shows the player's own settings, with no lock because they only change that player's things: change the shop's name or shopkeeper (the matching setup step, with Done), Hints on or off, Calm mode (characters stand still instead of breathing and hopping, and no confetti falls), Switch player (back to the start screen), and a button to the grown-ups area.
+Tap the ⚙ button in the top-right corner. The register panel shows the player's own settings, with no lock because they only change that player's things: change the shop's name or shopkeeper (the matching setup step; Done and ✕ both come back to My shop), Hints on or off, Calm mode (characters stand still instead of breathing and hopping, and no confetti falls), Switch player (back to the start screen), and a button to the grown-ups area.
 
 ### Grown-ups area
 

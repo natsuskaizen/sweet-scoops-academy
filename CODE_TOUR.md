@@ -353,11 +353,13 @@ this.setup = new NewPlayerSetup({
   onDone: ({ shop }) => {
     updatePlayer(profile, { shopName: shop.name, keeper: shop.keeper });
     this.saveNow();
-    this.scene.restart(); // rebuilt from the save, mid-order or not, as rotating does
+    this.backToMyShop(); // rebuilt from the save, mid-order or not, as rotating does
   },
-  onCancel: () => this.scene.restart(),
+  onCancel: () => this.backToMyShop(), // ✕ keeps what was there
 });
 ```
+
+`backToMyShop()` sets `services.reopenMyShop` before restarting, so once the shop is rebuilt My shop opens again instead of dropping the child back at the counter.
 
 Calm mode is the player's `settings.reduceMotion`. `setCalm()` in `src/ui/motion.ts` is set from the active player whenever the shop is built, and `CharacterView` (breathing, `cheer`, `hop`, `puzzled`) and `confetti()` check `isCalm()` before they move.
 
