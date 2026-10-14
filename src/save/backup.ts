@@ -7,7 +7,7 @@
  */
 import type { AddedCharacter } from '../shop/addedCharacters';
 import { readCharacterList } from './characterLibrary';
-import { playersInOrder } from './profileActions';
+import { playersInOrder, playerStats } from './profileActions';
 import { parseSave } from './saveManager';
 import type { SaveFile } from './saveTypes';
 
@@ -50,8 +50,6 @@ export function describeBackup(save: SaveFile, characters: readonly AddedCharact
   });
   const added =
     characters.length > 0 ? ` ${characters.length} added character${characters.length === 1 ? '' : 's'}.` : '';
-  const players = playersInOrder(save).map(
-    (p) => `${p.displayName}: ${p.sprinkles} Sprinkles, ${p.roundHistory.length} rounds finished.`,
-  );
+  const players = playersInOrder(save).map((p) => `${p.displayName}: ${playerStats(p)}.`);
   return `Saved ${saved}. ${players.join(' ')}${added}`;
 }

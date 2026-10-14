@@ -112,6 +112,7 @@ src/
     parentArea.ts            what the grown-ups area shows and every action in it
     backupActions.ts         grown-ups area actions for saving and loading backup files
     characterActions.ts      grown-ups area action that opens the Characters dialog
+    playerActions.ts         grown-ups area action that opens the Players dialog (rename, remove)
     ResultsOverlay.ts        end-of-round sticker card (one sticker per customer, confetti)
     parade.ts                a perfect round's parade before the card, with Skip
     serveAnimation.ts        the shopkeeper's scooper carries each scoop from its tub to the cone
@@ -126,7 +127,7 @@ src/
   ui/                        NumberKeypad, OrderPanel (+ SpeechBubble), VisualAidView,
                              StatusBar, ShopMenu, ParentGate, ProgressScreen, Button, TierCard, theme,
                              WallCalendar (on the shop wall) and CalendarScreen (the progress calendar),
-                             CharacterDialog (a DOM form for adding characters);
+                             CharacterDialog and PlayersDialog (DOM forms sharing domDialog.ts);
                              tweenAsync.ts turns tweens and timers into awaitable promises;
                              aidLayout.ts sizes the hint board's scoops and cups (unit tested);
                              setupLayout.ts places the new-player setup's keys and cards (unit tested);
@@ -187,6 +188,7 @@ Press and hold the ⚙ button in the top-right corner for about a second (or tap
 - **Progress**: a switch in the top-left corner (mirroring Close) flips between two views. **Rounds** shows totals (rounds played, time playing, % right first try) over a 2x2 grid of cards, newest first with Newer/Older pages. Each card has when the round was played, how long it took, the first-try count, one dot per order (green first try, blue 2nd try, pink answer shown) and up to three questions to practise. **Overview** shows the last 7 days (rounds, time playing, average round length), a bar for each of the last 10 rounds, and the questions that needed help most in the last 5 rounds. Time is active play: any gap between taps counts as 2 minutes at most (`GAME_CONFIG.round.playTimeIdleCapMs`), so a round left open overnight still shows minutes. Rounds finished before timing was added show a dash. Page sizes and look-backs are in `GAME_CONFIG.parentArea`. None of this appears outside the grown-ups area.
 - **Save a backup file**: the whole save as JSON, through the share sheet on iPad and iPhone (Save to Files, AirDrop, Mail) or as a download elsewhere.
 - **Load a backup file**: picks a file, checks it the same way a save is checked on load, shows whose progress it holds, and replaces the current progress only after a confirmation. The replaced progress is kept aside in storage, not deleted.
+- **Players**: everyone who plays on this device, with their shop and totals. Rename a player, or remove one (tap Remove twice; the last player can't be removed). Removing the player who was playing goes back to the start screen. Children add new players from the start screen.
 - **Characters**: add your own characters from a picture, switch them on or off, or remove them. See below.
 - **Restore previous save**, **Reset learning progress**, **Reset whole profile**, each with a confirmation step.
 
@@ -212,7 +214,7 @@ All items in the spec's acceptance checklist are implemented. Verified automatic
 
 - **Not yet tested on a real iPad or iPhone.** It was checked in desktop Chromium at iPad and iPhone viewport sizes with touch emulation. Safari on a real device still needs a look.
 - Art is original pixel art: the room is painted at 1/4 resolution and scaled up so it matches the characters; the built-in cast waddles on stepping feet, breathes and blinks while waiting, cheers or tilts their head at an answer, and Momo scoops from the tubs. Timings are in `GAME_CONFIG.animation`.
-- Milestone 4 (in progress): the save holds several players, each with their own shop name, shopkeeper, Sprinkles, items and progress (`src/save/profileActions.ts`). A brand new game first asks the child's name, lets them roll, pick or type a shop name (the sign follows) and choose one of six friends for behind the counter. Coming back opens on a start screen in front of the shop of whoever played last (door shut), with one big "Open the shop!" button; under "Not Ava?" the other players switch in, and New sets up another child. Tapping ⚙ opens My shop, where a child changes their shop's name or shopkeeper, turns hints or calm mode on and off, or switches player. Managing players in the grown-ups area is coming next.
+- Milestone 4 (in progress): the save holds several players, each with their own shop name, shopkeeper, Sprinkles, items and progress (`src/save/profileActions.ts`). A brand new game first asks the child's name, lets them roll, pick or type a shop name (the sign follows) and choose one of six friends for behind the counter. Coming back opens on a start screen in front of the shop of whoever played last (door shut), with one big "Open the shop!" button; under "Not Ava?" the other players switch in, and New sets up another child. Tapping ⚙ opens My shop, where a child changes their shop's name or shopkeeper, turns hints or calm mode on and off, or switches player. Grown-ups rename or remove players from Players in the grown-ups area.
 - Decorate and the Closet (Milestone 3) open from the results card, or by tapping the Sprinkles balance in the top bar (between rounds or while a customer waits, not while serving). Decorate sells furniture and little decorations, wall paint and three doors; the Closet sells clothes, accessories and scoopers; everything comes in six tiers. The player's shopkeeper (any of the six) wears Closet items; a shopkeeper added from a picture serves with the chosen scooper but does not wear clothes or accessories.
 - Division practice uses divisors 1-12 (`GAME_CONFIG.math.division.divisor`); the spec itself only requires a positive divisor.
 - Addition and subtraction are built and tested but switched off, since Milestone 1 is multiplication and division. Their hints use simple piles of scoops; the difficulty curve for them is a first guess.

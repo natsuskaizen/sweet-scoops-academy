@@ -12,6 +12,7 @@ import type { ParentAction, ParentGate, ParentGateOptions } from '../ui/ParentGa
 import { showProgress } from '../ui/ProgressScreen';
 import { backupActions } from './backupActions';
 import { characterAction, restartWithCharacters } from './characterActions';
+import { playersAction } from './playerActions';
 
 export interface ParentAreaHost {
   scene: Phaser.Scene;
@@ -43,6 +44,7 @@ function parentActions(host: ParentAreaHost): ParentAction[] {
   return [
     { label: 'Progress', enabled: true, run: (gate) => showProgress(gate, scene, profile().roundHistory) },
     dailyGoalAction(host),
+    playersAction(scene, services),
     characterAction(scene, services),
     ...backupActions(services, () => void restartWithCharacters(scene, services)),
     restoreAction(host),

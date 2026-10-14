@@ -8,38 +8,8 @@
 import { FLAVOR_COLORS } from '../characters/sprites';
 import { GAME_CONFIG } from '../config/gameConfig';
 import type { CharacterLibrary } from '../save/characterLibrary';
+import { el, openDialog, type Children } from './domDialog';
 import { sheetLayout, type AddedCharacter, type ArtPoint, type CharacterDraft } from '../shop/addedCharacters';
-
-const STYLE = `
-.ssa-chars { position: fixed; inset: 0; z-index: 10; display: flex; align-items: center; justify-content: center;
-  background: rgba(74, 58, 88, .45); font: 600 18px "Trebuchet MS", "Avenir Next Rounded", system-ui, sans-serif;
-  color: #4a3a58; -webkit-user-select: text; user-select: text; touch-action: manipulation; }
-.ssa-chars .panel { background: #fff6e8; border: 5px solid #9b84d1; border-radius: 24px; padding: 20px 24px;
-  width: min(640px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow: auto; box-sizing: border-box; }
-.ssa-chars h2 { margin: 0 0 12px; font-size: 28px; display: flex; justify-content: space-between; align-items: center; }
-.ssa-chars button { font: inherit; border: 3px solid #4a3a58; border-radius: 14px; background: #fff; padding: 8px 14px;
-  min-height: 48px; color: inherit; }
-.ssa-chars button.main { background: #9ee6c4; } .ssa-chars button.warn { background: #ffc9a8; }
-.ssa-chars .row { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 2px dotted #c7b3f0; }
-.ssa-chars .row .who { flex: 1; } .ssa-chars .row small { display: block; color: #7a6a88; font-weight: 500; }
-.ssa-chars canvas { image-rendering: pixelated; background: #f3e2c7; border-radius: 8px; }
-.ssa-chars label { display: block; margin: 10px 0 4px; }
-.ssa-chars input, .ssa-chars select, .ssa-chars textarea { font: inherit; width: 100%; box-sizing: border-box;
-  border: 2px solid #9b84d1; border-radius: 10px; padding: 8px; background: #fff; }
-.ssa-chars .error { color: #e0607e; margin: 8px 0; } .ssa-chars .hint { color: #7a6a88; font-weight: 500; }
-.ssa-chars .buttons { display: flex; gap: 12px; margin-top: 16px; justify-content: flex-end; }`;
-
-type Children = (Node | string | null)[];
-
-function el<K extends keyof HTMLElementTagNameMap>(
-  tag: K,
-  props: Partial<HTMLElementTagNameMap[K]> = {},
-  children: Children = [],
-): HTMLElementTagNameMap[K] {
-  const node = Object.assign(document.createElement(tag), props);
-  node.append(...children.filter((c): c is Node | string => c !== null));
-  return node;
-}
 
 const FLAVOR_NAMES = Object.keys(FLAVOR_COLORS);
 const titleCase = (s: string): string =>
@@ -90,12 +60,7 @@ export class CharacterDialog {
     private readonly onClose: (changed: boolean) => void,
   ) {
     this.panel = el('div', { className: 'panel' });
-    this.root = el('div', { className: 'ssa-chars' }, [el('style', { textContent: STYLE }), this.panel]);
-    // Keep taps from reaching the game underneath (Phaser also listens for releases on the window).
-    for (const type of ['pointerdown', 'pointerup', 'mousedown', 'mouseup', 'touchstart', 'touchend']) {
-      this.root.addEventListener(type, (e) => e.stopPropagation());
-    }
-    document.body.append(this.root);
+    this.root = openDialog('ssa-chars', this.panel);
     this.showList();
   }
 
