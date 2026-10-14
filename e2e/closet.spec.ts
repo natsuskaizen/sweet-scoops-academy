@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { atResultsWith200, SAVE_KEY, tapAt, type HookWindow } from './shopHelpers';
+import { atResultsWith200, SAVE_KEY, skipSetup, tapAt, type HookWindow } from './shopHelpers';
 
 test("Momo's Closet opens from the results card, and what she buys she wears in the shop", async ({
   page,
@@ -37,7 +37,7 @@ test("Momo's Closet opens from the results card, and what she buys she wears in 
   const keeper = await page.evaluate(() =>
     (window as HookWindow).__ssa!.scene.shopkeeper.list.map((part) => part.texture.key),
   );
-  expect(keeper).toEqual(['friend-momo-hatless', 'wear-hat-beret.mint']);
+  expect(keeper).toEqual(['friend-momo-bare', 'wear-hat-beret.mint']);
 
   const saved = await page.evaluate((key) => {
     const save = JSON.parse(localStorage.getItem(key)!);
@@ -59,6 +59,7 @@ test('the Sprinkles balance opens the shop while a customer waits, and the order
   await page.goto('/?e2e&fast');
   await page.evaluate(() => localStorage.clear());
   await page.reload();
+  await skipSetup(page);
   await page.waitForFunction(() => (window as HookWindow).__ssa?.scene.keypad.isEnabled, null, { timeout: 30_000 });
   const pill = await page.evaluate(() => {
     const { width } = (window as HookWindow).__ssa!.scene.scale.gameSize;
@@ -77,5 +78,24 @@ test('the Sprinkles balance opens the shop while a customer waits, and the order
   await page.waitForFunction(() => (window as HookWindow).__ssa!.scene.closet !== null);
   await page.evaluate(() => (window as HookWindow).__ssa!.scene.closet!.close());
   await page.waitForFunction(() => (window as HookWindow).__ssa!.scene.keypad.isEnabled);
+  expect(errors).toEqual([]);
+});
+
+test('another shopkeeper has their own Closet: a hat takes the place of Kiki’s star', async ({ page }) => {
+  const errors: string[] = [];
+  await atResultsWith200(page, errors, 'kiki');
+  await page.evaluate(() => (window as HookWindow).__ssa!.scene.openCloset());
+  await page.waitForFunction(() => (window as HookWindow).__ssa!.scene.closet !== null);
+  await page.evaluate(() => {
+    const closet = (window as HookWindow).__ssa!.scene.closet!;
+    closet.pick('mint'); // the Beret
+    closet.act();
+    closet.close();
+  });
+  await page.waitForFunction(() => (window as HookWindow).__ssa!.scene.closet === null);
+  const keeper = await page.evaluate(() =>
+    (window as HookWindow).__ssa!.scene.shopkeeper.list.map((part) => part.texture.key),
+  );
+  expect(keeper).toEqual(['friend-kiki-bare', 'wear-hat-beret.mint']);
   expect(errors).toEqual([]);
 });

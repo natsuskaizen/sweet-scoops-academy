@@ -18,6 +18,8 @@ export const COLORS = {
   ink: 0x4a3a58,
   white: 0xffffff,
   shadow: 0x000000,
+  // The chosen card in a set, e.g. the new player's shopkeeper.
+  lemon: 0xffe680,
 } as const;
 
 export const CSS = {

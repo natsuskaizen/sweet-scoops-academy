@@ -12,6 +12,8 @@ import type { SaveFile } from '../save/saveTypes';
 
 export const SERVICES_KEY = 'services';
 
+export type GameStage = 'setup' | 'start' | 'play';
+
 export interface GameServices {
   saves: SaveManager;
   /** The game being played. Whatever replaces it (a backup, a reset) also writes it through `saves`. */
@@ -24,6 +26,12 @@ export interface GameServices {
   subject: LearningSubject<ChallengeSpec, unknown>;
   /** Characters a grown-up added on this device. */
   characters: CharacterLibrary;
+  /**
+   * Where the shop is: setting up a brand new game's first player, on the
+   * start screen choosing who plays, or playing. Kept here so rotating the
+   * screen (which restarts the scene) stays put.
+   */
+  stage: GameStage;
 }
 
 function browserStorage(): StorageLike | null {
@@ -49,7 +57,11 @@ function chooseSubject(): LearningSubject<ChallengeSpec, unknown> {
   });
 }
 
-const fromLoad = (load: LoadResult) => ({ save: load.save, loadNotice: load.status });
+const fromLoad = (load: LoadResult) => ({
+  save: load.save,
+  loadNotice: load.status,
+  stage: (load.status === 'fresh' ? 'setup' : 'start') as GameStage,
+});
 
 export function createServices(): GameServices {
   const storage = browserStorage();

@@ -20,7 +20,7 @@ import {
   type FriendId,
 } from './friendArt';
 import { makePixelTexture } from './pixelArt';
-import { MOMO_HATLESS } from './wearArt';
+import { bareArt, type FriendSheets } from './wearArt';
 import { hearts, questionBubble } from './reactions';
 import {
   EYES,
@@ -92,8 +92,10 @@ export function addedLook(scene: Phaser.Scene, c: AddedCharacter): SheetLook | n
 const friendTextureKey = (id: FriendId): string => `friend-${id}`;
 const FRIEND_FRAMES = 6;
 
-/** Momo's picture with and without her chef hat, for dressMomo(). */
-export const MOMO_SHEETS = { withHat: friendTextureKey('momo'), hatless: 'friend-momo-hatless' } as const;
+/** A friend's picture as drawn and without their topper, for dressFriend(). */
+export function friendSheets(id: FriendId): FriendSheets {
+  return { dressed: friendTextureKey(id), bare: bareArt(id) ? `${friendTextureKey(id)}-bare` : null };
+}
 
 /** Draws a friend's frames side by side into one sprite sheet. */
 function registerSheet(scene: Phaser.Scene, key: string, art: FriendArt): void {
@@ -105,8 +107,11 @@ function registerSheet(scene: Phaser.Scene, key: string, art: FriendArt): void {
 }
 
 export function registerFriendTextures(scene: Phaser.Scene): void {
-  for (const id of FRIEND_IDS) registerSheet(scene, friendTextureKey(id), FRIEND_ART[id]);
-  registerSheet(scene, MOMO_SHEETS.hatless, MOMO_HATLESS);
+  for (const id of FRIEND_IDS) {
+    registerSheet(scene, friendTextureKey(id), FRIEND_ART[id]);
+    const bare = bareArt(id);
+    if (bare) registerSheet(scene, friendSheets(id).bare!, bare);
+  }
 }
 
 export function friendLook(id: FriendId): SheetLook {

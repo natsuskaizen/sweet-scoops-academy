@@ -1,5 +1,5 @@
 /**
- * The pieces Momo's Closet is drawn from: the dressing-room backdrop, the
+ * The pieces the Closet is drawn from: the dressing-room backdrop, the
  * top bar, the tabs and the item tiles. closetMode.ts puts them together.
  */
 import type Phaser from 'phaser';
@@ -9,11 +9,9 @@ import type { CatalogItem, EquipSlot } from '../shop/catalog';
 import { Button } from '../ui/Button';
 import { COLORS, CSS, LAYOUT, text, type ClosetLayout, type Rect } from '../ui/theme';
 
-/** Momo's fur, for the paw holding a scooper icon. */
-const MOMO_PAW = '#ffc9a8';
 const STRIPE_W = 40;
 
-/** Striped wallpaper behind Momo, a scalloped trim, the floor and a round rug. */
+/** Striped wallpaper behind the shopkeeper, a scalloped trim, the floor and a round rug. */
 export function drawBackdrop(scene: Phaser.Scene, closet: ClosetLayout): Phaser.GameObjects.GameObject[] {
   const { stage, momo } = closet;
   const g = scene.add.graphics();
@@ -36,10 +34,11 @@ export function drawBackdrop(scene: Phaser.Scene, closet: ClosetLayout): Phaser.
   return [blocker, g];
 }
 
-/** The lavender bar along the top: Back, the title and the Sprinkles balance (returned so it can change). */
+/** The lavender bar along the top: Back, the `heading` and the Sprinkles balance (returned so it can change). */
 export function drawTopBar(
   scene: Phaser.Scene,
   root: Phaser.GameObjects.Container,
+  heading: string,
   onBack: () => void,
 ): Phaser.GameObjects.Text {
   const barH = 72;
@@ -53,7 +52,7 @@ export function drawTopBar(
     fontSize: 24,
     onTap: onBack,
   });
-  const title = scene.add.text(LAYOUT.width / 2, barH / 2 - 3, "Momo's Closet", text(32)).setOrigin(0.5);
+  const title = scene.add.text(LAYOUT.width / 2, barH / 2 - 3, heading, text(32)).setOrigin(0.5);
   const balance = scene.add.text(LAYOUT.width - 24, barH / 2 - 3, '', text(30, CSS.strawberry)).setOrigin(1, 0.5);
   root.add([g, back, title, balance]);
   return balance;
@@ -97,6 +96,8 @@ export interface TileInfo {
   ownedCount: number;
   on: boolean;
   onTap: () => void;
+  /** The shopkeeper's fur, for the paw holding a scooper icon (a CSS colour). */
+  paw: string;
 }
 
 const TILE_GAP = 14;
@@ -118,7 +119,7 @@ export function drawTile(scene: Phaser.Scene, rect: Rect, tile: TileInfo): Phase
   g.fillStyle(tile.on ? 0xf7f2ff : COLORS.white, 1).fillRoundedRect(x, y, w, h, 18);
   g.lineStyle(tile.on ? 6 : 3, tile.on ? COLORS.lavenderDark : 0xe6d6c4, 1).strokeRoundedRect(x, y, w, h, 18);
   const parts: Phaser.GameObjects.GameObject[] = [g];
-  const key = iconTexture(scene, tile.item);
+  const key = iconTexture(scene, tile.item, tile.paw);
   if (key) {
     const icon = scene.add.image(x + w / 2, y + h * 0.33, key);
     parts.push(icon.setScale(Math.max(2, Math.floor(Math.min((w * 0.7) / icon.width, (h * 0.4) / icon.height)))));
@@ -136,19 +137,20 @@ export function drawTile(scene: Phaser.Scene, rect: Rect, tile: TileInfo): Phase
   return [...parts, hit];
 }
 
-function iconTexture(scene: Phaser.Scene, item: CatalogItem): string | null {
+function iconTexture(scene: Phaser.Scene, item: CatalogItem, paw: string): string | null {
   const slot = item.placement.kind === 'equip' ? item.placement.slot : null;
-  return slot === 'handheld' ? scooperTexture(scene, item.tier, MOMO_PAW) : wearIconTexture(scene, item);
+  return slot === 'handheld' ? scooperTexture(scene, item.tier, paw) : wearIconTexture(scene, item);
 }
 
-/** Momo's scooper held at her side, drawn at `scale`. */
+/** The shopkeeper's scooper held at their side in a `paw`-coloured paw, drawn at `scale`. */
 export function heldScooper(
   scene: Phaser.Scene,
   item: CatalogItem | undefined,
+  paw: string,
   scale: number,
 ): Phaser.GameObjects.Image {
   return scene.add
-    .image(0, 0, scooperTexture(scene, item?.tier ?? 'wooden', MOMO_PAW))
+    .image(0, 0, scooperTexture(scene, item?.tier ?? 'wooden', paw))
     .setOrigin(0.85, 0.15)
     .setScale(scale);
 }

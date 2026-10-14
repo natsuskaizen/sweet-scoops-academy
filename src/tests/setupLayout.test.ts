@@ -1,0 +1,56 @@
+import { describe, expect, it } from 'vitest';
+import { gridCells, letterKeyCells, setupLayout } from '../ui/setupLayout';
+import { layoutFor, PORTRAIT_MAX_H, PORTRAIT_MIN_H, SHOP_W, type Rect } from '../ui/theme';
+
+const inside = (inner: Rect, outer: Rect) =>
+  inner.x >= outer.x - 0.01 &&
+  inner.y >= outer.y - 0.01 &&
+  inner.x + inner.w <= outer.x + outer.w + 0.01 &&
+  inner.y + inner.h <= outer.y + outer.h + 0.01;
+
+const overlaps = (a: Rect, b: Rect) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+
+const screens = {
+  landscape: layoutFor(1180, 820),
+  'iPad portrait': layoutFor(SHOP_W, PORTRAIT_MIN_H),
+  'iPhone portrait': layoutFor(SHOP_W, PORTRAIT_MAX_H),
+};
+
+describe('gridCells', () => {
+  it('fills the area in rows, left to right', () => {
+    const cells = gridCells({ x: 0, y: 0, w: 210, h: 100 }, 5, 3, 10);
+    expect(cells[0]).toEqual({ x: 0, y: 0, w: 63.333333333333336, h: 45 });
+    expect(cells[3]).toMatchObject({ x: 0, y: 55 });
+    expect(cells[4]!.x).toBeCloseTo(73.33);
+  });
+});
+
+describe('letterKeyCells', () => {
+  it('has every letter, a wide space, back and done, without overlaps', () => {
+    const cells = letterKeyCells({ x: 0, y: 0, w: 800, h: 400 }, 8);
+    expect(cells.map((c) => c.key).join('')).toBe('ABCDEFGHIJKLMNOPQRSTUVWXYZ backdone');
+    const space = cells.find((c) => c.key === ' ')!;
+    expect(space.rect.w).toBeGreaterThan(cells[0]!.rect.w * 2.5);
+    cells.forEach((a, i) => cells.slice(i + 1).forEach((b) => expect(overlaps(a.rect, b.rect)).toBe(false)));
+  });
+});
+
+describe.each(Object.entries(screens))('setupLayout on %s', (_, layout) => {
+  const setup = setupLayout(layout.panel, layout.orientation === 'portrait');
+
+  it('keeps every area inside the register panel, in order down the panel', () => {
+    for (const r of [setup.nameBox, setup.keys, setup.body, setup.next]) expect(inside(r, layout.panel)).toBe(true);
+    expect(setup.titleY).toBeLessThan(setup.nameBox.y);
+    expect(setup.nameBox.y + setup.nameBox.h).toBeLessThanOrEqual(setup.keys.y);
+    expect(setup.body.y + setup.body.h).toBeLessThanOrEqual(setup.next.y);
+  });
+
+  it('gives letter keys and shopkeeper cards room for a finger', () => {
+    const key = letterKeyCells(setup.keys, 8)[0]!.rect;
+    expect(key.w).toBeGreaterThanOrEqual(44);
+    expect(key.h).toBeGreaterThanOrEqual(52);
+    const card = gridCells(setup.body, 6, setup.keeperCols, 12)[0]!;
+    expect(card.w).toBeGreaterThanOrEqual(setup.keeperScale * 32 + 16);
+    expect(card.h).toBeGreaterThanOrEqual(setup.keeperScale * 40 + 30);
+  });
+});
