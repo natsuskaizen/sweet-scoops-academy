@@ -1,15 +1,17 @@
 /**
- * What Momo wears from her Closet: hats, a bow, glasses and hearing aids,
- * drawn on her 32x40 frame so each one is a layer the same size as her
- * picture. `L` and `l` pixels take the item's tier colours (tierColors.ts).
+ * What the shopkeeper wears from the Closet: hats, a bow, glasses and
+ * hearing aids, drawn on the friends' shared 32x40 frame (fitted to Momo)
+ * so each one is a layer the same size as their picture. `L` and `l`
+ * pixels take the item's tier colours (tierColors.ts).
  *
- * A hat replaces her chef hat, so with one on she is drawn from a copy of
- * her picture with the chef hat taken off (withoutChefHat).
+ * A hat replaces Momo's chef hat (and a hat or bow replaces Bonbon's
+ * flower, and so on), so with one on they are drawn from a copy of their
+ * picture with it taken off (withoutTopper).
  */
 import type Phaser from 'phaser';
 import type { CatalogItem, EquipSlot } from '../shop/catalog';
 import type { CharacterView } from './characterManager';
-import { FRIEND_ART, FRIEND_H, FRIEND_W, type FriendArt } from './friendArt';
+import { FRIEND_ART, FRIEND_H, FRIEND_W, type FriendArt, type FriendId } from './friendArt';
 import { makePixelTexture } from './pixelArt';
 import { tierPixel } from './tierColors';
 
@@ -161,8 +163,28 @@ export function wearIconTexture(scene: Phaser.Scene, item: CatalogItem): string 
   return art ? texture(scene, `wear-icon-${item.id}`, art.icon ?? art.rows, item) : null;
 }
 
-/** The rows above the top of Momo's head, where her chef hat is. */
-const HAT_ROWS = 10;
+/**
+ * What a friend wears on their head in their own picture (Momo's chef hat,
+ * Bonbon's flower), taken off when a Closet item would sit in the same
+ * place: the `chars` pixels in rows above `rows`, then any outline left
+ * that no longer edges an `edge` pixel (the head or ears).
+ */
+export interface Topper {
+  chars: string;
+  rows: number;
+  edge: string;
+  /** Worn items that replace it. */
+  under: readonly EquipSlot[];
+}
+
+export const TOPPERS: Readonly<Partial<Record<FriendId, Topper>>> = {
+  momo: { chars: 'a', rows: 10, edge: 'bc', under: ['hat'] },
+  mallow: { chars: 'ab', rows: 11, edge: 'cd', under: ['hat'] },
+  bonbon: { chars: 'cd', rows: 9, edge: 'ab', under: ['hat', 'bow'] },
+  kiki: { chars: 'c', rows: 10, edge: 'ab', under: ['hat', 'bow'] },
+  lulu: { chars: 'b', rows: 11, edge: 'ac', under: ['hat', 'bow'] },
+};
+
 const touches = (grid: string[][], x: number, y: number, chars: string): boolean =>
   [
     [0, 1],
@@ -171,17 +193,20 @@ const touches = (grid: string[][], x: number, y: number, chars: string): boolean
     [-1, 0],
   ].some(([dx, dy]) => chars.includes(grid[y + dy!]?.[x + dx!] ?? '.'));
 
-/** Momo's picture with the chef hat taken off: its white goes, and so does any outline not edging her ears. */
-export function withoutChefHat(rows: readonly string[]): string[] {
+/** A friend's picture with their topper taken off; everything below it stays as it was. */
+export function withoutTopper(rows: readonly string[], topper: Topper): string[] {
   const grid = rows.map((r) => r.split(''));
-  for (let y = 0; y < HAT_ROWS; y++) grid[y] = grid[y]!.map((ch) => (ch === 'a' ? '.' : ch));
-  for (let y = 0; y < HAT_ROWS; y++) {
-    grid[y] = grid[y]!.map((ch, x) => (ch === 'o' && !touches(grid, x, y, 'bc') ? '.' : ch));
-  }
+  const top = grid.slice(0, topper.rows);
+  for (const row of top) row.forEach((ch, x) => topper.chars.includes(ch) && (row[x] = '.'));
+  top.forEach((row, y) => row.forEach((ch, x) => ch === 'o' && !touches(grid, x, y, topper.edge) && (row[x] = '.')));
   return grid.map((r) => r.join(''));
 }
 
-export const MOMO_HATLESS: FriendArt = { ...FRIEND_ART.momo, rows: withoutChefHat(FRIEND_ART.momo.rows) };
+/** The friend without their topper, or null for one who has none. */
+export function bareArt(id: FriendId): FriendArt | null {
+  const topper = TOPPERS[id];
+  return topper ? { ...FRIEND_ART[id], rows: withoutTopper(FRIEND_ART[id].rows, topper) } : null;
+}
 
 /** The slots drawn on Momo, back to front. Her scooper is only drawn while she serves. */
 export const WORN_SLOTS: readonly EquipSlot[] = [
@@ -195,19 +220,26 @@ export const WORN_SLOTS: readonly EquipSlot[] = [
   'glasses',
 ];
 
+/** Texture keys of a friend's picture as drawn, and without their topper (null if they have none). */
+export interface FriendSheets {
+  dressed: string;
+  bare: string | null;
+}
+
 /**
- * Dresses Momo in `items`: each worn slot shows its item or nothing, and
- * she wears her chef hat only when no other hat is on. `sheets` are the
- * texture keys of her picture with and without the chef hat.
+ * Dresses a friend in `items`: each worn slot shows its item or nothing,
+ * and their own topper comes off while something is worn in its place.
  */
-export function dressMomo(
+export function dressFriend(
   view: CharacterView,
+  id: FriendId,
   items: readonly CatalogItem[],
-  sheets: { withHat: string; hatless: string },
+  sheets: FriendSheets,
 ): void {
   const { scene } = view;
   const bySlot = new Map(items.map((i) => [i.placement.kind === 'equip' ? i.placement.slot : null, i]));
-  view.setSheet(bySlot.has('hat') ? sheets.hatless : sheets.withHat);
+  const covered = TOPPERS[id]?.under.some((slot) => bySlot.has(slot)) ?? false;
+  view.setSheet(covered && sheets.bare ? sheets.bare : sheets.dressed);
   const keys = WORN_SLOTS.map((slot) => bySlot.get(slot)).map((item) => item && wearTexture(scene, item));
   view.dress(keys.filter((key): key is string => !!key));
 }

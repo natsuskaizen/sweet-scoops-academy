@@ -99,7 +99,7 @@ src/
     friendArt.ts             the built-in cast (Momo and 13 customers): 32x40 text grids; faces, walking steps and a blink drawn per pose
     reactions.ts             hearts for a right answer, a "?" bubble for a first miss
     scooperArt.ts            Momo's scooper held in her paw: wooden, plus one per item tier from her Closet
-    wearArt.ts               clothes and accessories on Momo's frame in tier colours; Momo without her chef hat
+    wearArt.ts               clothes and accessories on the friends' frame in tier colours; each friend without their own topper
     tierColors.ts            the colours of each item tier (Sparkly Rainbow in bands)
     sprites.ts               16x20 species and clothing layers (Milestone 3 equipment)
     characterManager.ts      layered species rendering (body + outfit/hat/bow/handheld), sprite sheets for the cast and added characters
@@ -117,7 +117,7 @@ src/
     decorArt.ts              decoration pixel art in tier colours, and the decorations placed in the room
     doorArt.ts               the doors sold in Decorate (painted into the room) and the wall paint's icon
     decorateMode.ts          Decorate: the whole room, a paged tray of decorations, try a colour then buy
-    closetMode.ts            Momo's Closet: Clothing, Accessories and Ice Cream Tools; try a colour on, then buy
+    closetMode.ts            the shopkeeper's Closet: Clothing, Accessories and Ice Cream Tools; try a colour on, then buy
     closetParts.ts           the Closet's backdrop, top bar, tabs and item tiles
     shopRoom.ts              the pixel-art room and counter (strawberry parlour), repainted for wall paint and doors
     roomPixels.ts            tiny pixel painter the room is drawn with
@@ -204,8 +204,8 @@ All items in the spec's acceptance checklist are implemented. Verified automatic
 
 - **Not yet tested on a real iPad or iPhone.** It was checked in desktop Chromium at iPad and iPhone viewport sizes with touch emulation. Safari on a real device still needs a look.
 - Art is original pixel art: the room is painted at 1/4 resolution and scaled up so it matches the characters; the built-in cast waddles on stepping feet, breathes and blinks while waiting, cheers or tilts their head at an answer, and Momo scoops from the tubs. Timings are in `GAME_CONFIG.animation`.
-- Milestone 4 (in progress): the save holds several players, each with their own shop name, shopkeeper, Sprinkles, items and progress (`src/save/profileActions.ts`). A brand new game first asks the child's name, lets them roll, pick or type a shop name (the sign follows) and choose one of six friends for behind the counter. The start screen for choosing between players, the kids' settings and managing players in the grown-ups area are coming next. A shopkeeper other than Momo doesn't wear Closet items yet.
-- Decorate and Momo's Closet (Milestone 3) open from the results card, or by tapping the Sprinkles balance in the top bar (between rounds or while a customer waits, not while serving). Decorate sells furniture and little decorations, wall paint and three doors; the Closet sells clothes, accessories and scoopers; everything comes in six tiers. Only Momo wears Closet items; a shopkeeper added from a picture serves with the chosen scooper but does not wear clothes or accessories.
+- Milestone 4 (in progress): the save holds several players, each with their own shop name, shopkeeper, Sprinkles, items and progress (`src/save/profileActions.ts`). A brand new game first asks the child's name, lets them roll, pick or type a shop name (the sign follows) and choose one of six friends for behind the counter. The start screen for choosing between players, the kids' settings and managing players in the grown-ups area are coming next.
+- Decorate and the Closet (Milestone 3) open from the results card, or by tapping the Sprinkles balance in the top bar (between rounds or while a customer waits, not while serving). Decorate sells furniture and little decorations, wall paint and three doors; the Closet sells clothes, accessories and scoopers; everything comes in six tiers. The player's shopkeeper (any of the six) wears Closet items; a shopkeeper added from a picture serves with the chosen scooper but does not wear clothes or accessories.
 - Division practice uses divisors 1-12 (`GAME_CONFIG.math.division.divisor`); the spec itself only requires a positive divisor.
 - Addition and subtraction are built and tested but switched off, since Milestone 1 is multiplication and division. Their hints use simple piles of scoops; the difficulty curve for them is a first guess.
 - localStorage is per browser and per device (and the Home Screen app has its own); backup files move progress between them. If the browser blocks storage (some private modes), the game still plays but warns that progress will not be kept.

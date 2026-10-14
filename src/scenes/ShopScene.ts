@@ -7,11 +7,11 @@
  * only animates what the manager says and forwards what the player taps.
  */
 import Phaser from 'phaser';
-import { addedLook, CharacterView, friendLook, MOMO_SHEETS, type AnyLook } from '../characters/characterManager';
-import { friendName, isFriendId, type FriendId } from '../characters/friendArt';
+import { addedLook, CharacterView, friendLook, friendSheets, type AnyLook } from '../characters/characterManager';
+import { friendName, keeperOrMomo, type FriendId } from '../characters/friendArt';
 import { updatePlayer, type NewPlayer } from '../save/profileActions';
 import type { ScooperId } from '../characters/scooperArt';
-import { dressMomo } from '../characters/wearArt';
+import { dressFriend } from '../characters/wearArt';
 import { SERVICES_KEY, type GameServices } from '../game/services';
 import { GAME_CONFIG } from '../config/gameConfig';
 import type { RoundSummary } from '../save/saveTypes';
@@ -222,14 +222,13 @@ export class ShopScene extends Phaser.Scene {
     return customer;
   }
 
-  /** The newest added shopkeeper, else the player's own, with Momo in what she has on from her Closet. */
+  /** The newest added shopkeeper, else the player's own in what they have on from the Closet. */
   private makeShopkeeper(): CharacterView {
     const added = chosenShopkeeper(this.services.characters.list());
-    const { keeper: id } = this.manager.profile.shop;
-    const keeper = isFriendId(id) ? id : 'momo';
-    const look = (added && addedLook(this, added)) || friendLook(keeper);
-    const view = new CharacterView(this, LAYOUT.shopkeeper.x, 530, look).setDepth(20);
-    if (!added && keeper === 'momo') dressMomo(view, equippedItems(this.manager.profile), MOMO_SHEETS);
+    const keeper = keeperOrMomo(this.manager.profile.shop.keeper);
+    const look = added && addedLook(this, added);
+    const view = new CharacterView(this, LAYOUT.shopkeeper.x, 530, look || friendLook(keeper)).setDepth(20);
+    if (!look) dressFriend(view, keeper, equippedItems(this.manager.profile), friendSheets(keeper));
     return view.idle(true);
   }
 
@@ -460,6 +459,7 @@ export class ShopScene extends Phaser.Scene {
     if (this.shopMenu || this.gate || this.decorate || this.closet) return;
     if (this.busy && !this.results) return;
     this.shopMenu = new ShopMenu(this, {
+      keeperName: friendName(keeperOrMomo(this.manager.profile.shop.keeper)),
       onDecorate: () => this.openDecorate(this.resultsCover),
       onCloset: () => this.openCloset(),
       onClose: () => {
@@ -529,7 +529,7 @@ export class ShopScene extends Phaser.Scene {
     this.syncInput();
   }
 
-  /** Opens Momo's Closet over everything; Momo comes back to the counter in what she chose. */
+  /** Opens the Closet over everything; the shopkeeper comes back to the counter in what they chose. */
   private openCloset(): void {
     if (this.closet || this.decorate) return;
     this.closet = new ClosetMode({
