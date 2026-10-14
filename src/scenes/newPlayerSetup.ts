@@ -22,6 +22,8 @@ export interface SetupHost {
   /** The chosen friend steps behind the counter. */
   onKeeper: (id: FriendId) => void;
   onDone: (player: NewPlayer) => void;
+  /** When adding a player from the start screen, ✕ goes back to it. */
+  onCancel?: () => void;
 }
 
 type Step = 'name' | 'shop' | 'typeShop' | 'keeper' | 'ready';
@@ -72,6 +74,12 @@ export class NewPlayerSetup {
     this.host.onDone(player);
   }
 
+  private cancel(onCancel: () => void): void {
+    if (this.done) return;
+    this.destroy();
+    onCancel();
+  }
+
   destroy(): void {
     this.done = true;
     this.root.destroy();
@@ -107,6 +115,11 @@ export class NewPlayerSetup {
       keeper: 'Who works in your shop?',
       ready: 'Your shop is ready!',
     };
+    const { onCancel } = this.host;
+    if (onCancel) {
+      const close = { x: LAYOUT.panel.x + 12, y: LAYOUT.panel.y + 10, w: 60, h: 56 };
+      this.page.add(button(scene, close, '✕', 26, () => this.cancel(onCancel)));
+    }
     const title = scene.add.text(cx, this.layout.titleY, titles[step], text(this.layout.titleFont)).setOrigin(0.5);
     title.setScale(Math.min(1, (LAYOUT.panel.w - 30) / title.width));
     this.page.add([dots, title]);

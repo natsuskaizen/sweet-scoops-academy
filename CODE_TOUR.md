@@ -302,7 +302,24 @@ if (!result.ok) return gate.notice('Not saved', `The change could not be saved: 
 scene.scene.restart();
 ```
 
-A brand new game (`services.needsSetup`, true when the load found no save) opens on the new-player setup instead of the first customer. It lives in the register panel, so the shop stays in view, and it only reports choices; the scene shows them and saves the result:
+`services.stage` says where the shop opens: `'setup'` when the load found no save, `'start'` whenever the game comes back (or a backup is loaded), and `'play'` once someone opens their shop. `ShopScene.create()` ends with `this.openAt(this.services.stage)`, and a rotation restarts into the same stage.
+
+The start screen (`src/scenes/startScreen.ts`) shows the active player's own shop behind it with the door shut, and only reports choices; the scene does what they mean:
+
+```ts
+this.start = new StartScreen({
+  scene: this,
+  player, // the active player: "Hi, Ava!", her friend dressed as in her shop, Open the shop!
+  others: playersInOrder(save).filter((p) => p.id !== player.id), // "Not Ava?" cards, most recent first
+  canAddPlayer: canAddPlayer(save),
+  onOpen: () => this.play(() => choosePlayer(save, player.id, Date.now())), // stage 'play', save, restart
+  onSwitch: (id) => this.switchTo(id), // choosePlayer, save, restart on the start screen in front of their shop
+  onNewPlayer: () => this.addNewPlayer(), // the setup below, with ✕ back to the start screen
+  onGrownUps: () => this.openParentGate(),
+});
+```
+
+Its pieces are placed by `startLayout()` in `src/ui/startLayout.ts` (unit tested). A brand new game, or New on the start screen, opens the new-player setup instead. It lives in the register panel, so the shop stays in view, and it only reports choices; the scene shows them and saves the result:
 
 ```ts
 this.setup = new NewPlayerSetup({
@@ -310,7 +327,8 @@ this.setup = new NewPlayerSetup({
   scene: this,
   onShopName: (name) => setShopSign(this.room.sign, name), // the sign follows every roll, tap and letter
   onKeeper: (id) => this.previewKeeper(id), // the friend steps behind the counter and says hi
-  onDone: (player) => this.finishSetup(player), // updatePlayer, write the save, restart into the first round
+  onDone: (player) => this.play(() => addPlayer(save, player, Date.now())), // or updatePlayer for a brand new game
+  onCancel: () => this.scene.restart(), // only from the start screen: ✕ goes back to it
 });
 ```
 
