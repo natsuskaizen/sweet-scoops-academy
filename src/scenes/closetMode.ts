@@ -23,7 +23,7 @@ import {
 } from '../shop/catalog';
 import { equippedIn, equippedItems, isInUse, owns, ownedTiers, takeOffer, wornWith } from '../shop/purchases';
 import { TierCard } from '../ui/TierCard';
-import { closetLayout, CSS, LAYOUT, text, type ClosetLayout } from '../ui/theme';
+import { closetLayout, CSS, DEPTH, LAYOUT, text, type ClosetLayout } from '../ui/theme';
 import { drawBackdrop, drawTabs, drawTile, drawTopBar, heldScooper, tileRect, type ClosetTab } from './closetParts';
 import { twinkle } from './decorArt';
 
@@ -69,7 +69,7 @@ export class ClosetMode {
   constructor(private readonly host: ClosetHost) {
     const { scene } = host;
     this.layout = closetLayout(LAYOUT);
-    this.root = scene.add.container(0, 0).setDepth(600); // above the results card
+    this.root = scene.add.container(0, 0).setDepth(DEPTH.closet);
     this.root.add(drawBackdrop(scene, this.layout));
     this.keeper = keeperOrMomo(host.profile().shop.keeper);
     this.balance = drawTopBar(scene, this.root, `${friendName(this.keeper)}'s Closet`, () => this.close());

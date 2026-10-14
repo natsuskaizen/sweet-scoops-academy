@@ -15,12 +15,7 @@ import {
   tierCardRect,
   type Rect,
 } from '../ui/theme';
-
-const inside = (inner: Rect, outer: Rect) =>
-  inner.x >= outer.x &&
-  inner.y >= outer.y &&
-  inner.x + inner.w <= outer.x + outer.w &&
-  inner.y + inner.h <= outer.y + outer.h;
+import { inside, overlaps } from './rects';
 
 const keypadRect = (k: { x: number; y: number; cellW: number; cellH: number; gap: number }): Rect => ({
   x: k.x,
@@ -95,7 +90,6 @@ describe('tubSpot', () => {
 });
 
 describe('decorating layout', () => {
-  const overlaps = (a: Rect, b: Rect) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
   const screens = [layoutFor(1180, 820), layoutFor(393, 852), layoutFor(375, 667), layoutFor(820, 1180)];
 
   it('keeps every decoration on screen and clear of the tray and the colour card', () => {

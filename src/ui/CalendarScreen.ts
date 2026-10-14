@@ -2,7 +2,7 @@ import type Phaser from 'phaser';
 import type { Profile } from '../save/saveTypes';
 import { dayKey, dayView, monthOf, monthView, shiftMonth, type DayView, type MonthRef } from '../shop/progressCalendar';
 import { Button } from './Button';
-import { COLORS, CSS, LAYOUT, text, type Rect } from './theme';
+import { COLORS, CSS, DEPTH, LAYOUT, text, type Rect } from './theme';
 
 export interface CalendarSubject {
   id: string;
@@ -89,7 +89,7 @@ export class CalendarScreen {
   ) {
     this.month = monthOf(opts.now());
     this.selected = dayKey(opts.now());
-    this.root = scene.add.container(0, 0).setDepth(700);
+    this.root = scene.add.container(0, 0).setDepth(DEPTH.menu);
     this.content = scene.add.container(0, 0);
     this.drawFrame();
     this.render();

@@ -6,14 +6,15 @@
  */
 import type Phaser from 'phaser';
 import { friendLook } from '../characters/characterManager';
-import { friendName, isFriendId, type FriendId } from '../characters/friendArt';
+import { friendName, isFriendId, keeperOrMomo, type FriendId } from '../characters/friendArt';
 import { GAME_CONFIG } from '../config/gameConfig';
 import { createRng, randomSeed, type Rng } from '../core/rng';
 import type { NewPlayer } from '../save/profileActions';
 import { letterAs, ownedShopName, rollShopName, SHOP_NAME_IDEAS, typeKey, type LetterKey } from '../shop/playerNames';
 import { Button } from '../ui/Button';
 import { gridCells, letterKeyCells, setupLayout, type SetupLayout } from '../ui/setupLayout';
-import { COLORS, CSS, LAYOUT, text, type Rect } from '../ui/theme';
+import { registerCover } from '../ui/registerCard';
+import { COLORS, CSS, DEPTH, LAYOUT, text, type Rect } from '../ui/theme';
 
 export interface SetupHost {
   scene: Phaser.Scene;
@@ -40,7 +41,13 @@ const STEP_DOT: Record<Step, number> = { name: 0, shop: 1, typeShop: 1, keeper: 
 const KEY_LABELS: Record<string, string> = { done: '✓', back: '⌫', ' ': 'space' };
 
 const button = (scene: Phaser.Scene, r: Rect, label: string, fontSize: number, onTap: () => void) =>
-  new Button(scene, r.x + r.w / 2, r.y + r.h / 2, { width: r.w, height: r.h, label, fontSize, onTap });
+  Button.inRect(scene, r, { label, fontSize, onTap });
+
+/** ◀ and ✕ in the panel's top corners. */
+const CORNER = { w: 60, h: 56, inset: 12, top: 10 };
+
+/** The two things typed on the letter keys, and what each one is called in the setup. */
+type Typed = 'name' | 'shop';
 
 export class NewPlayerSetup {
   private readonly root: Phaser.GameObjects.Container;
@@ -61,19 +68,12 @@ export class NewPlayerSetup {
     const { scene } = host;
     this.layout = setupLayout(LAYOUT.panel, LAYOUT.orientation === 'portrait');
     const { edit } = host;
-    const keeper = edit?.player.shop.keeper ?? this.players.defaultShop.keeper;
-    this.keeper = isFriendId(keeper) ? keeper : 'momo';
+    this.keeper = keeperOrMomo(edit?.player.shop.keeper ?? this.players.defaultShop.keeper);
     this.name = edit?.player.name ?? '';
     this.shopName = edit?.player.shop.name ?? '';
-    const { x, y, w, h } = LAYOUT.panel;
-    const g = scene.add.graphics();
-    g.fillStyle(0xffe9d6, 1).fillRoundedRect(x, y, w, h - 10, 26);
-    g.lineStyle(5, COLORS.brownDark, 1).strokeRoundedRect(x, y, w, h - 10, 26);
-    // Taps on the panel never reach the ticket or keypad underneath.
-    const blocker = scene.add.zone(x, y, w, h).setOrigin(0).setInteractive();
     this.page = scene.add.container(0, 0);
-    // Changing from My shop can happen over the results card, so it goes above it.
-    this.root = scene.add.container(0, 0, [g, blocker, this.page]).setDepth(edit ? 660 : 80);
+    const depth = edit ? DEPTH.changeShop : DEPTH.setup;
+    this.root = scene.add.container(0, 0, [...registerCover(scene), this.page]).setDepth(depth);
     this.show(edit?.step ?? 'name');
   }
 
@@ -85,8 +85,7 @@ export class NewPlayerSetup {
   /** Finishes with these choices, as "Open the shop!" does (the e2e test calls it to skip the steps). */
   complete(player: NewPlayer): void {
     if (this.done) return;
-    this.done = true;
-    this.root.destroy();
+    this.destroy();
     this.host.onDone(player);
   }
 
@@ -121,7 +120,7 @@ export class NewPlayerSetup {
     const cx = LAYOUT.panel.x + LAYOUT.panel.w / 2;
     const dots = scene.add.graphics();
     for (let i = 0; i < (this.host.edit ? 0 : 4); i++) {
-      dots.fillStyle(i <= STEP_DOT[step] ? COLORS.lavenderDark : 0xe2d3c4, 1);
+      dots.fillStyle(i <= STEP_DOT[step] ? COLORS.lavenderDark : COLORS.off, 1);
       dots.fillCircle(cx + (i - 1.5) * 30, this.layout.dotsY, 9);
     }
     const titles: Record<Step, string> = {
@@ -132,18 +131,19 @@ export class NewPlayerSetup {
       ready: 'Your shop is ready!',
     };
     const { onCancel } = this.host;
-    if (onCancel) {
-      const close = { x: LAYOUT.panel.x + LAYOUT.panel.w - 72, y: LAYOUT.panel.y + 10, w: 60, h: 56 };
-      this.page.add(button(scene, close, '✕', 26, () => this.cancel(onCancel)));
-    }
+    if (onCancel) this.addCorner('right', '✕', () => this.cancel(onCancel));
     const previous = this.previousStep(step);
-    if (previous) {
-      const back = { x: LAYOUT.panel.x + 12, y: LAYOUT.panel.y + 10, w: 60, h: 56 };
-      this.page.add(button(scene, back, '◀', 26, () => this.goBack(previous)));
-    }
+    if (previous) this.addCorner('left', '◀', () => this.goBack(previous));
     const title = scene.add.text(cx, this.layout.titleY, titles[step], text(this.layout.titleFont)).setOrigin(0.5);
     title.setScale(Math.min(1, (LAYOUT.panel.w - 30) / title.width));
     this.page.add([dots, title]);
+  }
+
+  private addCorner(side: 'left' | 'right', label: string, onTap: () => void): void {
+    const { x, y, w } = LAYOUT.panel;
+    const left = side === 'left' ? x + CORNER.inset : x + w - CORNER.inset - CORNER.w;
+    const r = { x: left, y: y + CORNER.top, w: CORNER.w, h: CORNER.h };
+    this.page.add(button(this.host.scene, r, label, 26, onTap));
   }
 
   /** The step ◀ goes back to: none from the first step, or from the one step being changed. */
@@ -155,8 +155,7 @@ export class NewPlayerSetup {
 
   private goBack(step: Step): void {
     if (this.step === 'typeShop') {
-      this.shopName = this.shopNameBeforeTyping;
-      this.host.onShopName(this.shopName || this.players.defaultShop.name);
+      this.pickShopName(this.shopNameBeforeTyping);
     }
     this.show(step);
   }
@@ -167,44 +166,50 @@ export class NewPlayerSetup {
     const box = scene.add.graphics();
     box.fillStyle(COLORS.white, 1).fillRoundedRect(x, y, w, h, 16);
     box.lineStyle(4, COLORS.skyDark, 1).strokeRoundedRect(x, y, w, h, 16);
-    this.nameText = scene.add.text(x + w / 2, y + h / 2, value, text(fontSize)).setOrigin(0.5);
+    this.nameText = scene.add.text(x + w / 2, y + h / 2, '', text(fontSize)).setOrigin(0.5);
     this.page.add([box, this.nameText]);
-    this.fitName();
+    this.showInBox(value);
   }
 
-  private fitName(): void {
+  /** Shows `value` in the name box, shrunk to fit. */
+  private showInBox(value: string): void {
     const t = this.nameText;
     if (!t) return;
-    t.setScale(1);
+    t.setText(value).setScale(1);
     t.setScale(Math.min(1, (this.layout.nameBox.w - 30) / Math.max(1, t.width)));
   }
 
-  /** The letter keys, typing the player's name or their own shop name. */
-  private buildTyping(what: 'name' | 'shop'): void {
-    const max = what === 'name' ? this.players.maxNameLength : this.players.maxShopNameLength;
-    const read = () => (what === 'name' ? this.name : this.shopName);
-    const write = (value: string) => {
-      if (what === 'name') this.name = value;
-      else {
-        this.shopName = value;
-        this.host.onShopName(value || this.players.defaultShop.name);
-      }
-      this.nameText?.setText(value);
-      this.fitName();
+  /** What the letter keys type into, and how long it may be. */
+  private typed(what: Typed) {
+    const isName = what === 'name';
+    return {
+      max: isName ? this.players.maxNameLength : this.players.maxShopNameLength,
+      fontSize: isName ? 44 : 34,
+      read: () => (isName ? this.name : this.shopName),
+      write: (value: string) => {
+        if (!isName) return this.pickShopName(value);
+        this.name = value;
+        this.showInBox(value);
+      },
     };
+  }
+
+  /** The letter keys, typing the player's name or their own shop name. */
+  private buildTyping(what: Typed): void {
+    const { max, fontSize, read, write } = this.typed(what);
     if (what === 'shop') {
       this.shopNameBeforeTyping = this.shopName;
       this.shopName = '';
     }
-    this.addNameBox(read(), what === 'name' ? 44 : 34);
+    this.addNameBox(read(), fontSize);
     const short = this.layout.keys.h < 300;
     const letters: { key: string; button: Button }[] = [];
     // Letter keys show the case they type next: capitals to start a word, small after.
     const relabel = () => letters.forEach(({ key, button }) => button.setLabel(letterAs(read(), key)));
     for (const { key, rect } of letterKeyCells(this.layout.keys, 6)) {
       const label = KEY_LABELS[key] ?? key;
-      const fontSize = key === ' ' ? 24 : short ? 26 : 30;
-      const b = button(this.host.scene, rect, label, fontSize, () => {
+      const keySize = key === ' ' ? 24 : short ? 26 : 30;
+      const b = button(this.host.scene, rect, label, keySize, () => {
         if (key === 'done') return this.finishTyping(what);
         write(typeKey(read(), key as LetterKey, max));
         relabel();
@@ -216,12 +221,11 @@ export class NewPlayerSetup {
     relabel();
   }
 
-  private finishTyping(what: 'name' | 'shop'): void {
-    if (what === 'name' && !this.name.trim()) return;
-    if (what === 'shop' && !this.shopName.trim()) return;
-    if (what === 'name' && !this.shopName) this.pickShopName(this.rolled());
-    if (what === 'name') this.show('shop');
-    else this.after('shop');
+  private finishTyping(what: Typed): void {
+    if (!this.typed(what).read().trim()) return;
+    if (what === 'shop') return this.after('shop');
+    if (!this.shopName) this.pickShopName(this.rolled());
+    this.show('shop');
   }
 
   /** On to the next step, or finished when only this one thing was being changed. */
@@ -234,11 +238,11 @@ export class NewPlayerSetup {
     return rollShopName(this.rng, this.name, this.players.maxShopNameLength);
   }
 
+  /** The sign shows the shop's name, or the default one while the name is blank. */
   private pickShopName(name: string): void {
     this.shopName = name;
-    this.host.onShopName(name);
-    this.nameText?.setText(name);
-    this.fitName();
+    this.host.onShopName(name || this.players.defaultShop.name);
+    this.showInBox(name);
   }
 
   /** Roll a name, tap an idea, or type one; the sign follows. */

@@ -3,7 +3,7 @@ import { CharacterView, type AnyLook } from '../characters/characterManager';
 import type { RoundSummary } from '../save/saveTypes';
 import { Button } from '../ui/Button';
 import { isCalm } from '../ui/motion';
-import { COLORS, CSS, LAYOUT, SHOP_W, text } from '../ui/theme';
+import { COLORS, CSS, DEPTH, LAYOUT, SHOP_W, text } from '../ui/theme';
 
 /** A served customer as the card shows them. */
 export interface ResultSticker {
@@ -56,7 +56,7 @@ export class ResultsOverlay extends Phaser.GameObjects.Container {
       button(512, 216, 'Keep scooping!', [COLORS.mint, COLORS.mintDark], actions.onContinue),
     ]);
 
-    this.setDepth(500).setScale(0.8).setAlpha(0);
+    this.setDepth(DEPTH.results).setScale(0.8).setAlpha(0);
     scene.add.existing(this);
     scene.tweens.add({ targets: this, scale: 1, alpha: 1, duration: 320, ease: 'Back.easeOut' });
     confetti(scene, summary.perfect);
@@ -123,7 +123,7 @@ export function confetti(scene: Phaser.Scene, perfect: boolean): void {
   for (let i = 0; i < pieces; i++) {
     const piece = scene.add
       .rectangle(Phaser.Math.Between(20, LAYOUT.width - 20), -20, 10, 16, colors[i % colors.length])
-      .setDepth(501)
+      .setDepth(DEPTH.results + 1)
       .setAngle(Phaser.Math.Between(0, 180));
     scene.tweens.add({
       targets: piece,

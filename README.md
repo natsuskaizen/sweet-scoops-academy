@@ -132,8 +132,10 @@ src/
                              aidLayout.ts sizes the hint board's scoops and cups (unit tested);
                              setupLayout.ts places the new-player setup's keys and cards (unit tested);
                              startLayout.ts and myShopLayout.ts place the start screen and My shop (unit tested);
-                             motion.ts holds calm mode for the character animations and confetti
-  tests/                     Vitest suites
+                             motion.ts holds calm mode for the character animations and confetti;
+                             registerCard.ts draws the register panel's card the setup, start screen and My shop share;
+                             theme.ts also has DEPTH, the order the bar, cards and screens draw over the shop
+  tests/                     Vitest suites (rects.ts: shared helpers for the layout suites)
 e2e/                         Playwright: smoke test, new player, offline and backup, redeploy
 scripts/                     offline-plugin.mjs (writes dist/sw.js), make-icons.mjs, check-live-site.mjs
 public/                      favicon, manifest.webmanifest, Home Screen icons

@@ -94,6 +94,8 @@ export interface GameConfig {
     maxPlayers: number;
     maxNameLength: number;
     maxShopNameLength: number;
+    /** The name a new game's first player has until they type their own. */
+    firstPlayerName: string;
     /** The shop a player has before choosing their own (and every save from before players chose). */
     defaultShop: { name: string; keeper: string };
     /** The friends a new player can choose to work behind their counter, in the order shown. */
@@ -210,6 +212,7 @@ export const GAME_CONFIG: GameConfig = {
     maxPlayers: 6,
     maxNameLength: 12,
     maxShopNameLength: 28,
+    firstPlayerName: 'Player 1',
     defaultShop: { name: 'Sweet Scoops', keeper: 'momo' },
     starterKeepers: ['momo', 'bonbon', 'kiki', 'mallow', 'pom', 'lulu'],
   },

@@ -22,7 +22,7 @@ export function resetLearning(profile: Profile, subject: Subject): void {
 /** Starts the active player over under the same name and shop; any other players are left alone. */
 export function resetProfile(save: SaveFile, now: number): Profile {
   const old = save.profiles[save.activeProfileId];
-  const fresh = createProfile(old?.displayName ?? 'Player 1', now, randomSeed(), old?.shop);
+  const fresh = createProfile(old?.displayName ?? GAME_CONFIG.players.firstPlayerName, now, randomSeed(), old?.shop);
   delete save.profiles[save.activeProfileId];
   save.profiles[fresh.id] = fresh;
   save.activeProfileId = fresh.id;

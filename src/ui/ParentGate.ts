@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { Button } from './Button';
 import { NumberKeypad } from './NumberKeypad';
 import { numberToWords } from './numberWords';
-import { COLORS, CSS, LAYOUT, text } from './theme';
+import { COLORS, CSS, DEPTH, LAYOUT, text } from './theme';
 
 export interface ParentAction {
   label: string;
@@ -45,7 +45,7 @@ export class ParentGate {
     private scene: Phaser.Scene,
     private opts: ParentGateOptions,
   ) {
-    this.root = scene.add.container(0, 0).setDepth(1000);
+    this.root = scene.add.container(0, 0).setDepth(DEPTH.parentGate);
     const shade = scene.add
       .rectangle(0, 0, LAYOUT.width, LAYOUT.height, COLORS.ink, 0.45)
       .setOrigin(0)

@@ -8,7 +8,11 @@ import {
   FRIEND_W,
   friendColor,
   friendFrames,
+  friendName,
+  isFriendId,
+  keeperOrMomo,
 } from '../characters/friendArt';
+import { GAME_CONFIG } from '../config/gameConfig';
 import { CUSTOMERS } from '../shop/customerManager';
 
 describe('built-in friends', () => {
@@ -76,5 +80,19 @@ describe('built-in friends', () => {
     expect(new Set(CUSTOMERS.map((c) => c.name)).size).toBe(CUSTOMERS.length);
     expect(arts).not.toContain('momo');
     expect(CUSTOMERS).toHaveLength(FRIEND_IDS.length - 1);
+  });
+});
+
+describe('shopkeepers a player can choose', () => {
+  it('offers only built-in friends, with the default shopkeeper among them', () => {
+    const { starterKeepers, defaultShop } = GAME_CONFIG.players;
+    for (const id of starterKeepers) expect(isFriendId(id), id).toBe(true);
+    expect(starterKeepers).toContain(defaultShop.keeper);
+  });
+
+  it('names a friend, and falls back to Momo for a saved id the game does not know', () => {
+    expect(friendName('bonbon')).toBe('Bonbon');
+    expect(keeperOrMomo('kiki')).toBe('kiki');
+    expect(keeperOrMomo('gone-friend')).toBe('momo');
   });
 });
