@@ -27,7 +27,8 @@ export interface MyShopHost {
   onToggle: (setting: KidToggle) => void;
   onSwitchPlayer: () => void;
   onGrownUps: () => void;
-  onClose: () => void;
+  /** `leaving` is true when My shop closes to do something else (change a step, switch, grown-ups). */
+  onClose: (leaving: boolean) => void;
 }
 
 interface ToggleRow {
@@ -63,18 +64,18 @@ export class MyShopPanel {
     this.addButtons();
   }
 
-  close(): void {
+  close(leaving = false): void {
     if (this.closed) return;
     this.closed = true;
     this.root.destroy();
-    this.host.onClose();
+    this.host.onClose(leaving);
   }
 
   /** Leaves My shop, then does what was tapped. */
   private leave(go: () => void): () => void {
     return () => {
       if (this.closed) return;
-      this.close();
+      this.close(true);
       go();
     };
   }

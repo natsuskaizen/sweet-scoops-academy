@@ -162,6 +162,10 @@ export class ShopScene extends Phaser.Scene {
     if (stage === 'start') return this.showStart();
     this.manager.ensureRound();
     void this.runOrder();
+    if (this.services.reopenMyShop) {
+      this.services.reopenMyShop = false;
+      this.openMyShop();
+    }
   }
 
   private activeProfile() {
@@ -659,10 +663,11 @@ export class ShopScene extends Phaser.Scene {
       onToggle: (setting) => this.toggleSetting(setting),
       onSwitchPlayer: () => this.switchPlayer(),
       onGrownUps: () => this.openParentGate(),
-      onClose: () => {
+      onClose: (leaving) => {
         this.myShop = null;
-        // Characters already breathing or bouncing pick up calm mode when the shop is rebuilt.
-        if (profile.settings.reduceMotion !== calmBefore) this.scene.restart();
+        // Characters already breathing or bouncing pick up calm mode when the shop is rebuilt. Leaving for
+        // something else doesn't rebuild now, or what was tapped would be lost in the restart.
+        if (!leaving && profile.settings.reduceMotion !== calmBefore) this.scene.restart();
         else this.syncInput();
       },
     });
@@ -676,7 +681,11 @@ export class ShopScene extends Phaser.Scene {
     setCalm(settings.reduceMotion);
   }
 
-  /** The setup's shop-name or shopkeeper step; the sign and counter follow, and Done saves and rebuilds the shop. */
+  /**
+   * The setup's shop-name or shopkeeper step; the sign and counter follow.
+   * Done saves, ✕ keeps what was there; either way the shop is rebuilt and
+   * My shop opens again.
+   */
   private changeShop(step: EditStep): void {
     const profile = this.manager.profile;
     const player = { name: profile.displayName, shop: { ...profile.shop } };
@@ -688,11 +697,16 @@ export class ShopScene extends Phaser.Scene {
       onDone: ({ shop }) => {
         updatePlayer(profile, { shopName: shop.name, keeper: shop.keeper });
         this.saveNow();
-        this.scene.restart();
+        this.backToMyShop();
       },
-      onCancel: () => this.scene.restart(),
+      onCancel: () => this.backToMyShop(),
     });
     this.syncInput();
+  }
+
+  private backToMyShop(): void {
+    this.services.reopenMyShop = true;
+    this.scene.restart();
   }
 
   /** Back to the start screen, where another child can open their shop. */

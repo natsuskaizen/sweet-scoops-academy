@@ -20,6 +20,9 @@ type HookWindow = Window & { __ssa?: Hook };
 const keypadReady = (page: Page) =>
   page.waitForFunction(() => (window as HookWindow).__ssa?.scene.keypad.isEnabled, null, { timeout: 30_000 });
 
+const myShopOpen = (page: Page) =>
+  page.waitForFunction(() => Boolean((window as HookWindow).__ssa?.scene.myShop), null, { timeout: 30_000 });
+
 const savedPlayer = (page: Page) =>
   page.evaluate((key) => {
     const save = JSON.parse(localStorage.getItem(key)!);
@@ -75,30 +78,50 @@ test('My shop: a child turns hints off, calm mode on, renames the shop, changes 
   await tapMyShop(page, 'back');
   await keypadReady(page);
 
-  // A new shop name from the ideas; the sign follows, and Done keeps it.
+  // A new shop name from the ideas; the sign follows, and Done keeps it and goes back to My shop.
   await openMyShop(page);
   await tapMyShop(page, 'shopName');
   await page.waitForFunction(() => (window as HookWindow).__ssa!.scene.setup?.current === 'shop');
   await tapSetupLabel(page, 'Sugar Cloud');
   expect(await page.evaluate(() => (window as HookWindow).__ssa!.scene.room.sign.text)).toBe("Player 1's Sugar Cloud");
   await tapSetupLabel(page, 'Done ✓');
-  await keypadReady(page);
+  await myShopOpen(page);
   expect((await savedPlayer(page)).shop).toEqual({ name: "Player 1's Sugar Cloud", keeper: 'momo' });
 
-  // Kiki takes over the counter.
-  await openMyShop(page);
+  // Trying Bonbon then ✕ keeps Momo, back in My shop.
+  await tapMyShop(page, 'keeper');
+  await page.waitForFunction(() => (window as HookWindow).__ssa!.scene.setup?.current === 'keeper');
+  await tapSetupLabel(page, 'Bonbon');
+  await tapSetupLabel(page, '✕');
+  await myShopOpen(page);
+  expect((await savedPlayer(page)).shop.keeper).toBe('momo');
+  expect(await page.evaluate(() => (window as HookWindow).__ssa!.scene.shopkeeper.list[0]!.texture.key)).not.toBe(
+    'friend-bonbon',
+  );
+
+  // Kiki takes over the counter, then Back to the shop carries on the order.
   await tapMyShop(page, 'keeper');
   await page.waitForFunction(() => (window as HookWindow).__ssa!.scene.setup?.current === 'keeper');
   await tapSetupLabel(page, 'Kiki');
   await tapSetupLabel(page, 'Done ✓');
-  await keypadReady(page);
+  await myShopOpen(page);
   expect((await savedPlayer(page)).shop.keeper).toBe('kiki');
   expect(await page.evaluate(() => (window as HookWindow).__ssa!.scene.shopkeeper.list[0]!.texture.key)).toBe(
     'friend-kiki',
   );
+  await tapMyShop(page, 'back');
+  await keypadReady(page);
+
+  // Calm mode off, then straight to Shop name: the step still opens (the calm rebuild waits), and ✕ comes back.
+  await openMyShop(page);
+  await tapMyShop(page, 'reduceMotion');
+  await tapMyShop(page, 'shopName');
+  await page.waitForFunction(() => (window as HookWindow).__ssa!.scene.setup?.current === 'shop');
+  await tapSetupLabel(page, '✕');
+  await myShopOpen(page);
+  expect(await savedPlayer(page)).toMatchObject({ calm: false, shop: { name: "Player 1's Sugar Cloud" } });
 
   // Switch player goes to the start screen.
-  await openMyShop(page);
   await tapMyShop(page, 'switch');
   await page.waitForFunction(() => (window as HookWindow).__ssa?.scene.start !== null, null, { timeout: 30_000 });
   expect(errors).toEqual([]);
