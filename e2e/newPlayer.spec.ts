@@ -80,7 +80,9 @@ test('a new game sets up the player, and the start screen greets whoever played 
   expect((await shown(page)).door).toBe('CLOSED');
 
   // Keys show the case they type: a capital first, then small letters.
-  for (const key of ['A', 'v', 'a', '✓']) await tapLabel(page, key);
+  for (const key of ['A', 'v', 'a']) await tapLabel(page, key);
+  await page.screenshot({ path: testInfo.outputPath('keyboard.png') });
+  await tapLabel(page, '✓');
   await onStep(page, 'shop');
   // ◀ goes back to the name, still typed, and on again.
   await tapLabel(page, '◀');

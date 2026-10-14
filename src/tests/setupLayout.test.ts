@@ -26,9 +26,16 @@ describe('gridCells', () => {
 });
 
 describe('letterKeyCells', () => {
-  it('has every letter, a wide space, back and done, without overlaps', () => {
+  it('has every letter in QWERTY rows, a wide space, back and done, without overlaps', () => {
     const cells = letterKeyCells({ x: 0, y: 0, w: 800, h: 400 }, 8);
-    expect(cells.map((c) => c.key).join('')).toBe('ABCDEFGHIJKLMNOPQRSTUVWXYZ backdone');
+    expect(cells.map((c) => c.key).join('')).toBe('QWERTYUIOPASDFGHJKLZXCVBNMback done');
+    // QWERTY rows: A sits half a key in from Q, Z a key and a half in, and each row ends inside the area.
+    const at = (key: string) => cells.find((c) => c.key === key)!.rect;
+    expect(at('A').x).toBeCloseTo(at('Q').x + (at('Q').w + 8) / 2);
+    expect(at('Z').x).toBeCloseTo(at('Q').x + ((at('Q').w + 8) * 3) / 2);
+    expect(at('P').x + at('P').w).toBeCloseTo(800);
+    expect(at('done').x + at('done').w).toBeCloseTo(800);
+    cells.forEach((c) => expect(inside(c.rect, { x: 0, y: 0, w: 800, h: 400 })).toBe(true));
     const space = cells.find((c) => c.key === ' ')!;
     expect(space.rect.w).toBeGreaterThan(cells[0]!.rect.w * 2.5);
     cells.forEach((a, i) => cells.slice(i + 1).forEach((b) => expect(overlaps(a.rect, b.rect)).toBe(false)));
@@ -46,8 +53,9 @@ describe.each(Object.entries(screens))('setupLayout on %s', (_, layout) => {
   });
 
   it('gives letter keys and shopkeeper cards room for a finger', () => {
-    const key = letterKeyCells(setup.keys, 8)[0]!.rect;
-    expect(key.w).toBeGreaterThanOrEqual(44);
+    // Ten QWERTY keys to a row make them narrower than tall, as on a tablet keyboard.
+    const key = letterKeyCells(setup.keys, 6)[0]!.rect;
+    expect(key.w).toBeGreaterThanOrEqual(38);
     expect(key.h).toBeGreaterThanOrEqual(52);
     const card = gridCells(setup.body, 6, setup.keeperCols, 12)[0]!;
     expect(card.w).toBeGreaterThanOrEqual(setup.keeperScale * 32 + 16);

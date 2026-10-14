@@ -201,7 +201,7 @@ export class NewPlayerSetup {
     const letters: { key: string; button: Button }[] = [];
     // Letter keys show the case they type next: capitals to start a word, small after.
     const relabel = () => letters.forEach(({ key, button }) => button.setLabel(letterAs(read(), key)));
-    for (const { key, rect } of letterKeyCells(this.layout.keys, 8)) {
+    for (const { key, rect } of letterKeyCells(this.layout.keys, 6)) {
       const label = KEY_LABELS[key] ?? key;
       const fontSize = key === ' ' ? 24 : short ? 26 : 30;
       const b = button(this.host.scene, rect, label, fontSize, () => {
