@@ -9,10 +9,17 @@
 import Phaser from 'phaser';
 import { addedLook, CharacterView, friendLook, friendSheets, type AnyLook } from '../characters/characterManager';
 import { friendName, keeperOrMomo, type FriendId } from '../characters/friendArt';
-import { updatePlayer, type NewPlayer } from '../save/profileActions';
+import {
+  addPlayer,
+  canAddPlayer,
+  choosePlayer,
+  playersInOrder,
+  updatePlayer,
+  type NewPlayer,
+} from '../save/profileActions';
 import type { ScooperId } from '../characters/scooperArt';
 import { dressFriend } from '../characters/wearArt';
-import { SERVICES_KEY, type GameServices } from '../game/services';
+import { SERVICES_KEY, type GameServices, type GameStage } from '../game/services';
 import { GAME_CONFIG } from '../config/gameConfig';
 import type { RoundSummary } from '../save/saveTypes';
 import { chosenShopkeeper, customerRoster } from '../shop/addedCharacters';
@@ -39,6 +46,7 @@ import { ClosetMode } from './closetMode';
 import { PlacedDecorations } from './decorArt';
 import { DecorateMode } from './decorateMode';
 import { NewPlayerSetup } from './newPlayerSetup';
+import { StartScreen } from './startScreen';
 import { drawShopRoom, setShopSign, type ShopRoom } from './shopArt';
 
 /** Test hooks (`window.__ssa`, `?fast`) exist in dev, and in a build only when opened with `?e2e`. */
@@ -82,6 +90,8 @@ export class ShopScene extends Phaser.Scene {
   private room!: ShopRoom;
   /** A new player's setup, shown on the first visit before any customer (the e2e test skips it through `__ssa`). */
   private setup: NewPlayerSetup | null = null;
+  /** The start screen, while children choose who plays (the e2e test taps it through `__ssa`). */
+  private start: StartScreen | null = null;
   /** The results card and any parade, hidden while Decorate is open over them. */
   private resultsCover: Phaser.GameObjects.GameObject[] = [];
 
@@ -138,7 +148,13 @@ export class ShopScene extends Phaser.Scene {
     if (testHooksEnabled())
       (window as unknown as Record<string, unknown>).__ssa = { scene: this, manager: () => this.manager };
 
-    if (this.services.needsSetup) return this.startSetup();
+    this.openAt(this.services.stage);
+  }
+
+  /** Sets up a new game's player, shows the start screen, or carries on serving. */
+  private openAt(stage: GameStage): void {
+    if (stage === 'setup') return this.setUpNewGame();
+    if (stage === 'start') return this.showStart();
     this.manager.ensureRound();
     void this.runOrder();
   }
@@ -151,16 +167,73 @@ export class ShopScene extends Phaser.Scene {
   // New player
   // -------------------------------------------------------------------------
 
-  /** The first visit sets up the player (name, shop name, shopkeeper) before any customer comes in. */
-  private startSetup(): void {
+  /** Whoever played last, in front of their own shop with the door shut; the others can switch in. */
+  private showStart(): void {
+    this.closeShop();
+    const { save } = this.services;
+    // The shop behind is the active player's, so they are the one greeted.
+    const player = this.activeProfile();
+    this.start = new StartScreen({
+      scene: this,
+      player,
+      others: playersInOrder(save).filter((p) => p.id !== player.id),
+      canAddPlayer: canAddPlayer(save),
+      onOpen: () => this.play(() => choosePlayer(save, player.id, Date.now())),
+      onSwitch: (id) => this.switchTo(id),
+      onNewPlayer: () => this.addNewPlayer(),
+      onGrownUps: () => this.openParentGate(),
+    });
+  }
+
+  /** The start screen again, in front of another player's shop. */
+  private switchTo(id: string): void {
+    if (!choosePlayer(this.services.save, id, Date.now())) return;
+    this.saveNow();
+    this.scene.restart();
+  }
+
+  /** The shop with its door shut and nothing to answer, while players are chosen or set up. */
+  private closeShop(): void {
+    this.busy = true;
+    this.syncInput();
     this.room.doorSign.setText('CLOSED');
+    this.status.setVisible(false);
+    this.wallCalendar.setVisible(false);
+  }
+
+  /** From the start screen: set up a new player in an empty shop, or ✕ back to the start screen. */
+  private addNewPlayer(): void {
+    this.start?.destroy();
+    this.start = null;
+    this.shopkeeper.dress([]).setSheet(friendSheets('momo').dressed).setVisible(true);
+    setShopSign(this.room.sign, GAME_CONFIG.players.defaultShop.name);
+    this.startSetup(
+      (player) => this.play(() => addPlayer(this.services.save, player, Date.now())),
+      () => {
+        this.scene.restart();
+      },
+    );
+  }
+
+  /** Applies a change to the save (choosing or adding a player), saves it and opens that player's shop. */
+  private play(change: () => object | boolean | null): void {
+    if (!change()) this.toast('That player could not be added.');
+    this.services.stage = 'play';
+    this.saveNow();
+    this.scene.restart();
+  }
+
+  /** Sets up a player (name, shop name, shopkeeper) before any customer comes in. */
+  private startSetup(onDone: (player: NewPlayer) => void, onCancel?: () => void): void {
+    this.closeShop();
     this.bubble.say("Hi! I'm Momo. Let's open your very own ice cream shop!", LAYOUT.shopkeeper.x);
     this.setup?.destroy();
     this.setup = new NewPlayerSetup({
       scene: this,
       onShopName: (name) => setShopSign(this.room.sign, name),
       onKeeper: (id) => this.previewKeeper(id),
-      onDone: (player) => this.finishSetup(player),
+      onDone,
+      onCancel,
     });
   }
 
@@ -170,12 +243,19 @@ export class ShopScene extends Phaser.Scene {
     this.bubble.say(`Hi! I'm ${friendName(id)}!`, LAYOUT.shopkeeper.x);
   }
 
-  private finishSetup(player: NewPlayer): void {
-    this.services.needsSetup = false;
-    updatePlayer(this.manager.profile, { name: player.name, shopName: player.shop.name, keeper: player.shop.keeper });
-    const result = this.services.saves.write(this.services.save);
-    if (!result.ok) this.toast('Progress could not be saved just now.');
-    this.scene.restart();
+  /**
+   * A brand new game sets up its first player, who is already in the save
+   * as "Player 1". The top bar stays, so a grown-up can load a backup instead.
+   */
+  private setUpNewGame(): void {
+    const { profile } = this.manager;
+    this.startSetup(({ name, shop }) =>
+      this.play(() => {
+        updatePlayer(profile, { name, shopName: shop.name, keeper: shop.keeper });
+        return true;
+      }),
+    );
+    this.status.setVisible(true);
   }
 
   update(): void {
@@ -265,6 +345,7 @@ export class ShopScene extends Phaser.Scene {
     this.decorate = null;
     this.closet = null;
     this.setup = null;
+    this.start = null;
   }
 
   /** Hands control back to the player. */

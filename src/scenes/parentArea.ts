@@ -78,7 +78,7 @@ function restoreAction({ scene, services }: ParentAreaHost): ParentAction {
         const restored = services.saves.restoreBackup();
         if (!restored) return gate.notice('Nothing restored', 'There is no backup copy to go back to.');
         services.save = restored;
-        services.needsSetup = false;
+        services.stage = 'start';
       } catch (err) {
         return gate.notice('Nothing restored', `The backup could not be put back: ${String(err)}`);
       }

@@ -106,7 +106,8 @@ src/
   scenes/
     BootScene.ts             builds textures, loads the save
     ShopScene.ts             the persistent shop: runs the order flow, animating what OrderManager decides
-    newPlayerSetup.ts        a new game's setup in the register: name, shop name, shopkeeper
+    newPlayerSetup.ts        a new player's setup in the register: name, shop name, shopkeeper
+    startScreen.ts           the start screen: hello to whoever played last, Open the shop!, the other players and New
     parentArea.ts            what the grown-ups area shows and every action in it
     backupActions.ts         grown-ups area actions for saving and loading backup files
     characterActions.ts      grown-ups area action that opens the Characters dialog
@@ -127,7 +128,8 @@ src/
                              CharacterDialog (a DOM form for adding characters);
                              tweenAsync.ts turns tweens and timers into awaitable promises;
                              aidLayout.ts sizes the hint board's scoops and cups (unit tested);
-                             setupLayout.ts places the new-player setup's keys and cards (unit tested)
+                             setupLayout.ts places the new-player setup's keys and cards (unit tested);
+                             startLayout.ts places the start screen in the register panel (unit tested)
   tests/                     Vitest suites
 e2e/                         Playwright: smoke test, new player, offline and backup, redeploy
 scripts/                     offline-plugin.mjs (writes dist/sw.js), make-icons.mjs, check-live-site.mjs
@@ -204,7 +206,7 @@ All items in the spec's acceptance checklist are implemented. Verified automatic
 
 - **Not yet tested on a real iPad or iPhone.** It was checked in desktop Chromium at iPad and iPhone viewport sizes with touch emulation. Safari on a real device still needs a look.
 - Art is original pixel art: the room is painted at 1/4 resolution and scaled up so it matches the characters; the built-in cast waddles on stepping feet, breathes and blinks while waiting, cheers or tilts their head at an answer, and Momo scoops from the tubs. Timings are in `GAME_CONFIG.animation`.
-- Milestone 4 (in progress): the save holds several players, each with their own shop name, shopkeeper, Sprinkles, items and progress (`src/save/profileActions.ts`). A brand new game first asks the child's name, lets them roll, pick or type a shop name (the sign follows) and choose one of six friends for behind the counter. The start screen for choosing between players, the kids' settings and managing players in the grown-ups area are coming next.
+- Milestone 4 (in progress): the save holds several players, each with their own shop name, shopkeeper, Sprinkles, items and progress (`src/save/profileActions.ts`). A brand new game first asks the child's name, lets them roll, pick or type a shop name (the sign follows) and choose one of six friends for behind the counter. Coming back opens on a start screen in front of the shop of whoever played last (door shut), with one big "Open the shop!" button; under "Not Ava?" the other players switch in, and New sets up another child. The kids' settings and managing players in the grown-ups area are coming next.
 - Decorate and the Closet (Milestone 3) open from the results card, or by tapping the Sprinkles balance in the top bar (between rounds or while a customer waits, not while serving). Decorate sells furniture and little decorations, wall paint and three doors; the Closet sells clothes, accessories and scoopers; everything comes in six tiers. The player's shopkeeper (any of the six) wears Closet items; a shopkeeper added from a picture serves with the chosen scooper but does not wear clothes or accessories.
 - Division practice uses divisors 1-12 (`GAME_CONFIG.math.division.divisor`); the spec itself only requires a positive divisor.
 - Addition and subtraction are built and tested but switched off, since Milestone 1 is multiplication and division. Their hints use simple piles of scoops; the difficulty curve for them is a first guess.
