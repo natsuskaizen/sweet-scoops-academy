@@ -20,6 +20,8 @@ export type MathSubject = LearningSubject<MathChallengeSpec, MathProgress>;
 export interface MathSubjectOptions {
   adaptive?: AdaptiveConfig;
   operations?: OperationRegistry;
+  /** What the progress calendar files this subject's rounds under (see LearningSubject.gameType). */
+  gameType?: string;
   /** Players can't read yet: draw orders as pictures (where the operation has one) and dot the number keys. */
   preReaders?: boolean;
 }
@@ -28,6 +30,9 @@ export interface MathSubjectOptions {
 function skillProgress(progress: MathProgress, operationId: string): SkillProgress {
   return (progress[operationId] ??= { facts: {} });
 }
+
+const skillLine = (label: string, s: SkillSummary): string =>
+  `${label}: ${s.mastered} mastered · ${s.practicing} practicing · ${s.learning} learning · ${s.unseen} not seen yet`;
 
 export function createMathSubject(options: MathSubjectOptions = {}): MathSubject {
   const adaptive = options.adaptive ?? GAME_CONFIG.adaptive;
@@ -45,6 +50,7 @@ export function createMathSubject(options: MathSubjectOptions = {}): MathSubject
   return {
     id: 'math',
     badge: '123',
+    gameType: options.gameType,
 
     createProgress: () => Object.fromEntries(operations.enabled.map((op) => [op.id, { facts: {} }])),
 
@@ -74,9 +80,7 @@ export function createMathSubject(options: MathSubjectOptions = {}): MathSubject
     },
 
     progressReport(progress: MathProgress): string[] {
-      const summary = (id: string, s: SkillSummary) =>
-        `${operation(id).label}: ${s.mastered} mastered · ${s.practicing} practicing · ${s.learning} learning · ${s.unseen} not seen yet`;
-      const lines = pools(progress).map((pool) => summary(pool.skillId, summarizeSkill(pool)));
+      const lines = pools(progress).map((pool) => skillLine(operation(pool.skillId).label, summarizeSkill(pool)));
       const tricky = trickyFacts(progress).map((key) => {
         const fact = factByKey(key, operations);
         return fact ? operation(fact.operation).formatKey(key) : key;

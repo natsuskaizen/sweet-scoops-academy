@@ -8,7 +8,7 @@ import type { AttemptOutcome, ChallengeSpec, LearningSubject } from '../learning
 import type { EquipSlot, ShopSpot } from '../shop/catalog';
 import type { RoundBonus } from '../shop/rewards';
 
-export const SAVE_SCHEMA_VERSION = 5;
+export const SAVE_SCHEMA_VERSION = 6;
 
 export interface OrderState {
   /** Checked by the owning subject's isValidSpec on load. */
@@ -79,6 +79,8 @@ export interface DayRecord {
   playMs: number;
   /** Rounds finished per subject id. */
   subjects: Record<string, number>;
+  /** The different games played (LearningSubject.gameType), in the order first played; a heart needs several. */
+  types: string[];
   /** The day's goal was reached. Kept once earned, so a later, bigger goal never takes a heart away. */
   heart: boolean;
 }

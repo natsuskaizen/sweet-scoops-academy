@@ -29,11 +29,21 @@ export function mathModeOf(choice: GradeChoice, grades: GradesConfig = GAME_CONF
   return mathModes.find((m) => m.id === choice.mathMode) ?? mathModes[0]!;
 }
 
-/** A grade's starting choice: its first math mode. */
+/** A grade's starting choice: its start mode, else its first math mode. */
 export function startOfGrade(id: string, grades: GradesConfig = GAME_CONFIG.grades): GradeChoice {
   const grade = gradeLevel(id, grades);
-  return { grade: grade.id, mathMode: grade.mathModes[0]!.id };
+  return { grade: grade.id, mathMode: grade.startMode ?? grade.mathModes[0]!.id };
 }
+
+/** The id the progress calendar files a round under, so a heart needs different games: "grade3/division". */
+export function gameTypeOf(choice: GradeChoice, grades: GradesConfig = GAME_CONFIG.grades): string {
+  const settled = settleChoice(choice, grades);
+  return `${settled.grade}/${settled.mathMode}`;
+}
+
+/** How many different games a player's grade offers; a heart never needs more different games than this. */
+export const gameCount = (choice: GradeChoice, grades: GradesConfig = GAME_CONFIG.grades): number =>
+  gradeLevel(choice.grade, grades).mathModes.length;
 
 /** Where every new player (and every player from before grades) starts. */
 export const defaultGradeChoice = (grades: GradesConfig = GAME_CONFIG.grades): GradeChoice =>
@@ -68,13 +78,14 @@ export function gradeSubjects(config: GameConfig = GAME_CONFIG): (choice: GradeC
   const built = new Map<string, MathSubject>();
   return (choice) => {
     const settled = settleChoice(choice, config.grades);
-    const key = `${settled.grade}/${settled.mathMode}`;
+    const key = gameTypeOf(settled, config.grades);
     let subject = built.get(key);
     if (!subject) {
       subject = createMathSubject({
         adaptive: config.adaptive,
         operations: createOperations(mathConfigFor(settled, config)),
         preReaders: gradeLevel(settled.grade, config.grades).preReaders ?? false,
+        gameType: key,
       });
       built.set(key, subject);
     }

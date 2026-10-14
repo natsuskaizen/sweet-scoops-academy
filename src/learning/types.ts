@@ -135,6 +135,12 @@ export interface LearningSubject<S extends ChallengeSpec, P> {
   readonly id: string;
   /** A few characters a young child can recognise, shown on the progress calendar (e.g. "123", "ABC"). */
   readonly badge: string;
+  /**
+   * Which game this is within the subject (times tables, sharing, ...). The
+   * progress calendar asks for a heart's games to be different from each
+   * other; a subject with no game types counts every round as the same game.
+   */
+  readonly gameType?: string;
   createProgress(): P;
   /** Choose `ctx.count` challenges for the next round, adapting to `progress`. */
   planRound(progress: P, ctx: PlanContext): S[];

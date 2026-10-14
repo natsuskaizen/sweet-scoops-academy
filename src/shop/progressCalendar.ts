@@ -1,13 +1,16 @@
 /**
  * The kids' progress calendar. Each finished round (a "game", in any subject)
- * is added to the day it finished on; reaching the day's goal stamps a heart
- * on that date with the time played. Phaser-free: src/ui/CalendarScreen.ts and
- * src/ui/WallCalendar.ts only draw what this returns.
+ * is added to the day it finished on, with which kind of game it was. Playing
+ * the day's goal of different games (times tables, then sharing, then a mix)
+ * stamps a heart on that date with the time played; the same game again
+ * still counts as played but adds no slice. Phaser-free: src/ui/CalendarScreen.ts
+ * and src/ui/WallCalendar.ts only draw what this returns.
  *
  * Gentle by design: days short of the goal show how many games were played,
  * never a cross, and a heart once earned is never taken away.
  */
 import { GAME_CONFIG } from '../config/gameConfig';
+import { gameCount } from '../learning/grades';
 import type { DayRecord, Profile, RoundSummary } from '../save/saveTypes';
 
 export type CalendarSettings = typeof GAME_CONFIG.calendar;
@@ -46,7 +49,11 @@ export interface DayView {
   /** After today: drawn faintly and can't be picked. */
   isFuture: boolean;
   heart: boolean;
+  /** Rounds finished that day, of any game. */
   rounds: number;
+  /** Different games played that day, at most `goal`: the slices of the heart filled. */
+  progress: number;
+  /** Different games the heart needs. */
   goal: number;
   /** "12 min", or '' when nothing was played. */
   minutes: string;
@@ -77,20 +84,34 @@ export function minutesLabel(playMs: number): string {
   return `${Math.max(1, Math.round(playMs / 60_000))} min`;
 }
 
-const emptyDay = (): DayRecord => ({ rounds: 0, playMs: 0, subjects: {}, heart: false });
+const emptyDay = (): DayRecord => ({ rounds: 0, playMs: 0, subjects: {}, types: [], heart: false });
 
-/** Adds one finished round to its day. Returns true when this round earned the day's heart. */
+/** Different games played on a day; a day from before game types counts each round as a game. */
+const gamesPlayed = (day: DayRecord): number => day.types.length || day.rounds;
+
+/** A player's heart needs this many different games: the goal, but never more than their grade offers. */
+export const gamesForHeart = (profile: Profile, settings: CalendarSettings = GAME_CONFIG.calendar): number =>
+  Math.max(1, Math.min(profile.settings.dailyGoal, gameCount(profile.settings), settings.dailyGoal.max));
+
+/**
+ * Adds one finished round to its day. `gameType` is which game it was; a round with
+ * none (a save from before game types) counts as a game of its own. Returns true
+ * when this round earned the day's heart.
+ */
 export function addRound(
   log: Record<string, DayRecord>,
   round: Pick<RoundSummary, 'finishedAt' | 'playMs'>,
   subjectId: string,
   goal: number,
+  gameType?: string,
 ): boolean {
   const day = (log[dayKey(round.finishedAt)] ??= emptyDay());
   day.rounds += 1;
   day.playMs += round.playMs ?? 0;
   day.subjects[subjectId] = (day.subjects[subjectId] ?? 0) + 1;
-  const earned = !day.heart && day.rounds >= goal;
+  if (gameType !== undefined && !day.types.includes(gameType)) day.types.push(gameType);
+  const different = gamesPlayed(day);
+  const earned = !day.heart && different >= goal;
   if (earned) day.heart = true;
   return earned;
 }
@@ -106,9 +127,10 @@ export function recordRound(
   profile: Profile,
   summary: RoundSummary,
   subjectId: string,
+  gameType: string | undefined,
   settings: CalendarSettings = GAME_CONFIG.calendar,
 ): boolean {
-  const earned = addRound(profile.dailyLog, summary, subjectId, profile.settings.dailyGoal);
+  const earned = addRound(profile.dailyLog, summary, subjectId, gamesForHeart(profile, settings), gameType);
   pruneLog(profile.dailyLog, summary.finishedAt, settings.keepDays);
   return earned;
 }
@@ -130,20 +152,20 @@ export function nextGoal(goal: number, settings: CalendarSettings = GAME_CONFIG.
   return goal >= max || goal < min ? min : goal + 1;
 }
 
-function message(rounds: number, goal: number, heart: boolean, isToday: boolean): string {
+function message(rounds: number, left: number, heart: boolean, isToday: boolean): string {
   if (heart) return isToday ? 'You earned a heart today!' : 'Heart stamp!';
   if (!isToday) return rounds === 0 ? 'A rest day' : `${rounds} ${rounds === 1 ? 'game' : 'games'} played`;
-  const left = goal - rounds;
-  return `${left === 1 ? 'One more game' : `${left} more games`} for a heart!`;
+  return `${left === 1 ? 'One new game' : `${left} new games`} for a heart!`;
 }
 
-/** One day's view. Today shows a heart as soon as the current goal is reached, even if it was raised. */
+/** One day's view; `goal` is the different games a heart needs. Today shows a heart as soon as the current goal is reached, even if it was raised. */
 export function dayView(log: Record<string, DayRecord>, key: string, goal: number, now: number): DayView {
   const record = log[key] ?? emptyDay();
   const [year, month, date] = key.split('-').map(Number) as [number, number, number];
   const today = dayKey(now);
   const isToday = key === today;
-  const heart = record.heart || (isToday && record.rounds >= goal);
+  const different = gamesPlayed(record);
+  const heart = record.heart || (isToday && different >= goal);
   const weekday = WEEKDAYS[new Date(year, month - 1, date).getDay()]!;
   return {
     key,
@@ -153,12 +175,13 @@ export function dayView(log: Record<string, DayRecord>, key: string, goal: numbe
     isFuture: key > today,
     heart,
     rounds: record.rounds,
+    progress: heart ? goal : Math.min(different, goal),
     goal,
     minutes: record.rounds > 0 ? minutesLabel(record.playMs) : '',
     subjects: Object.entries(record.subjects)
       .sort((a, b) => b[1] - a[1])
       .map(([id]) => id),
-    message: message(record.rounds, goal, heart, isToday),
+    message: message(record.rounds, goal - different, heart, isToday),
   };
 }
 
@@ -210,8 +233,12 @@ export function wallPage(now: number): { month: string; date: string } {
   return { month: MONTHS[d.getMonth()]!.slice(0, 3).toUpperCase(), date: String(d.getDate()) };
 }
 
-/** Today's games toward the goal, for the wall calendar's hearts: how many of `goal` are filled. */
+/** Today's different games toward the heart, for the wall calendar's hearts: how many of `goal` are filled. */
 export function todayProgress(profile: Profile, now: number): { filled: number; goal: number; heart: boolean } {
-  const view = dayView(profile.dailyLog, dayKey(now), profile.settings.dailyGoal, now);
-  return { filled: Math.min(view.rounds, view.goal), goal: view.goal, heart: view.heart };
+  const view = dayView(profile.dailyLog, dayKey(now), gamesForHeart(profile), now);
+  return { filled: view.progress, goal: view.goal, heart: view.heart };
 }
+
+/** The games played today, in the order they were first played. */
+export const typesToday = (profile: Profile, now: number): readonly string[] =>
+  profile.dailyLog[dayKey(now)]?.types ?? [];

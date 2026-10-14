@@ -210,7 +210,12 @@ export class OrderManager {
       .filter((o) => o.outcome !== null)
       .map((o) => ({ customer: customerById(o.customerId, this.roster), firstTry: o.outcome === 'first' }));
     this.profile.roundHistory = [...this.profile.roundHistory, summary].slice(-MAX_HISTORY);
-    const heartEarned = recordRound(this.profile, summary, this.opts.subject.id);
+    const heartEarned = recordRound(
+      this.profile,
+      summary,
+      this.opts.subject.id,
+      this.opts.subject.gameType ?? this.opts.subject.id,
+    );
     this.profile.currentRound = null;
     this.persist();
     return { kind: 'round-complete', summary, stickers, heartEarned };

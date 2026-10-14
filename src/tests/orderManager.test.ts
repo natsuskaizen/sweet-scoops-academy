@@ -57,9 +57,14 @@ describe('OrderManager', () => {
         if (done.kind === 'round-complete') return done.heartEarned;
       }
     };
-    expect([playRound(), playRound(), playRound()]).toEqual([false, true, false]);
+    // The same game three times fills one slice, not the heart.
+    expect([playRound(), playRound(), playRound()]).toEqual([false, false, false]);
+    manager.profile.settings.dailyGoal = 1;
+    expect(playRound()).toBe(true);
     const days = Object.values(manager.profile.dailyLog);
-    expect(days).toEqual([{ rounds: 3, playMs: expect.any(Number), subjects: { math: 3 }, heart: true }]);
+    expect(days).toEqual([
+      { rounds: 4, playMs: expect.any(Number), subjects: { math: 4 }, types: [expect.any(String)], heart: true },
+    ]);
     expect(days[0]!.playMs).toBeGreaterThan(0);
   });
 

@@ -27,6 +27,10 @@ export interface GameServices {
   persistent: boolean;
   /** The subject a player practises, from their grade and math mode. Swap here to play a different subject. */
   subjectFor: (profile: Profile) => Subject;
+  /** False when a developer's `?ops=` plays fixed operations, so there is no game to pick. */
+  picksGame: boolean;
+  /** Set when a child has just picked a game, so the restarted shop starts that round without asking again. */
+  justPicked?: boolean;
   /** Characters a grown-up added on this device. */
   characters: CharacterLibrary;
   /**
@@ -55,8 +59,11 @@ function browserStorage(): StorageLike | null {
  * `?ops=addition,subtraction` plays those operations for everyone instead,
  * without editing GAME_CONFIG.
  */
+const devOps = (): string | null =>
+  import.meta.env.DEV ? new URLSearchParams(window.location.search).get('ops') : null;
+
 function chooseSubject(): (profile: Profile) => Subject {
-  const ops = import.meta.env.DEV ? new URLSearchParams(window.location.search).get('ops') : null;
+  const ops = devOps();
   if (!ops) return (profile) => subjectForGrade(profile.settings);
   const subject = createMathSubject({
     operations: createOperations({ ...GAME_CONFIG.math, enabledOperations: ops.split(',') }),
@@ -82,8 +89,22 @@ export function createServices(): GameServices {
     const memory = new MemoryStorage();
     const saves = new SaveManager(memory);
     const characters = new CharacterLibrary(memory);
-    return { ...fromLoad(saves.load()), saves, persistent: false, subjectFor: chooseSubject(), characters };
+    return {
+      ...fromLoad(saves.load()),
+      saves,
+      persistent: false,
+      picksGame: !devOps(),
+      subjectFor: chooseSubject(),
+      characters,
+    };
   }
   const characters = new CharacterLibrary(storage ?? new MemoryStorage());
-  return { ...fromLoad(load), saves, persistent: storage !== null, subjectFor: chooseSubject(), characters };
+  return {
+    ...fromLoad(load),
+    saves,
+    persistent: storage !== null,
+    picksGame: !devOps(),
+    subjectFor: chooseSubject(),
+    characters,
+  };
 }

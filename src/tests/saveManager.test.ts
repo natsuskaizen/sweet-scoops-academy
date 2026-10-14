@@ -206,7 +206,7 @@ describe('SaveManager', () => {
     const profile = parsed.save.profiles[parsed.save.activeProfileId]!;
     expect(profile.settings.dailyGoal).toBe(GAME_CONFIG.calendar.defaultDailyGoal);
     expect(profile.dailyLog).toEqual({
-      '2026-10-12': { rounds: 3, playMs: 180_000, subjects: { math: 3 }, heart: true },
+      '2026-10-12': { rounds: 3, playMs: 180_000, subjects: { math: 3 }, types: [], heart: true },
     });
   });
 
@@ -221,6 +221,7 @@ describe('SaveManager', () => {
       'dailyLog[yesterday].playMs invalid',
       'dailyLog[yesterday].heart invalid',
       'dailyLog[yesterday].subjects invalid',
+      'dailyLog[yesterday].types invalid',
       'dailyLog[2026-10-12] not an object',
     ]);
     p.dailyLog = [] as never;
@@ -256,6 +257,17 @@ describe('SaveManager', () => {
     const parsed = parseSave(JSON.stringify(v4));
     if (!parsed.ok) throw new Error(parsed.problems.join());
     expect(parsed.save.profiles[v4.activeProfileId]!.settings).toMatchObject({ grade: 'grade3', mathMode: 'mixed' });
+  });
+
+  it('upgrades a version 5 save: each day of the calendar gets an empty list of games played', () => {
+    const v5 = createSaveFile(1000);
+    v5.schemaVersion = 5;
+    const p = v5.profiles[v5.activeProfileId]!;
+    p.dailyLog = { '2026-10-12': { rounds: 2, playMs: 1, subjects: { math: 2 }, heart: true } as never };
+
+    const parsed = parseSave(JSON.stringify(v5));
+    if (!parsed.ok) throw new Error(parsed.problems.join());
+    expect(parsed.save.profiles[v5.activeProfileId]!.dailyLog['2026-10-12']).toMatchObject({ types: [], heart: true });
   });
 
   it('rejects a player with no grade, but loads a grade this game does not know', () => {

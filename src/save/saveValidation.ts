@@ -129,6 +129,7 @@ const DAY_FIELDS: Record<string, (v: unknown) => boolean> = {
   playMs: isNonNegInt,
   heart: (v) => typeof v === 'boolean',
   subjects: (v) => isObj(v) && Object.values(v).every(isNonNegInt),
+  types: isStrArray,
 };
 
 function checkDailyLog(log: unknown, path: string, out: string[]): void {

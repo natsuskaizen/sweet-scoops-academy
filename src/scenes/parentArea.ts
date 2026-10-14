@@ -59,7 +59,7 @@ function parentActions(host: ParentAreaHost): ParentAction[] {
 function dailyGoalAction({ services, profile }: ParentAreaHost): ParentAction {
   const goal = profile().settings.dailyGoal;
   return {
-    label: `Heart goal: ${goal} ${goal === 1 ? 'game' : 'games'} a day`,
+    label: `Heart goal: ${goal} different ${goal === 1 ? 'game' : 'games'}`,
     enabled: true,
     run: (gate) => {
       const settings = profile().settings;

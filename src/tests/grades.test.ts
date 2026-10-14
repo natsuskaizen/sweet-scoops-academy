@@ -16,7 +16,7 @@ import { MemoryStorage, SaveManager, createSaveFile, parseSave } from '../save/s
 import { subjectProgress } from '../save/saveTypes';
 import { OrderManager } from '../shop/orderManager';
 
-const K = { grade: 'kindergarten', mathMode: 'countAdd' };
+const K = { grade: 'kindergarten', mathMode: 'mixed' };
 const plan = (choice: { grade: string; mathMode: string }) =>
   subjectForGrade(choice).planRound(
     {},
@@ -26,14 +26,20 @@ const plan = (choice: { grade: string; mathMode: string }) =>
 describe('grade levels', () => {
   it('starts everyone in 3rd grade with multiplication and division mixed', () => {
     expect(defaultGradeChoice()).toEqual({ grade: 'grade3', mathMode: 'mixed' });
-    expect(describeChoice(defaultGradeChoice())).toBe('3rd grade · Multiplication and division');
-    expect(describeChoice(K)).toBe('Kindergarten');
+    expect(describeChoice(defaultGradeChoice())).toBe('3rd grade · Mix it up');
+    expect(describeChoice(K)).toBe('Kindergarten · Mix it up');
   });
 
   it('plays an unknown grade or mode as the nearest one it has', () => {
     expect(gradeLevel('grade9').id).toBe('grade3');
-    expect(settleChoice({ grade: 'grade3', mathMode: 'fractions' })).toEqual({ grade: 'grade3', mathMode: 'mixed' });
-    expect(settleChoice({ grade: 'kindergarten', mathMode: 'division' })).toEqual(K);
+    expect(settleChoice({ grade: 'grade3', mathMode: 'fractions' })).toEqual({
+      grade: 'grade3',
+      mathMode: 'multiplication',
+    });
+    expect(settleChoice({ grade: 'kindergarten', mathMode: 'division' })).toEqual({
+      grade: 'kindergarten',
+      mathMode: 'counting',
+    });
   });
 
   it('throws when the default grade is missing from the config', () => {
@@ -98,7 +104,7 @@ describe('choosing a grade', () => {
     expect(p.currentRound).toBeNull();
   });
 
-  it('moving grade starts on its first mode; picking the same grade keeps the mode', () => {
+  it('moving grade starts on its start mode; picking the same grade keeps the mode', () => {
     const save = createSaveFile(1);
     const p = save.profiles[save.activeProfileId]!;
     chooseGrade(p, { grade: 'grade3', mathMode: 'division' });

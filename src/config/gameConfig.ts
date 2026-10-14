@@ -26,10 +26,15 @@ export interface MathConfig {
   factorTiers: Readonly<Record<number, number>>;
 }
 
-/** One way to practise a grade's math, e.g. "multiplication only". */
+/** One game a child can pick for a round, e.g. "Times tables". */
 export interface MathMode {
   id: string;
+  /** Shown on the pick-a-game card. */
   label: string;
+  /** A few characters that stand for the game on its card: "×", "123". */
+  symbol: string;
+  /** One short line under the label. */
+  hint: string;
   /** The operations this mode puts in rounds, split evenly (as `math.enabledOperations`). */
   operations: readonly string[];
 }
@@ -39,8 +44,10 @@ export interface GradeLevel {
   label: string;
   /** This grade's number ranges, in place of the ones in `math`. */
   math: Partial<Omit<MathConfig, 'enabledOperations'>>;
-  /** The ways to practise; the first is what a player gets on moving to this grade. */
+  /** The games to pick from, in the order shown. A grade with one game skips the picking. */
   mathModes: readonly MathMode[];
+  /** The game a player has on moving to this grade, until they pick (the first when left out). */
+  startMode?: string;
   /** Players can't read yet: orders are drawn as pictures and number keys show dots. */
   preReaders?: boolean;
 }
@@ -145,7 +152,10 @@ export interface GameConfig {
   };
   /** The kids' progress calendar: a heart stamp on each day the goal is reached. */
   calendar: {
-    /** Games (finished rounds, any subject) in a day for a heart, until a grown-up picks another goal. */
+    /**
+     * Different games (finished rounds of different kinds, e.g. times tables then sharing) in a day for a
+     * heart, until a grown-up picks another goal. Never more than the games the player's grade has.
+     */
     defaultDailyGoal: number;
     /** The goals a grown-up can choose from. */
     dailyGoal: { min: number; max: number };
@@ -237,7 +247,18 @@ export const GAME_CONFIG: GameConfig = {
           addition: { addend: { min: 1, max: 4 }, maxSum: 5 },
           counting: { count: { min: 1, max: 5 } },
         },
-        mathModes: [{ id: 'countAdd', label: 'Counting and adding', operations: ['counting', 'addition'] }],
+        mathModes: [
+          { id: 'counting', label: 'How many?', symbol: '123', hint: 'Count the scoops', operations: ['counting'] },
+          { id: 'adding', label: 'Adding', symbol: '+', hint: 'Put scoops together', operations: ['addition'] },
+          {
+            id: 'mixed',
+            label: 'Mix it up',
+            symbol: '1+',
+            hint: 'A bit of both',
+            operations: ['counting', 'addition'],
+          },
+        ],
+        startMode: 'mixed',
         preReaders: true,
       },
       {
@@ -245,10 +266,23 @@ export const GAME_CONFIG: GameConfig = {
         label: '3rd grade',
         math: {},
         mathModes: [
-          { id: 'mixed', label: 'Multiplication and division', operations: ['multiplication', 'division'] },
-          { id: 'multiplication', label: 'Multiplication only', operations: ['multiplication'] },
-          { id: 'division', label: 'Division only', operations: ['division'] },
+          {
+            id: 'multiplication',
+            label: 'Times tables',
+            symbol: '×',
+            hint: 'Groups of scoops',
+            operations: ['multiplication'],
+          },
+          { id: 'division', label: 'Sharing', symbol: '÷', hint: 'Share scoops fairly', operations: ['division'] },
+          {
+            id: 'mixed',
+            label: 'Mix it up',
+            symbol: '×÷',
+            hint: 'A bit of both',
+            operations: ['multiplication', 'division'],
+          },
         ],
+        startMode: 'mixed',
       },
     ],
   },
