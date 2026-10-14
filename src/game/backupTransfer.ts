@@ -31,21 +31,37 @@ function downloadFile(file: File): void {
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
-/** Opens the file picker; resolves null if the parent cancels. Must run inside a tap. */
+const PICKER_ATTR = 'data-backup-picker';
+const BACKUP_ACCEPT = `${BACKUP_MIME},.json,text/plain,.txt`;
+
+/**
+ * Opens the file picker; resolves null if the parent cancels. Must run inside a tap.
+ *
+ * The input is attached to the page while the picker is open: Safari on iPad and
+ * iPhone (most often the Home Screen app) can drop a detached input before the
+ * parent picks a file, so the choice never arrives and nothing loads. iOS also
+ * greys out files whose type it can't match to `accept`, so plain-text copies
+ * of a backup stay pickable; the contents are checked before anything is loaded.
+ */
 export function pickBackupFile(): Promise<PickResult> {
-  return new Promise((resolve) => {
-    const input = Object.assign(document.createElement('input'), { type: 'file', accept: `${BACKUP_MIME},.json` });
+  document.querySelectorAll(`input[${PICKER_ATTR}]`).forEach((old) => old.remove());
+  const input = Object.assign(document.createElement('input'), { type: 'file', accept: BACKUP_ACCEPT, hidden: true });
+  input.setAttribute(PICKER_ATTR, '');
+  document.body.append(input);
+  return new Promise<PickResult>((resolve) => {
     input.addEventListener('cancel', () => resolve(null));
-    input.addEventListener('change', () => {
-      const file = input.files?.[0];
-      if (!file) return resolve(null);
-      if (file.size > GAME_CONFIG.backup.maxImportBytes)
-        return resolve({ ok: false, error: 'That file is too big to be a backup.' });
-      file.text().then(
-        (text) => resolve({ ok: true, text }),
-        () => resolve({ ok: false, error: 'That file could not be read.' }),
-      );
-    });
+    input.addEventListener('change', () => void readPicked(input.files?.[0]).then(resolve));
     input.click();
-  });
+  }).finally(() => input.remove());
+}
+
+async function readPicked(file: File | undefined): Promise<PickResult> {
+  if (!file) return null;
+  if (file.size > GAME_CONFIG.backup.maxImportBytes)
+    return { ok: false, error: 'That file is too big to be a backup.' };
+  try {
+    return { ok: true, text: await file.text() };
+  } catch {
+    return { ok: false, error: 'That file could not be read.' };
+  }
 }
