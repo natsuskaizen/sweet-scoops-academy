@@ -32,6 +32,7 @@ import { CalendarScreen } from '../ui/CalendarScreen';
 import { NumberKeypad } from '../ui/NumberKeypad';
 import { OrderPanel, SpeechBubble } from '../ui/OrderPanel';
 import { ParentGate, type ParentGateOptions } from '../ui/ParentGate';
+import { setCalm } from '../ui/motion';
 import { ShopMenu } from '../ui/ShopMenu';
 import { StatusBar } from '../ui/StatusBar';
 import { COLORS, CSS, LAYOUT, text } from '../ui/theme';
@@ -45,7 +46,8 @@ import { scoopOntoCone } from './serveAnimation';
 import { ClosetMode } from './closetMode';
 import { PlacedDecorations } from './decorArt';
 import { DecorateMode } from './decorateMode';
-import { NewPlayerSetup } from './newPlayerSetup';
+import { MyShopPanel, type KidToggle } from './myShop';
+import { NewPlayerSetup, type EditStep } from './newPlayerSetup';
 import { StartScreen } from './startScreen';
 import { drawShopRoom, setShopSign, type ShopRoom } from './shopArt';
 
@@ -83,6 +85,8 @@ export class ShopScene extends Phaser.Scene {
   private closet: ClosetMode | null = null;
   /** The Sprinkle Shop's menu, while it is open. */
   private shopMenu: ShopMenu | null = null;
+  /** The player's own settings, from ⚙ (the e2e test taps through `__ssa`). */
+  private myShop: MyShopPanel | null = null;
   /** The calendar on the shop wall, and the progress calendar it opens (the e2e test drives both through `__ssa`). */
   private wallCalendar!: WallCalendar;
   private calendar: CalendarScreen | null = null;
@@ -127,11 +131,8 @@ export class ShopScene extends Phaser.Scene {
 
     this.shopkeeper = this.makeShopkeeper();
 
-    this.status = new StatusBar(
-      this,
-      () => this.openParentGate(),
-      () => this.openShopMenu(),
-    );
+    const gear = { onTap: () => this.openMyShop(), onHold: () => this.openParentGate() };
+    this.status = new StatusBar(this, gear, () => this.openShopMenu());
     this.status.setSprinkles(this.manager.profile.sprinkles);
     this.ticket = new OrderPanel(this, LAYOUT.ticket.x, LAYOUT.ticket.y, LAYOUT.ticket.w, LAYOUT.ticket.h).setDepth(70);
     this.bubble = new SpeechBubble(this, LAYOUT.bubble.x, 455, LAYOUT.bubble.w, LAYOUT.bubble.h).setDepth(60);
@@ -346,6 +347,8 @@ export class ShopScene extends Phaser.Scene {
     this.closet = null;
     this.setup = null;
     this.start = null;
+    this.myShop = null;
+    setCalm(this.activeProfile().settings.reduceMotion);
   }
 
   /** Hands control back to the player. */
@@ -356,7 +359,8 @@ export class ShopScene extends Phaser.Scene {
 
   /** The keypad takes answers only while the shop waits for one and the grown-ups area is closed. */
   private syncInput(): void {
-    const away = this.gate || this.decorate || this.closet || this.shopMenu || this.calendar;
+    const away =
+      this.gate || this.decorate || this.closet || this.shopMenu || this.calendar || this.myShop || this.setup;
     this.keypad.setEnabled(!this.busy && !away);
   }
 
@@ -632,6 +636,66 @@ export class ShopScene extends Phaser.Scene {
     const result = this.services.saves.write(this.services.save);
     if (!result.ok) this.toast('That could not be saved just now.');
     return result.ok;
+  }
+
+  // -------------------------------------------------------------------------
+  // My shop
+  // -------------------------------------------------------------------------
+
+  /** ⚙ opens the player's own settings, over whatever the shop is doing. */
+  private openMyShop(): void {
+    if (this.myShop || this.gate || this.decorate || this.closet || this.shopMenu || this.calendar || this.setup)
+      return;
+    const profile = this.manager.profile;
+    const calmBefore = profile.settings.reduceMotion;
+    this.myShop = new MyShopPanel({
+      scene: this,
+      profile,
+      onChange: (step) => this.changeShop(step),
+      onToggle: (setting) => this.toggleSetting(setting),
+      onSwitchPlayer: () => this.switchPlayer(),
+      onGrownUps: () => this.openParentGate(),
+      onClose: () => {
+        this.myShop = null;
+        // Characters already breathing or bouncing pick up calm mode when the shop is rebuilt.
+        if (profile.settings.reduceMotion !== calmBefore) this.scene.restart();
+        else this.syncInput();
+      },
+    });
+    this.syncInput();
+  }
+
+  private toggleSetting(setting: KidToggle): void {
+    const { settings } = this.manager.profile;
+    settings[setting] = !settings[setting];
+    if (!this.saveNow()) settings[setting] = !settings[setting];
+    setCalm(settings.reduceMotion);
+  }
+
+  /** The setup's shop-name or shopkeeper step; the sign and counter follow, and Done saves and rebuilds the shop. */
+  private changeShop(step: EditStep): void {
+    const profile = this.manager.profile;
+    const player = { name: profile.displayName, shop: { ...profile.shop } };
+    this.setup = new NewPlayerSetup({
+      scene: this,
+      edit: { step, player },
+      onShopName: (name) => setShopSign(this.room.sign, name),
+      onKeeper: (id) => this.previewKeeper(id),
+      onDone: ({ shop }) => {
+        updatePlayer(profile, { shopName: shop.name, keeper: shop.keeper });
+        this.saveNow();
+        this.scene.restart();
+      },
+      onCancel: () => this.scene.restart(),
+    });
+    this.syncInput();
+  }
+
+  /** Back to the start screen, where another child can open their shop. */
+  private switchPlayer(): void {
+    this.services.stage = 'start';
+    this.saveNow();
+    this.scene.restart();
   }
 
   // -------------------------------------------------------------------------

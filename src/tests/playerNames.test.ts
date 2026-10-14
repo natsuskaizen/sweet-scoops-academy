@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createRng } from '../core/rng';
-import { BACK, rollShopName, SHOP_NAME_IDEAS, SPACE, typeKey } from '../shop/playerNames';
+import { BACK, letterAs, rollShopName, SHOP_NAME_IDEAS, SPACE, typeKey } from '../shop/playerNames';
 
 const type = (keys: string[], max = 12) => keys.reduce((text, key) => typeKey(text, key, max), '');
 
@@ -44,5 +44,14 @@ describe('rollShopName', () => {
 
   it('offers ideas that fit the sign', () => {
     for (const idea of SHOP_NAME_IDEAS) expect(idea.length).toBeLessThanOrEqual(28);
+  });
+});
+
+describe('letterAs', () => {
+  it('shows capitals at the start of each word and small letters after, as typeKey types them', () => {
+    expect(letterAs('', 'a')).toBe('A');
+    expect(letterAs('Av', 'A')).toBe('a');
+    expect(letterAs('Ava ', 'm')).toBe('M');
+    for (const current of ['', 'Av', 'Ava ']) expect(typeKey(current, 'q', 12)).toBe(current + letterAs(current, 'q'));
   });
 });

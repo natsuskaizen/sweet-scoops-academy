@@ -21,7 +21,8 @@ export class StatusBar extends Phaser.GameObjects.Container {
   private balance = 0;
   private holdRing: Phaser.GameObjects.Graphics;
 
-  constructor(scene: Phaser.Scene, onParentHold: () => void, onShop: () => void) {
+  /** ⚙ opens My shop with a tap, or goes straight to the grown-ups area when held. */
+  constructor(scene: Phaser.Scene, gear: { onTap: () => void; onHold: () => void }, onShop: () => void) {
     super(scene, 0, 0);
     const { w, h, orderFont, pillX, pillW, gearX } = LAYOUT.statusBar;
     const bg = scene.add.graphics();
@@ -42,17 +43,17 @@ export class StatusBar extends Phaser.GameObjects.Container {
       .setInteractive({ useHandCursor: true });
     shop.on('pointerup', onShop);
 
-    const gear = scene.add.text(gearX, h / 2 - 3, '⚙', text(40, CSS.inkSoft)).setOrigin(0.5);
+    const gearIcon = scene.add.text(gearX, h / 2 - 3, '⚙', text(40, CSS.inkSoft)).setOrigin(0.5);
     this.holdRing = scene.add.graphics();
-    const hit = this.holdButton(gearX, h / 2 - 3, onParentHold);
+    const hit = this.holdButton(gearX, h / 2 - 3, gear);
 
-    this.add([bg, this.orderText, this.dots, pill, icon, this.sprinklesText, shop, gear, this.holdRing, hit]);
+    this.add([bg, this.orderText, this.dots, pill, icon, this.sprinklesText, shop, gearIcon, this.holdRing, hit]);
     this.setDepth(400);
     scene.add.existing(this);
   }
 
-  /** Grown-ups button: a ring fills while held, and only a full hold opens it. */
-  private holdButton(x: number, y: number, onParentHold: () => void): Phaser.GameObjects.Zone {
+  /** ⚙: a ring fills while held, and only a full hold opens the grown-ups area; letting go sooner is a tap. */
+  private holdButton(x: number, y: number, gear: { onTap: () => void; onHold: () => void }): Phaser.GameObjects.Zone {
     const scene = this.scene;
     const hit = scene.add.zone(x, y, 76, 64).setInteractive();
     let holdTween: Phaser.Tweens.Tween | undefined;
@@ -76,11 +77,15 @@ export class StatusBar extends Phaser.GameObjects.Container {
         },
         onComplete: () => {
           cancel();
-          onParentHold();
+          gear.onHold();
         },
       });
     });
-    hit.on('pointerup', cancel);
+    hit.on('pointerup', () => {
+      if (!holdTween) return;
+      cancel();
+      gear.onTap();
+    });
     hit.on('pointerout', cancel);
     return hit;
   }

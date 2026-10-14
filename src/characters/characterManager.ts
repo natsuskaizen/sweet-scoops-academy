@@ -38,6 +38,7 @@ import {
 } from './sprites';
 import { frameFor, hasWalkFrames, type AddedCharacter, type Pose } from '../shop/addedCharacters';
 import { GAME_CONFIG } from '../config/gameConfig';
+import { isCalm } from '../ui/motion';
 import { CHAR_SCALE } from '../ui/theme';
 import { tweenAsync } from '../ui/tweenAsync';
 
@@ -256,6 +257,8 @@ export class CharacterView extends Phaser.GameObjects.Container {
     const parts = [this.base, ...this.layerImages.values(), ...this.worn];
     for (const part of parts) part.setScale(1);
     if (on) {
+      this.scheduleBlink();
+      if (isCalm()) return this;
       this.bobTween = this.scene.tweens.add({
         targets: parts,
         scaleX: 1.02,
@@ -265,7 +268,6 @@ export class CharacterView extends Phaser.GameObjects.Container {
         repeat: -1,
         ease: 'Sine.easeInOut',
       });
-      this.scheduleBlink();
     }
     return this;
   }
@@ -287,6 +289,7 @@ export class CharacterView extends Phaser.GameObjects.Container {
   /** Jump for joy with a few hearts (a right answer). */
   cheer(): Promise<void> {
     hearts(this.scene, this.x, this.y - this.displayHeight - 10);
+    if (isCalm()) return Promise.resolve();
     return tweenAsync(this.scene, { targets: this, y: this.y - 40, duration: 180, yoyo: true, ease: 'Quad.easeOut' });
   }
 
@@ -294,6 +297,7 @@ export class CharacterView extends Phaser.GameObjects.Container {
   puzzled(): void {
     this.setExpression('thinking');
     questionBubble(this.scene, this.x + this.displayWidth * 0.75, this.y - this.displayHeight * 0.8);
+    if (isCalm()) return;
     this.scene.tweens.add({
       targets: this,
       angle: { from: -7, to: 7 },
@@ -321,6 +325,7 @@ export class CharacterView extends Phaser.GameObjects.Container {
 
   /** Hop in place (happy reaction). */
   hop(): Promise<void> {
+    if (isCalm()) return Promise.resolve();
     return tweenAsync(this.scene, {
       targets: this,
       y: this.y - 24,

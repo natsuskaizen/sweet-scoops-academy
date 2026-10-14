@@ -10,7 +10,7 @@ import { friendName, isFriendId, type FriendId } from '../characters/friendArt';
 import { GAME_CONFIG } from '../config/gameConfig';
 import { createRng, randomSeed, type Rng } from '../core/rng';
 import type { NewPlayer } from '../save/profileActions';
-import { ownedShopName, rollShopName, SHOP_NAME_IDEAS, typeKey, type LetterKey } from '../shop/playerNames';
+import { letterAs, ownedShopName, rollShopName, SHOP_NAME_IDEAS, typeKey, type LetterKey } from '../shop/playerNames';
 import { Button } from '../ui/Button';
 import { gridCells, letterKeyCells, setupLayout, type SetupLayout } from '../ui/setupLayout';
 import { COLORS, CSS, LAYOUT, text, type Rect } from '../ui/theme';
@@ -22,12 +22,22 @@ export interface SetupHost {
   /** The chosen friend steps behind the counter. */
   onKeeper: (id: FriendId) => void;
   onDone: (player: NewPlayer) => void;
-  /** When adding a player from the start screen, ✕ goes back to it. */
+  /** When adding a player from the start screen, or changing one thing from My shop, ✕ goes back. */
   onCancel?: () => void;
+  /** Changing one thing for a player who has a shop: starts on that step with their choices, and Done finishes. */
+  edit?: { step: EditStep; player: NewPlayer };
 }
 
+export type EditStep = 'shop' | 'keeper';
+
 type Step = 'name' | 'shop' | 'typeShop' | 'keeper' | 'ready';
+const NEXT_STEP: Record<EditStep, Step> = { shop: 'keeper', keeper: 'ready' };
+/** Where ◀ goes from each step; the first step has none. */
+const PREVIOUS_STEP: Partial<Record<Step, Step>> = { shop: 'name', typeShop: 'shop', keeper: 'shop', ready: 'keeper' };
 const STEP_DOT: Record<Step, number> = { name: 0, shop: 1, typeShop: 1, keeper: 2, ready: 3 };
+
+/** What the keys that aren't letters show. */
+const KEY_LABELS: Record<string, string> = { done: '✓', back: '⌫', ' ': 'space' };
 
 const button = (scene: Phaser.Scene, r: Rect, label: string, fontSize: number, onTap: () => void) =>
   new Button(scene, r.x + r.w / 2, r.y + r.h / 2, { width: r.w, height: r.h, label, fontSize, onTap });
@@ -43,13 +53,18 @@ export class NewPlayerSetup {
   private shopName = '';
   private keeper: FriendId;
   private nameText: Phaser.GameObjects.Text | null = null;
+  /** The shop name before "Type my own" cleared it, for ◀. */
+  private shopNameBeforeTyping = '';
   private done = false;
 
   constructor(private readonly host: SetupHost) {
     const { scene } = host;
     this.layout = setupLayout(LAYOUT.panel, LAYOUT.orientation === 'portrait');
-    const keeper = this.players.defaultShop.keeper;
+    const { edit } = host;
+    const keeper = edit?.player.shop.keeper ?? this.players.defaultShop.keeper;
     this.keeper = isFriendId(keeper) ? keeper : 'momo';
+    this.name = edit?.player.name ?? '';
+    this.shopName = edit?.player.shop.name ?? '';
     const { x, y, w, h } = LAYOUT.panel;
     const g = scene.add.graphics();
     g.fillStyle(0xffe9d6, 1).fillRoundedRect(x, y, w, h - 10, 26);
@@ -57,8 +72,9 @@ export class NewPlayerSetup {
     // Taps on the panel never reach the ticket or keypad underneath.
     const blocker = scene.add.zone(x, y, w, h).setOrigin(0).setInteractive();
     this.page = scene.add.container(0, 0);
-    this.root = scene.add.container(0, 0, [g, blocker, this.page]).setDepth(80);
-    this.show('name');
+    // Changing from My shop can happen over the results card, so it goes above it.
+    this.root = scene.add.container(0, 0, [g, blocker, this.page]).setDepth(edit ? 660 : 80);
+    this.show(edit?.step ?? 'name');
   }
 
   /** The step showing now (the e2e test reads it). */
@@ -104,7 +120,7 @@ export class NewPlayerSetup {
     const { scene } = this.host;
     const cx = LAYOUT.panel.x + LAYOUT.panel.w / 2;
     const dots = scene.add.graphics();
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < (this.host.edit ? 0 : 4); i++) {
       dots.fillStyle(i <= STEP_DOT[step] ? COLORS.lavenderDark : 0xe2d3c4, 1);
       dots.fillCircle(cx + (i - 1.5) * 30, this.layout.dotsY, 9);
     }
@@ -117,12 +133,32 @@ export class NewPlayerSetup {
     };
     const { onCancel } = this.host;
     if (onCancel) {
-      const close = { x: LAYOUT.panel.x + 12, y: LAYOUT.panel.y + 10, w: 60, h: 56 };
+      const close = { x: LAYOUT.panel.x + LAYOUT.panel.w - 72, y: LAYOUT.panel.y + 10, w: 60, h: 56 };
       this.page.add(button(scene, close, '✕', 26, () => this.cancel(onCancel)));
+    }
+    const previous = this.previousStep(step);
+    if (previous) {
+      const back = { x: LAYOUT.panel.x + 12, y: LAYOUT.panel.y + 10, w: 60, h: 56 };
+      this.page.add(button(scene, back, '◀', 26, () => this.goBack(previous)));
     }
     const title = scene.add.text(cx, this.layout.titleY, titles[step], text(this.layout.titleFont)).setOrigin(0.5);
     title.setScale(Math.min(1, (LAYOUT.panel.w - 30) / title.width));
     this.page.add([dots, title]);
+  }
+
+  /** The step ◀ goes back to: none from the first step, or from the one step being changed. */
+  private previousStep(step: Step): Step | undefined {
+    const { edit } = this.host;
+    if (edit && step === edit.step) return undefined;
+    return PREVIOUS_STEP[step];
+  }
+
+  private goBack(step: Step): void {
+    if (this.step === 'typeShop') {
+      this.shopName = this.shopNameBeforeTyping;
+      this.host.onShopName(this.shopName || this.players.defaultShop.name);
+    }
+    this.show(step);
   }
 
   private addNameBox(value: string, fontSize: number): void {
@@ -156,25 +192,42 @@ export class NewPlayerSetup {
       this.nameText?.setText(value);
       this.fitName();
     };
-    if (what === 'shop') this.shopName = '';
+    if (what === 'shop') {
+      this.shopNameBeforeTyping = this.shopName;
+      this.shopName = '';
+    }
     this.addNameBox(read(), what === 'name' ? 44 : 34);
     const short = this.layout.keys.h < 300;
-    for (const { key, rect } of letterKeyCells(this.layout.keys, 8)) {
-      const label = key === 'done' ? '✓' : key === 'back' ? '⌫' : key === ' ' ? 'space' : key;
+    const letters: { key: string; button: Button }[] = [];
+    // Letter keys show the case they type next: capitals to start a word, small after.
+    const relabel = () => letters.forEach(({ key, button }) => button.setLabel(letterAs(read(), key)));
+    for (const { key, rect } of letterKeyCells(this.layout.keys, 6)) {
+      const label = KEY_LABELS[key] ?? key;
       const fontSize = key === ' ' ? 24 : short ? 26 : 30;
-      const b = button(this.host.scene, rect, label, fontSize, () =>
-        key === 'done' ? this.finishTyping(what) : write(typeKey(read(), key as LetterKey, max)),
-      );
+      const b = button(this.host.scene, rect, label, fontSize, () => {
+        if (key === 'done') return this.finishTyping(what);
+        write(typeKey(read(), key as LetterKey, max));
+        relabel();
+      });
       if (key === 'done') b.setFill(COLORS.mint, COLORS.mintDark);
+      else if (!KEY_LABELS[key]) letters.push({ key, button: b });
       this.page.add(b);
     }
+    relabel();
   }
 
   private finishTyping(what: 'name' | 'shop'): void {
     if (what === 'name' && !this.name.trim()) return;
     if (what === 'shop' && !this.shopName.trim()) return;
     if (what === 'name' && !this.shopName) this.pickShopName(this.rolled());
-    this.show(what === 'name' ? 'shop' : 'keeper');
+    if (what === 'name') this.show('shop');
+    else this.after('shop');
+  }
+
+  /** On to the next step, or finished when only this one thing was being changed. */
+  private after(step: EditStep): void {
+    if (!this.host.edit) return this.show(NEXT_STEP[step]);
+    this.complete({ name: this.name, shop: { name: this.shopName, keeper: this.keeper } });
   }
 
   private rolled(): string {
@@ -206,10 +259,10 @@ export class NewPlayerSetup {
       const owned = () => ownedShopName(this.name, idea, this.players.maxShopNameLength);
       this.page.add(button(scene, cell, idea, 21, () => this.pickShopName(owned())));
     });
-    this.addNext(() => this.show('keeper'));
+    this.addNext(() => this.after('shop'));
   }
 
-  private addNext(onTap: () => void, label = 'Next ▶'): void {
+  private addNext(onTap: () => void, label = this.host.edit ? 'Done ✓' : 'Next ▶'): void {
     const next = button(this.host.scene, this.layout.next, label, 30, onTap);
     this.page.add(next.setFill(COLORS.mint, COLORS.mintDark));
   }
@@ -229,7 +282,7 @@ export class NewPlayerSetup {
     });
     this.page.add(cards);
     this.chooseKeeper(this.keeper, cards, ids);
-    this.addNext(() => this.show('ready'));
+    this.addNext(() => this.after('keeper'));
   }
 
   private chooseKeeper(id: FriendId, cards: Button[], ids: FriendId[]): void {

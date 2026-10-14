@@ -71,6 +71,11 @@ export function typeKey(current: string, key: LetterKey, maxLength: number): str
   if (key === BACK) return current.slice(0, -1);
   if (current.length >= maxLength) return current;
   if (key === SPACE) return current === '' || current.endsWith(SPACE) ? current : current + SPACE;
+  return current + letterAs(current, key);
+}
+
+/** How a letter key looks and types next: a capital to start a word, small after that. */
+export function letterAs(current: string, letter: string): string {
   const startsWord = current === '' || current.endsWith(SPACE);
-  return current + (startsWord ? key.toUpperCase() : key.toLowerCase());
+  return startsWord ? letter.toUpperCase() : letter.toLowerCase();
 }

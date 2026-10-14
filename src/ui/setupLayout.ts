@@ -18,15 +18,25 @@ export function gridCells(area: Rect, count: number, cols: number, gap: number):
   }));
 }
 
-const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-/** Letter keys in ABC order, eight to a row; the last row ends with a wide space, back and done. */
-const KEY_SPANS: [LetterKey | 'done', number][] = [
-  ...LETTERS.map((l): [LetterKey, number] => [l, 1]),
-  [SPACE, 3],
-  [BACK, 1],
-  ['done', 2],
+/**
+ * QWERTY rows like a tablet keyboard, in half-key steps across a 10-key row:
+ * the second row is set in half a key, the third (with ⌫) a key and a half,
+ * and the last row is a wide space and done.
+ */
+const KEY_ROWS: { start: number; keys: [LetterKey | 'done', number][] }[] = [
+  { start: 0, keys: 'QWERTYUIOP'.split('').map((l) => [l, 2]) },
+  { start: 1, keys: 'ASDFGHJKL'.split('').map((l) => [l, 2]) },
+  { start: 3, keys: [...'ZXCVBNM'.split('').map((l): [LetterKey, number] => [l, 2]), [BACK, 3]] },
+  {
+    start: 0,
+    keys: [
+      [SPACE, 12],
+      ['done', 8],
+    ],
+  },
 ];
-const KEY_COLS = 8;
+const HALF_KEYS = 20;
+const KEYS_PAD = 10;
 
 export interface KeyCell {
   key: LetterKey | 'done';
@@ -35,16 +45,16 @@ export interface KeyCell {
 
 /** The letter keys laid out over `area`. */
 export function letterKeyCells(area: Rect, gap: number): KeyCell[] {
-  const unit = gridCells(area, KEY_COLS * 4, KEY_COLS, gap);
-  const cells: KeyCell[] = [];
-  let slot = 0;
-  for (const [key, span] of KEY_SPANS) {
-    const first = unit[slot]!;
-    const last = unit[slot + span - 1]!;
-    cells.push({ key, rect: { x: first.x, y: first.y, w: last.x + last.w - first.x, h: first.h } });
-    slot += span;
-  }
-  return cells;
+  const half = (area.w + gap) / HALF_KEYS;
+  const h = (area.h - gap * (KEY_ROWS.length - 1)) / KEY_ROWS.length;
+  return KEY_ROWS.flatMap(({ start, keys }, row) => {
+    let at = start;
+    return keys.map(([key, span]) => {
+      const rect = { x: area.x + at * half, y: area.y + row * (h + gap), w: span * half - gap, h };
+      at += span;
+      return { key, rect };
+    });
+  });
 }
 
 export interface SetupLayout {
@@ -83,7 +93,8 @@ export function setupLayout(panel: Rect, portrait: boolean): SetupLayout {
     titleY,
     titleFont: short ? 32 : 38,
     nameBox,
-    keys: { ...inner, y: keysTop, h: keysH },
+    // Ten QWERTY keys to a row, so the keys reach nearer the panel's edges than the rest.
+    keys: { x: panel.x + KEYS_PAD, w: panel.w - 2 * KEYS_PAD, y: keysTop, h: keysH },
     body: { ...inner, y: keysTop, h: next.y - 16 - keysTop },
     next,
     keeperCols: portrait && short ? 6 : 3,
