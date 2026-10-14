@@ -10,7 +10,7 @@
  *   3. add its rules to `MathConfig` and turn it on in `math.enabledOperations`
  */
 import type { Rng } from '../../core/rng';
-import type { ChallengeSpec, VisualAid } from '../types';
+import type { ChallengeSpec, OrderPicture, VisualAid } from '../types';
 
 export interface MathChallengeSpec extends ChallengeSpec {
   subjectId: 'math';
@@ -64,6 +64,13 @@ export interface MathOperation {
   word(spec: MathChallengeSpec, flavor: string): OrderWording;
   /** Short form of a fact key for the grown-ups screen, e.g. "5×6". */
   formatKey(key: string): string;
+  /** The question as the ticket and grown-ups show it; "left symbol right" when left out. */
+  expression?(spec: MathChallengeSpec): string;
+  /**
+   * The order as a picture for players who can't read yet. `onTicket` also
+   * draws it on the ticket in place of the expression.
+   */
+  picture?(spec: MathChallengeSpec): { order: OrderPicture; onTicket?: boolean };
 }
 
 // ---------------------------------------------------------------------------

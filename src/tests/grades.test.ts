@@ -16,7 +16,7 @@ import { MemoryStorage, SaveManager, createSaveFile, parseSave } from '../save/s
 import { subjectProgress } from '../save/saveTypes';
 import { OrderManager } from '../shop/orderManager';
 
-const K = { grade: 'kindergarten', mathMode: 'addSubtract' };
+const K = { grade: 'kindergarten', mathMode: 'countAdd' };
 const plan = (choice: { grade: string; mathMode: string }) =>
   subjectForGrade(choice).planRound(
     {},
@@ -49,11 +49,30 @@ describe('grade levels', () => {
     expect([...skills].sort()).toEqual(ops);
   });
 
-  it('kindergarten adds and takes away within 5', () => {
+  it('kindergarten counts scoops and adds within 5, drawn as pictures with dotted keys', () => {
     const specs = plan(K);
-    expect(new Set(specs.map((s) => s.skillId))).toEqual(new Set(['addition', 'subtraction']));
-    for (const s of specs) expect(Math.max(s.left, s.right, s.answer)).toBeLessThanOrEqual(5);
-    expect(mathConfigFor(K).addition).toEqual({ addend: { min: 1, max: 5 }, maxSum: 5 });
+    expect(new Set(specs.map((s) => s.skillId))).toEqual(new Set(['counting', 'addition']));
+    for (const s of specs) expect(s.answer).toBeLessThanOrEqual(5);
+    expect(mathConfigFor(K).enabledOperations).toEqual(['counting', 'addition']);
+    expect(mathConfigFor(K).addition.maxSum).toBe(5);
+    const subject = subjectForGrade(K);
+    const count = specs.find((s) => s.skillId === 'counting')!;
+    expect(subject.present(count, { flavor: 'mint' })).toMatchObject({
+      orderPicture: { kind: 'cone', scoops: count.left },
+      ticketPicture: { kind: 'cone', scoops: count.left },
+      answerInput: { kind: 'integer', dots: true },
+    });
+    const add = specs.find((s) => s.skillId === 'addition')!;
+    const added = subject.present(add, { flavor: 'mint' });
+    expect(added.orderPicture).toEqual({ kind: 'piles', parts: [add.left, add.right] });
+    expect(added.ticketPicture).toBeUndefined();
+  });
+
+  it('3rd grade orders stay in words', () => {
+    const spec = plan(defaultGradeChoice())[0]!;
+    const shown = subjectForGrade(defaultGradeChoice()).present(spec, { flavor: 'mint' });
+    expect(shown.orderPicture).toBeUndefined();
+    expect(shown.answerInput).toEqual({ kind: 'integer', maxDigits: 3 });
   });
 
   it('builds each grade and mode once, from the config it is given', () => {
@@ -63,7 +82,7 @@ describe('grade levels', () => {
       ...GAME_CONFIG,
       grades: { defaultGrade: 'kindergarten', levels: [GAME_CONFIG.grades.levels[0]!] },
     };
-    expect(gradeSubjects(onlyK)(defaultGradeChoice()).progressReport({})[0]).toMatch(/^Addition/);
+    expect(gradeSubjects(onlyK)(defaultGradeChoice()).progressReport({})[0]).toMatch(/^Counting/);
   });
 });
 
@@ -106,7 +125,7 @@ describe('choosing a grade', () => {
     expect(fresh.settings).toMatchObject(K);
   });
 
-  it('a kindergarten round in play survives a reload, checked against the player’s own grade', () => {
+  it('a kindergarten round in play survives a reload', () => {
     const storage = new MemoryStorage();
     const saves = new SaveManager(storage, () => 5);
     const { save } = saves.load();
@@ -114,28 +133,22 @@ describe('choosing a grade', () => {
     chooseGradeLevel(p, 'kindergarten');
     const manager = new OrderManager({ save, persister: saves, subject: subjectForGrade(p.settings), now: () => 5 });
     const round = manager.ensureRound();
-    // 1 − 1 is a kindergarten question but outside the default subtraction ranges.
-    const zero = { subjectId: 'math', skillId: 'subtraction', factKey: 'sub:1-1', left: 1, right: 1, answer: 0 };
-    round.orders[0]!.spec = zero;
-    saves.write(save);
-
-    const reloaded = saves.load().save.profiles[save.activeProfileId]!;
-    expect(reloaded.currentRound?.orders[0]?.spec).toEqual(zero);
+    expect(saves.load().save.profiles[p.id]!.currentRound).toEqual(round);
   });
 
   it('drops a saved round that no longer fits the player’s grade, keeping the rest', () => {
     const save = createSaveFile(1);
     const p = save.profiles[save.activeProfileId]!;
-    const zero = { subjectId: 'math', skillId: 'subtraction', factKey: 'sub:1-1', left: 1, right: 1, answer: 0 };
-    const order = { spec: zero, customerId: 'c', attempts: 0, outcome: null, paid: false, sprinklesPaid: 0 };
+    const big = { subjectId: 'math', skillId: 'addition', factKey: 'add:9+9', left: 9, right: 9, answer: 18 };
+    const order = { spec: big, customerId: 'c', attempts: 0, outcome: null, paid: false, sprinklesPaid: 0 };
     p.currentRound = {
       ...{ id: 'r', roundNumber: 1, seed: 1, startedAt: 1, playMs: 0, lastActiveAt: 1 },
       ...{ orders: [order], currentIndex: 0, bonusPaid: false, bonus: null },
     };
-    p.settings.grade = 'kindergarten';
     expect(parseSave(JSON.stringify(save))).toMatchObject({ ok: true });
 
-    p.settings.grade = 'grade3';
+    // 9 + 9 is fine in 3rd grade but beyond kindergarten's sums, so that round can't be resumed.
+    Object.assign(p.settings, K);
     p.sprinkles = 40;
     const parsed = parseSave(JSON.stringify(save));
     if (!parsed.ok) throw new Error(parsed.problems.join());

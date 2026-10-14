@@ -30,6 +30,17 @@ export function mathConfigFor(choice: GradeChoice, config: GameConfig = GAME_CON
 services.subjectFor(profile); // subjectForGrade(profile.settings): what OrderManager is given
 ```
 
+A grade with `preReaders: true` (kindergarten) gets orders as pictures. An operation can offer `picture(spec)`, and the subject then puts it on the `ChallengePresentation` as plain data (`orderPicture` for the speech bubble, `ticketPicture` where the ticket shows it in place of the expression) together with `answerInput.dots`:
+
+```ts
+// src/learning/math/counting.ts: "how many scoops?"
+picture: (spec) => ({ order: { kind: 'cone', scoops: spec.left }, onTicket: true }),
+// src/learning/math/addition.ts
+picture: (spec) => ({ order: { kind: 'piles', parts: [spec.left, spec.right] } }),
+```
+
+`src/ui/orderPicture.ts` draws them with the shop's scoops (`bubble.sayPicture`, `ticket.showOrder`), and `NumberKeypad.setDots` puts dots under each number key. Third grade has no `picture`, so its orders stay in words.
+
 Every grade's subject has the id `math` and each operation keeps its own record, so switching mode keeps what a child has mastered. A saved round is checked against the player's own grade on load. `chooseGrade` (`src/save/profileActions.ts`) drops the round in play, because it was planned for the old choice; the grown-ups area's grade screen (`src/scenes/gradeAction.ts`) saves each tap, and the shop restarts when the area closes on a new choice.
 
 ## 1. Operations: `src/learning/math/`

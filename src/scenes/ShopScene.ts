@@ -327,9 +327,13 @@ export class ShopScene extends Phaser.Scene {
     const { customer: def, presentation } = active;
     this.bubble.say(lineFor(def.greetings, active.index), customer.x);
     await delay(this, GAME_CONFIG.timing.greetingMs);
-    this.bubble.say(presentation.orderLine, customer.x);
-    this.ticket.showOrder(`${def.name}'s order`, presentation.expression);
+    const flavor = def.favoriteFlavor;
+    if (presentation.orderPicture) this.bubble.sayPicture(presentation.orderPicture, customer.x, flavor);
+    else this.bubble.say(presentation.orderLine, customer.x);
+    const ticketPicture = presentation.ticketPicture && { order: presentation.ticketPicture, flavor };
+    this.ticket.showOrder(`${def.name}'s order`, presentation.expression, ticketPicture);
     this.keypad.setMaxDigits(presentation.answerInput.maxDigits);
+    this.keypad.setDots(presentation.answerInput.dots ?? false);
     this.keypad.clear();
   }
 

@@ -61,8 +61,22 @@ export interface ChallengeSpec {
   factKey: string;
 }
 
-/** What the player types. Only integers for now; text input can come later. */
-export type AnswerInput = { kind: 'integer'; maxDigits: number };
+/**
+ * What the player types. Only integers for now; text input can come later.
+ * `dots` puts dots under each number key, so a child who can count but not
+ * yet read numbers can match a count to its key.
+ */
+export type AnswerInput = { kind: 'integer'; maxDigits: number; dots?: boolean };
+
+/**
+ * An order drawn as a picture, for players who can't read yet. Data only;
+ * the shop draws it.
+ */
+export type OrderPicture =
+  /** A cone stacked with `scoops` whole scoops: "how many?" */
+  | { kind: 'cone'; scoops: number }
+  /** Piles of scoops joined by plus signs: "put them together". */
+  | { kind: 'piles'; parts: number[] };
 
 /**
  * Data-only description of a visual hint or explanation. The shop renders
@@ -77,6 +91,8 @@ export type VisualAid =
   | { kind: 'combine'; parts: number[]; showTotal: boolean; caption: string }
   /** `total` scoops with `remove` of them taken away (subtraction); showResult crosses them out. */
   | { kind: 'takeAway'; total: number; remove: number; showResult: boolean; caption: string }
+  /** `total` scoops in rows of 5 to count; showNumbers counts them out one by one (explanation). */
+  | { kind: 'count'; total: number; showNumbers: boolean; caption: string }
   | { kind: 'text'; caption: string };
 
 /** Customer-flavoured context the shop passes in so order text can be themed. */
@@ -89,6 +105,10 @@ export interface ChallengePresentation {
   expression: string;
   /** Short natural-language order line for the customer's speech bubble. */
   orderLine: string;
+  /** Drawn in the speech bubble instead of `orderLine`, for players who can't read yet. */
+  orderPicture?: OrderPicture;
+  /** Drawn on the ticket instead of `expression` (which stays the grown-ups' record of the question). */
+  ticketPicture?: OrderPicture;
   answerInput: AnswerInput;
   correctAnswer: string;
   hint: VisualAid;

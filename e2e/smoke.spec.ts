@@ -177,7 +177,7 @@ test('opening and closing the grown-ups area while a customer walks in leaves th
   expect(errors).toEqual([]);
 });
 
-test('a grown-up moves the player to kindergarten and the next round adds and takes away', async ({ page }) => {
+test('a grown-up moves the player to kindergarten and the next round counts scoops and adds', async ({ page }) => {
   const errors: string[] = [];
   await startFresh(page, errors);
   await keypadReady(page);
@@ -210,7 +210,7 @@ test('a grown-up moves the player to kindergarten and the next round adds and ta
     };
   });
   expect(skills.grade).toBe('kindergarten');
-  expect(new Set(skills.ops)).toEqual(new Set(['addition', 'subtraction']));
+  expect(new Set(skills.ops)).toEqual(new Set(['counting', 'addition']));
   expect(errors).toEqual([]);
 });
 

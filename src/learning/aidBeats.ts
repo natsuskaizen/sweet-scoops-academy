@@ -10,7 +10,9 @@ export type AidBeat =
   /** Fill cup `group` and show the skip-count total so far. */
   | { kind: 'fill'; group: number; label: string; final: boolean }
   /** Deal one scoop from the pile into every cup; `round` scoops are now in each. */
-  | { kind: 'deal'; round: number; pileLeft: number; label: string; final: boolean };
+  | { kind: 'deal'; round: number; pileLeft: number; label: string; final: boolean }
+  /** Count scoop `index` (from 0), labelling it with its number. */
+  | { kind: 'count'; index: number; label: string; final: boolean };
 
 const range = (n: number): number[] => Array.from({ length: Math.max(0, n) }, (_, i) => i);
 
@@ -31,6 +33,14 @@ export function aidBeats(aid: VisualAid): AidBeat[] {
       pileLeft: total - (r + 1) * groups,
       label: String(r + 1),
       final: r === perGroup - 1,
+    }));
+  }
+  if (aid.kind === 'count' && aid.showNumbers) {
+    return range(aid.total).map((i) => ({
+      kind: 'count',
+      index: i,
+      label: String(i + 1),
+      final: i === aid.total - 1,
     }));
   }
   return [];

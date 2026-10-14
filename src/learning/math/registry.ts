@@ -5,6 +5,7 @@
  */
 import { GAME_CONFIG, type MathConfig } from '../../config/gameConfig';
 import { createAddition } from './addition';
+import { createCounting } from './counting';
 import { createDivision } from './division';
 import { createMultiplication } from './multiplication';
 import type { MathOperation } from './operation';
@@ -17,7 +18,13 @@ export interface OperationRegistry {
 }
 
 export function createOperations(math: MathConfig = GAME_CONFIG.math): OperationRegistry {
-  const all = [createMultiplication(math), createDivision(math), createAddition(math), createSubtraction(math)];
+  const all = [
+    createMultiplication(math),
+    createDivision(math),
+    createAddition(math),
+    createSubtraction(math),
+    createCounting(math),
+  ];
   const byId = new Map(all.map((op) => [op.id, op]));
   const enabled = math.enabledOperations.map((id) => {
     const op = byId.get(id);

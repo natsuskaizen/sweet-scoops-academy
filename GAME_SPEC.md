@@ -158,7 +158,7 @@ The two operations must maintain independent adaptive learning records for every
 Each child has a grade level, chosen by a grown-up in the parent area (new players start in 3rd grade). The grade decides what the shop's questions practise:
 
 - **3rd grade**: multiplication and division, with a choice of multiplication only, division only, or both mixed.
-- **Kindergarten**: adding and taking away within 5. Picture orders a pre-reader can follow, and more kindergarten question types, come next (see the kindergarten research notes); kindergarten vocabulary follows straight after.
+- **Kindergarten**: "How many scoops?" (counting up to 5) and adding within 5. Players can't read yet, so orders are drawn as pictures (a cone of scoops, or piles of scoops with a plus between) and the number keys show dots, so a child can match a count to its key. Every scoop is drawn whole and clear of its neighbours so none can be mistaken for hidden. More kindergarten question types (take away, make 10, which is more) and kindergarten reading follow; see the Milestone 5 tracker.
 
 Changing grade or math mode starts a fresh round. Each operation's learning record is kept, so a child who switches back carries on where they left off.
 

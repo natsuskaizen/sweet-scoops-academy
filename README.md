@@ -64,7 +64,8 @@ src/
       multiplication.ts      one file per operation: facts, rules, wording, hints
       division.ts
       addition.ts            (kindergarten)
-      subtraction.ts         (kindergarten)
+      counting.ts            how many scoops? (kindergarten)
+      subtraction.ts         (built, off by default)
       registry.ts            the list of operations; which ones are enabled
     mathValidator.ts         entry point for validating a question (delegates to its operation)
     questionGenerator.ts     builds validated questions from fact keys
@@ -162,8 +163,9 @@ Which operations a player practises comes from their grade, chosen in the grown-
 grades: {
   defaultGrade: 'grade3',
   levels: [
-    { id: 'kindergarten', label: 'Kindergarten', math: { addition: { addend: { min: 1, max: 5 }, maxSum: 5 }, ... },
-      mathModes: [{ id: 'addSubtract', label: 'Adding and taking away', operations: ['addition', 'subtraction'] }] },
+    { id: 'kindergarten', label: 'Kindergarten', math: { addition: { addend: { min: 1, max: 4 }, maxSum: 5 }, ... },
+      mathModes: [{ id: 'countAdd', label: 'Counting and adding', operations: ['counting', 'addition'] }],
+      preReaders: true },
     { id: 'grade3', label: '3rd grade', math: {},
       mathModes: [{ id: 'mixed', ... }, { id: 'multiplication', ... }, { id: 'division', ... }] },
   ],

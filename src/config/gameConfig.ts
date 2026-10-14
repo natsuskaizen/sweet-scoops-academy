@@ -20,6 +20,8 @@ export interface MathConfig {
   division: { dividend: RangeRule; quotient: RangeRule; divisor: RangeRule };
   addition: { addend: RangeRule; maxSum: number };
   subtraction: { minuend: RangeRule; subtrahend: RangeRule; minDifference: number };
+  /** How many scoops a "how many?" cone can have. */
+  counting: { count: RangeRule };
   /** How hard each times-table factor feels to a young learner (lower is easier). */
   factorTiers: Readonly<Record<number, number>>;
 }
@@ -39,6 +41,8 @@ export interface GradeLevel {
   math: Partial<Omit<MathConfig, 'enabledOperations'>>;
   /** The ways to practise; the first is what a player gets on moving to this grade. */
   mathModes: readonly MathMode[];
+  /** Players can't read yet: orders are drawn as pictures and number keys show dots. */
+  preReaders?: boolean;
 }
 
 export interface AdaptiveConfig {
@@ -218,6 +222,7 @@ export const GAME_CONFIG: GameConfig = {
     },
     addition: { addend: { min: 1, max: 10 }, maxSum: 20 },
     subtraction: { minuend: { min: 2, max: 20 }, subtrahend: { min: 1, max: 10 }, minDifference: 0 },
+    counting: { count: { min: 1, max: 10 } },
     // ×1, ×2, ×10 are easiest, then ×5 ×11, then ×3 ×4, then ×9, then ×6 ×7 ×8 ×12.
     factorTiers: { 1: 0, 2: 1, 10: 1, 5: 2, 11: 2, 3: 3, 4: 3, 9: 4, 6: 5, 7: 5, 8: 5, 12: 5 },
   },
@@ -227,12 +232,13 @@ export const GAME_CONFIG: GameConfig = {
       {
         id: 'kindergarten',
         label: 'Kindergarten',
-        // Adding and taking away within 5 first (Common Core K fluency); within 10 comes later.
+        // Counting and adding within 5 first (Common Core K fluency); within 10 comes later.
         math: {
-          addition: { addend: { min: 1, max: 5 }, maxSum: 5 },
-          subtraction: { minuend: { min: 1, max: 5 }, subtrahend: { min: 1, max: 5 }, minDifference: 0 },
+          addition: { addend: { min: 1, max: 4 }, maxSum: 5 },
+          counting: { count: { min: 1, max: 5 } },
         },
-        mathModes: [{ id: 'addSubtract', label: 'Adding and taking away', operations: ['addition', 'subtraction'] }],
+        mathModes: [{ id: 'countAdd', label: 'Counting and adding', operations: ['counting', 'addition'] }],
+        preReaders: true,
       },
       {
         id: 'grade3',

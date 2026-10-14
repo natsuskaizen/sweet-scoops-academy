@@ -1,4 +1,6 @@
 import Phaser from 'phaser';
+import type { OrderPicture } from '../learning/types';
+import { drawOrderPicture } from './orderPicture';
 import { COLORS, CSS, text } from './theme';
 
 export type TicketMood = 'neutral' | 'happy' | 'gentle' | 'explain';
@@ -16,6 +18,8 @@ export class OrderPanel extends Phaser.GameObjects.Container {
   private answer: Phaser.GameObjects.Text;
   private feedback: Phaser.GameObjects.Text;
   private caret: Phaser.GameObjects.Rectangle;
+  /** A picture order drawn in place of the expression, if any. */
+  private picture: Phaser.GameObjects.GameObject[] = [];
 
   constructor(
     scene: Phaser.Scene,
@@ -44,9 +48,13 @@ export class OrderPanel extends Phaser.GameObjects.Container {
     scene.add.existing(this);
   }
 
-  showOrder(title: string, expression: string): void {
+  /** Shows the order: `expression`, or `picture` (with "=" beside it) for a player who can't read yet. */
+  showOrder(title: string, expression: string, picture?: { order: OrderPicture; flavor: string }): void {
     this.title.setText(title);
-    this.expression.setText(`${expression} =`).setFontSize(68);
+    this.clearPicture();
+    this.expression.setFontSize(68).setX(this.boxW / 2);
+    if (picture) this.showPicture(picture.order, picture.flavor);
+    else this.expression.setText(`${expression} =`);
     const room = this.boxW - 32;
     if (this.expression.width > room) this.expression.setFontSize(Math.floor((68 * room) / this.expression.width));
     this.setAnswer('');
@@ -55,7 +63,21 @@ export class OrderPanel extends Phaser.GameObjects.Container {
     this.scene.tweens.add({ targets: this.expression, scale: 1, alpha: 1, duration: 260, ease: 'Back.easeOut' });
   }
 
+  /** The picture fills the expression row; "=" stands to its right. */
+  private showPicture(order: OrderPicture, flavor: string): void {
+    this.expression.setText('=').setX(this.boxW - 56);
+    const area = { x: 24, y: 64, w: this.boxW - 120, h: 82 };
+    this.picture = drawOrderPicture(this.scene, order, area, flavor);
+    this.add(this.picture);
+  }
+
+  private clearPicture(): void {
+    for (const obj of this.picture) obj.destroy();
+    this.picture = [];
+  }
+
   clearOrder(): void {
+    this.clearPicture();
     this.title.setText('Waiting for a customer…');
     this.expression.setText('');
     this.answer.setText('');
@@ -111,6 +133,9 @@ export class OrderPanel extends Phaser.GameObjects.Container {
   }
 }
 
+/** How much taller (upwards) the bubble is for a picture order than for words. */
+const PICTURE_GROW = 70;
+
 /** Speech bubble that floats above a customer's head. */
 export class SpeechBubble extends Phaser.GameObjects.Container {
   private bg: Phaser.GameObjects.Graphics;
@@ -135,16 +160,42 @@ export class SpeechBubble extends Phaser.GameObjects.Container {
     scene.add.existing(this);
   }
 
+  private picture: Phaser.GameObjects.GameObject[] = [];
+
   /** Shows `message`, with the tail pointing at `tailX` (scene coordinates). */
   say(message: string, tailX: number): void {
+    this.clearPicture();
     this.label.setText(message);
+    this.pop(tailX);
+  }
+
+  /** Shows an order as a picture instead of words, for a player who can't read yet. */
+  sayPicture(order: OrderPicture, tailX: number, flavor: string): void {
+    this.clearPicture();
+    this.label.setText('');
+    // A picture needs more room than a line of words, so the bubble grows upwards.
+    const top = -PICTURE_GROW;
+    const area = { x: 20, y: top + 14, w: this.boxW - 40, h: this.boxH + PICTURE_GROW - 48 };
+    this.picture = drawOrderPicture(this.scene, order, area, flavor);
+    this.add(this.picture);
+    this.pop(tailX, top);
+  }
+
+  private clearPicture(): void {
+    for (const obj of this.picture) obj.destroy();
+    this.picture = [];
+  }
+
+  /** Draws the bubble with its tail at `tailX` and pops it in. */
+  private pop(tailX: number, top = 0): void {
     const g = this.bg;
     const tail = Phaser.Math.Clamp(tailX - this.x, 40, this.boxW - 40);
+    const h = this.boxH - 20 - top;
     g.clear();
-    g.fillStyle(COLORS.shadow, 0.1).fillRoundedRect(4, 6, this.boxW, this.boxH - 20, 26);
-    g.fillStyle(COLORS.white, 1).fillRoundedRect(0, 0, this.boxW, this.boxH - 20, 26);
+    g.fillStyle(COLORS.shadow, 0.1).fillRoundedRect(4, top + 6, this.boxW, h, 26);
+    g.fillStyle(COLORS.white, 1).fillRoundedRect(0, top, this.boxW, h, 26);
     g.fillTriangle(tail - 18, this.boxH - 22, tail + 18, this.boxH - 22, tail, this.boxH);
-    g.lineStyle(4, COLORS.ink, 0.8).strokeRoundedRect(0, 0, this.boxW, this.boxH - 20, 26);
+    g.lineStyle(4, COLORS.ink, 0.8).strokeRoundedRect(0, top, this.boxW, h, 26);
     g.lineBetween(tail - 18, this.boxH - 21, tail, this.boxH);
     g.lineBetween(tail + 18, this.boxH - 21, tail, this.boxH);
     this.setVisible(true).setScale(0.85).setAlpha(0);

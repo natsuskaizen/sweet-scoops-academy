@@ -20,6 +20,8 @@ export type MathSubject = LearningSubject<MathChallengeSpec, MathProgress>;
 export interface MathSubjectOptions {
   adaptive?: AdaptiveConfig;
   operations?: OperationRegistry;
+  /** Players can't read yet: draw orders as pictures (where the operation has one) and dot the number keys. */
+  preReaders?: boolean;
 }
 
 /** The record for one operation, created on first use. */
@@ -59,7 +61,8 @@ export function createMathSubject(options: MathSubjectOptions = {}): MathSubject
 
     isValidSpec: (spec: unknown): spec is MathChallengeSpec => validateMathSpec(spec, operations).ok,
 
-    present: (spec: MathChallengeSpec, ctx: OrderContext) => present(operation(spec.skillId), spec, ctx),
+    present: (spec: MathChallengeSpec, ctx: OrderContext) =>
+      present(operation(spec.skillId), spec, ctx, options.preReaders ?? false),
 
     checkAnswer(spec: MathChallengeSpec, input: string): boolean {
       const trimmed = input.trim();
@@ -83,13 +86,24 @@ export function createMathSubject(options: MathSubjectOptions = {}): MathSubject
   };
 }
 
-function present(op: MathOperation, spec: MathChallengeSpec, ctx: OrderContext): ChallengePresentation {
-  return {
-    expression: `${spec.left} ${op.symbol} ${spec.right}`,
-    answerInput: { kind: 'integer', maxDigits: op.maxDigits },
+function present(
+  op: MathOperation,
+  spec: MathChallengeSpec,
+  ctx: OrderContext,
+  preReaders: boolean,
+): ChallengePresentation {
+  const presentation: ChallengePresentation = {
+    expression: op.expression?.(spec) ?? `${spec.left} ${op.symbol} ${spec.right}`,
+    answerInput: { kind: 'integer', maxDigits: op.maxDigits, ...(preReaders && { dots: true }) },
     correctAnswer: String(spec.answer),
     ...op.word(spec, ctx.flavor),
   };
+  const picture = preReaders ? op.picture?.(spec) : undefined;
+  if (picture) {
+    presentation.orderPicture = picture.order;
+    if (picture.onTicket) presentation.ticketPicture = picture.order;
+  }
+  return presentation;
 }
 
 /** Facts that needed help and are not yet mastered, most troublesome first. */

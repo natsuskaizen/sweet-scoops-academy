@@ -74,6 +74,7 @@ export function gradeSubjects(config: GameConfig = GAME_CONFIG): (choice: GradeC
       subject = createMathSubject({
         adaptive: config.adaptive,
         operations: createOperations(mathConfigFor(settled, config)),
+        preReaders: gradeLevel(settled.grade, config.grades).preReaders ?? false,
       });
       built.set(key, subject);
     }
