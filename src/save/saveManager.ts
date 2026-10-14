@@ -71,7 +71,10 @@ export function createProfile(
   };
 }
 
-export function createSaveFile(now: number, profile = createProfile('Player 1', now)): SaveFile {
+export function createSaveFile(
+  now: number,
+  profile = createProfile(GAME_CONFIG.players.firstPlayerName, now),
+): SaveFile {
   return {
     schemaVersion: SAVE_SCHEMA_VERSION,
     savedAt: now,

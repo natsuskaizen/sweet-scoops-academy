@@ -13,7 +13,8 @@ import { equippedItems } from '../shop/purchases';
 import { Button } from '../ui/Button';
 import { gridCells } from '../ui/setupLayout';
 import { startLayout, type StartLayout } from '../ui/startLayout';
-import { COLORS, CSS, LAYOUT, text, type Rect } from '../ui/theme';
+import { registerCover } from '../ui/registerCard';
+import { COLORS, CSS, DEPTH, LAYOUT, text, type Rect } from '../ui/theme';
 
 export interface StartHost {
   scene: Phaser.Scene;
@@ -43,9 +44,9 @@ export class StartScreen {
 
   constructor(private readonly host: StartHost) {
     this.layout = startLayout(LAYOUT.panel, LAYOUT.orientation === 'portrait');
-    this.root = host.scene.add.container(0, 0).setDepth(450);
+    this.root = host.scene.add.container(0, 0).setDepth(DEPTH.startScreen);
     this.drawTopBar();
-    this.drawPanel();
+    this.root.add(registerCover(host.scene));
     this.drawWelcome();
     this.drawOthers();
   }
@@ -65,13 +66,7 @@ export class StartScreen {
   }
 
   private button(id: string, r: Rect, label: string, fontSize: number, onTap: () => void): Button {
-    const b = new Button(this.host.scene, r.x + r.w / 2, r.y + r.h / 2, {
-      width: r.w,
-      height: r.h,
-      label,
-      fontSize,
-      onTap,
-    });
+    const b = Button.inRect(this.host.scene, r, { label, fontSize, onTap });
     this.spots[id] = { x: b.x, y: b.y };
     this.root.add(b);
     return b;
@@ -86,15 +81,6 @@ export class StartScreen {
     const title = scene.add.text(w / 2, h / 2 - 3, 'Sweet Scoops Academy', text(30)).setOrigin(0.5);
     // Taps on the bar don't reach the shop's own top bar underneath.
     this.root.add([bar, scene.add.zone(0, 0, w, h).setOrigin(0).setInteractive(), title]);
-  }
-
-  private drawPanel(): void {
-    const { scene } = this.host;
-    const { x, y, w, h } = LAYOUT.panel;
-    const g = scene.add.graphics();
-    g.fillStyle(0xffe9d6, 1).fillRoundedRect(x, y, w, h - 10, 26);
-    g.lineStyle(5, COLORS.brownDark, 1).strokeRoundedRect(x, y, w, h - 10, 26);
-    this.root.add([g, scene.add.zone(x, y, w, h).setOrigin(0).setInteractive()]);
   }
 
   /** "Hi, Ava!", her friend dressed as in her shop, Open the shop! and her Sprinkles. */

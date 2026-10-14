@@ -11,7 +11,8 @@ import { keeperOrMomo } from '../characters/friendArt';
 import type { Profile, ProfileSettings } from '../save/saveTypes';
 import { Button } from '../ui/Button';
 import { myShopLayout, type MyShopLayout } from '../ui/myShopLayout';
-import { COLORS, CSS, LAYOUT, text, type Rect } from '../ui/theme';
+import { registerCover } from '../ui/registerCard';
+import { COLORS, CSS, DEPTH, LAYOUT, text, type Rect } from '../ui/theme';
 import type { EditStep } from './newPlayerSetup';
 
 /** The settings a child can switch on and off here. */
@@ -54,15 +55,9 @@ export class MyShopPanel {
   constructor(private readonly host: MyShopHost) {
     const { scene } = host;
     this.layout = myShopLayout(LAYOUT.panel, LAYOUT.orientation === 'portrait');
-    const { x, y, w, h } = LAYOUT.panel;
-    const g = scene.add.graphics();
-    g.fillStyle(0xffe9d6, 1).fillRoundedRect(x, y, w, h - 10, 26);
-    g.lineStyle(5, COLORS.brownDark, 1).strokeRoundedRect(x, y, w, h - 10, 26);
-    // Taps on the panel never reach the ticket or keypad underneath.
-    const blocker = scene.add.zone(x, y, w, h).setOrigin(0).setInteractive();
+    const { x, w } = LAYOUT.panel;
     const title = scene.add.text(x + w / 2, this.layout.titleY, 'My shop', text(38)).setOrigin(0.5);
-    // Above the results card, which My shop can open over.
-    this.root = scene.add.container(0, 0, [g, blocker, title]).setDepth(650);
+    this.root = scene.add.container(0, 0, [...registerCover(scene), title]).setDepth(DEPTH.myShop);
     this.addChangeRows();
     TOGGLES.forEach((row, i) => this.addToggle(this.layout.rows[i + 2]!, row));
     this.addButtons();
@@ -84,8 +79,9 @@ export class MyShopPanel {
     };
   }
 
-  private row(id: string, r: Rect, onTap: () => void): Button {
-    const b = new Button(this.host.scene, r.x + r.w / 2, r.y + r.h / 2, { width: r.w, height: r.h, label: '', onTap });
+  /** A button the e2e test can find by `id`; rows have no label of their own. */
+  private button(id: string, r: Rect, onTap: () => void, label = '', fontSize?: number): Button {
+    const b = Button.inRect(this.host.scene, r, { label, fontSize, onTap });
     this.spots[id] = { x: b.x, y: b.y };
     this.root.add(b);
     return b;
@@ -106,14 +102,14 @@ export class MyShopPanel {
   private addChangeRows(): void {
     const { scene, profile } = this.host;
     const [nameRow, keeperRow] = this.layout.rows as [Rect, Rect];
-    const shop = this.row(
+    const shop = this.button(
       'shopName',
       nameRow,
       this.leave(() => this.host.onChange('shop')),
     );
     this.label(shop, nameRow, 'Shop name', profile.shop.name);
     shop.add(this.changePill(nameRow));
-    const keeper = this.row(
+    const keeper = this.button(
       'keeper',
       keeperRow,
       this.leave(() => this.host.onChange('keeper')),
@@ -136,7 +132,7 @@ export class MyShopPanel {
   }
 
   private addToggle(r: Rect, { label, note, setting }: ToggleRow): void {
-    const row = this.row(setting, r, () => {
+    const row = this.button(setting, r, () => {
       this.host.onToggle(setting);
       this.drawSwitch(setting);
     });
@@ -153,25 +149,18 @@ export class MyShopPanel {
     const g = this.switches.get(setting)!;
     const on = this.host.profile.settings[setting];
     g.clear();
-    g.fillStyle(on ? COLORS.mint : 0xe2dcd6, 1).fillRoundedRect(-SWITCH_W / 2, -SWITCH_H / 2, SWITCH_W, SWITCH_H, 24);
+    g.fillStyle(on ? COLORS.mint : COLORS.off, 1).fillRoundedRect(-SWITCH_W / 2, -SWITCH_H / 2, SWITCH_W, SWITCH_H, 24);
     g.lineStyle(3, COLORS.ink, 0.85).strokeRoundedRect(-SWITCH_W / 2, -SWITCH_H / 2, SWITCH_W, SWITCH_H, 24);
     g.fillStyle(COLORS.white, 1).fillCircle(on ? SWITCH_W / 2 - 24 : -SWITCH_W / 2 + 24, 0, 17);
     g.lineStyle(3, COLORS.ink, 0.85).strokeCircle(on ? SWITCH_W / 2 - 24 : -SWITCH_W / 2 + 24, 0, 17);
   }
 
   private addButtons(): void {
-    const { scene } = this.host;
     const { switchPlayer, back, grownUps } = this.layout;
     const portrait = LAYOUT.orientation === 'portrait';
-    const add = (id: string, r: Rect, label: string, fontSize: number, onTap: () => void) => {
-      const b = new Button(scene, r.x + r.w / 2, r.y + r.h / 2, { width: r.w, height: r.h, label, fontSize, onTap });
-      this.spots[id] = { x: b.x, y: b.y };
-      this.root.add(b);
-      return b;
-    };
-    add('switch', switchPlayer, 'Switch player', 28, this.leave(this.host.onSwitchPlayer));
-    const backButton = add('back', back, portrait ? 'Back to shop' : 'Back to the shop', 30, () => this.close());
-    backButton.setFill(COLORS.mint, COLORS.mintDark);
-    add('grownUps', grownUps, '⚙ Grown-ups', 20, this.leave(this.host.onGrownUps));
+    this.button('switch', switchPlayer, this.leave(this.host.onSwitchPlayer), 'Switch player', 28);
+    const backLabel = portrait ? 'Back to shop' : 'Back to the shop';
+    this.button('back', back, () => this.close(), backLabel, 30).setFill(COLORS.mint, COLORS.mintDark);
+    this.button('grownUps', grownUps, this.leave(this.host.onGrownUps), '⚙ Grown-ups', 20);
   }
 }

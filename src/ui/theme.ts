@@ -20,6 +20,31 @@ export const COLORS = {
   shadow: 0x000000,
   // The chosen card in a set, e.g. the new player's shopkeeper.
   lemon: 0xffe680,
+  // The register panel's card, where the ticket, start screen, setup and My shop sit.
+  panel: 0xffe9d6,
+  // Something switched off or not reached yet: a setup step dot, an off switch.
+  off: 0xe2d6cc,
+} as const;
+
+/**
+ * What draws over what, bottom to top, for the bar and the cards and screens
+ * that open over the shop. The shop room's own pieces sit below all of these.
+ */
+export const DEPTH = {
+  /** A new player's setup, over the ticket and keypad. */
+  setup: 80,
+  statusBar: 400,
+  /** The start screen and Decorate cover the top bar. */
+  startScreen: 450,
+  decorate: 450,
+  results: 500,
+  closet: 600,
+  /** My shop and the step it opens can both open over the results card. */
+  myShop: 650,
+  changeShop: 660,
+  menu: 700,
+  toast: 900,
+  parentGate: 1000,
 } as const;
 
 export const CSS = {

@@ -21,7 +21,7 @@ import {
 import { ownedTiers, takeOffer } from '../shop/purchases';
 import { Button } from '../ui/Button';
 import { TierCard } from '../ui/TierCard';
-import { COLORS, CSS, decorTrayRect, decorTraySlots, LAYOUT, text, tierCardRect, type Rect } from '../ui/theme';
+import { COLORS, CSS, decorTrayRect, DEPTH, decorTraySlots, LAYOUT, text, tierCardRect, type Rect } from '../ui/theme';
 import { decorationTexture, drawDecoration, pieceRect, type PlacedDecorations } from './decorArt';
 
 export interface DecorateHost {
@@ -48,7 +48,7 @@ export class DecorateMode {
 
   constructor(private readonly host: DecorateHost) {
     const { scene } = host;
-    this.root = scene.add.container(0, 0).setDepth(450);
+    this.root = scene.add.container(0, 0).setDepth(DEPTH.decorate);
     this.balance = this.drawTopBar();
     this.design = this.designs[0]!;
     this.tray = scene.add.container(0, 0);
@@ -160,9 +160,7 @@ export class DecorateMode {
     const pages = Math.ceil(this.designs.length / perPage);
     if (pages < 2) return;
     const arrow = (r: Rect, label: string, step: number) => {
-      const b = new Button(scene, r.x + r.w / 2, r.y + r.h / 2, {
-        width: r.w,
-        height: r.h,
+      const b = Button.inRect(scene, r, {
         label,
         fontSize: 40,
         fill: COLORS.lavender,

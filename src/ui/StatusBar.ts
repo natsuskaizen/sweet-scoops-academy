@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import type { AttemptOutcome } from '../learning/types';
 import { GAME_CONFIG } from '../config/gameConfig';
-import { COLORS, CSS, LAYOUT, text } from './theme';
+import { COLORS, CSS, DEPTH, LAYOUT, text } from './theme';
 
 const OUTCOME_COLORS: Record<AttemptOutcome, [number, number]> = {
   first: [COLORS.mint, COLORS.mintDark],
@@ -9,10 +9,16 @@ const OUTCOME_COLORS: Record<AttemptOutcome, [number, number]> = {
   miss: [COLORS.peach, 0xe8a888],
 };
 
+/** ⚙ opens My shop with a tap, or goes straight to the grown-ups area when held. */
+export interface GearActions {
+  onTap: () => void;
+  onHold: () => void;
+}
+
 /**
  * Top strip: order number, round progress dots, Sprinkles balance (tap it
- * for the Sprinkle Shop), and the grown-ups button (press and hold so a
- * stray tap does nothing).
+ * for the Sprinkle Shop), and ⚙ (tap for My shop; press and hold for the
+ * grown-ups area, so a stray tap never opens it).
  */
 export class StatusBar extends Phaser.GameObjects.Container {
   private orderText: Phaser.GameObjects.Text;
@@ -21,8 +27,7 @@ export class StatusBar extends Phaser.GameObjects.Container {
   private balance = 0;
   private holdRing: Phaser.GameObjects.Graphics;
 
-  /** ⚙ opens My shop with a tap, or goes straight to the grown-ups area when held. */
-  constructor(scene: Phaser.Scene, gear: { onTap: () => void; onHold: () => void }, onShop: () => void) {
+  constructor(scene: Phaser.Scene, gear: GearActions, onShop: () => void) {
     super(scene, 0, 0);
     const { w, h, orderFont, pillX, pillW, gearX } = LAYOUT.statusBar;
     const bg = scene.add.graphics();
@@ -48,12 +53,12 @@ export class StatusBar extends Phaser.GameObjects.Container {
     const hit = this.holdButton(gearX, h / 2 - 3, gear);
 
     this.add([bg, this.orderText, this.dots, pill, icon, this.sprinklesText, shop, gearIcon, this.holdRing, hit]);
-    this.setDepth(400);
+    this.setDepth(DEPTH.statusBar);
     scene.add.existing(this);
   }
 
   /** ⚙: a ring fills while held, and only a full hold opens the grown-ups area; letting go sooner is a tap. */
-  private holdButton(x: number, y: number, gear: { onTap: () => void; onHold: () => void }): Phaser.GameObjects.Zone {
+  private holdButton(x: number, y: number, gear: GearActions): Phaser.GameObjects.Zone {
     const scene = this.scene;
     const hit = scene.add.zone(x, y, 76, 64).setInteractive();
     let holdTween: Phaser.Tweens.Tween | undefined;

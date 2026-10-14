@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import { Button } from './Button';
-import { COLORS, LAYOUT, text } from './theme';
+import { COLORS, DEPTH, LAYOUT, text } from './theme';
 
 export interface ShopMenuOptions {
   /** Whose Closet it is: the player's shopkeeper. */
@@ -26,7 +26,7 @@ export class ShopMenu {
     scene: Phaser.Scene,
     private readonly opts: ShopMenuOptions,
   ) {
-    this.root = scene.add.container(0, 0).setDepth(700);
+    this.root = scene.add.container(0, 0).setDepth(DEPTH.menu);
     const shade = scene.add
       .rectangle(0, 0, LAYOUT.width, LAYOUT.height, COLORS.ink, 0.45)
       .setOrigin(0)

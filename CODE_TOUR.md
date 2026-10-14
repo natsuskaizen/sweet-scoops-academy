@@ -480,4 +480,4 @@ The Closet (named after the player's shopkeeper, "Kiki's Closet") opens the same
 
 ## Tests
 
-`src/tests/` has one suite per module. `operations.test.ts` checks every operation's fact table against its own rules and shows how turning on more operations behaves. The most useful to read are `adaptiveEngine.test.ts` (mastery across rounds, misses coming back, mastered facts returning, seeded reproducibility) and `orderManager.test.ts` (full rounds, retry flow, double submits, reload mid-order).
+`src/tests/` has one suite per module. `operations.test.ts` checks every operation's fact table against its own rules and shows how turning on more operations behaves. The most useful to read are `adaptiveEngine.test.ts` (mastery across rounds, misses coming back, mastered facts returning, seeded reproducibility) and `orderManager.test.ts` (full rounds, retry flow, double submits, reload mid-order). The layout suites (`layout`, `setupLayout`, `startLayout`, `myShopLayout`) share `inside`, `overlaps` and `PANEL_SCREENS` from `src/tests/rects.ts`, so every screen shape is checked the same way.

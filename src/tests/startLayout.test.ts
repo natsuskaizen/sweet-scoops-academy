@@ -1,22 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { startLayout } from '../ui/startLayout';
-import { layoutFor, PORTRAIT_MAX_H, PORTRAIT_MIN_H, SHOP_W, type Rect } from '../ui/theme';
+import { inside, overlaps, PANEL_SCREENS } from './rects';
 
-const inside = (inner: Rect, outer: Rect) =>
-  inner.x >= outer.x &&
-  inner.y >= outer.y &&
-  inner.x + inner.w <= outer.x + outer.w &&
-  inner.y + inner.h <= outer.y + outer.h;
-
-const overlaps = (a: Rect, b: Rect) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
-
-const screens = {
-  landscape: layoutFor(1180, 820),
-  'iPad portrait': layoutFor(SHOP_W, PORTRAIT_MIN_H),
-  'iPhone portrait': layoutFor(SHOP_W, PORTRAIT_MAX_H),
-};
-
-describe.each(Object.entries(screens))('startLayout on %s', (_, layout) => {
+describe.each(Object.entries(PANEL_SCREENS))('startLayout on %s', (_, layout) => {
   const start = startLayout(layout.panel, layout.orientation === 'portrait');
   // A friend is 112 x 140 at shop size, standing on their feet.
   const { friend } = start;

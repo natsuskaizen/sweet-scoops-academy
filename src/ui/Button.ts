@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { COLORS, text } from './theme';
+import { COLORS, text, type Rect } from './theme';
 
 export interface ButtonOptions {
   width: number;
@@ -53,6 +53,11 @@ export class Button extends Phaser.GameObjects.Container {
     });
     this.draw();
     scene.add.existing(this);
+  }
+
+  /** A button filling `r`, for the layouts that hand out rectangles. */
+  static inRect(scene: Phaser.Scene, r: Rect, opts: Omit<ButtonOptions, 'width' | 'height'>): Button {
+    return new Button(scene, r.x + r.w / 2, r.y + r.h / 2, { ...opts, width: r.w, height: r.h });
   }
 
   setLabel(label: string): this {

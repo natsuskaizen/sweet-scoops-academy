@@ -35,7 +35,8 @@ import { ParentGate, type ParentGateOptions } from '../ui/ParentGate';
 import { setCalm } from '../ui/motion';
 import { ShopMenu } from '../ui/ShopMenu';
 import { StatusBar } from '../ui/StatusBar';
-import { COLORS, CSS, LAYOUT, text } from '../ui/theme';
+import { drawPanelCard } from '../ui/registerCard';
+import { COLORS, CSS, DEPTH, LAYOUT, text } from '../ui/theme';
 import { delay, tweenAsync } from '../ui/tweenAsync';
 import { VisualAidView } from '../ui/VisualAidView';
 import { WallCalendar } from '../ui/WallCalendar';
@@ -53,6 +54,9 @@ import { drawShopRoom, setShopSign, type ShopRoom } from './shopArt';
 
 /** Test hooks (`window.__ssa`, `?fast`) exist in dev, and in a build only when opened with `?e2e`. */
 const testHooksEnabled = (): boolean => import.meta.env.DEV || new URLSearchParams(window.location.search).has('e2e');
+
+/** Who greets a new player and stands at the counter until they choose their own. */
+const newPlayerKeeper = (): FriendId => keeperOrMomo(GAME_CONFIG.players.defaultShop.keeper);
 
 const PRAISE = ["Yum! That's right!", 'Sweet! You got it!', 'Scoop-tastic!', 'Perfect order!'];
 const RETRY_PRAISE = ['You got it! Great thinking!', 'Yes! Nice try-again!'];
@@ -206,19 +210,17 @@ export class ShopScene extends Phaser.Scene {
   private addNewPlayer(): void {
     this.start?.destroy();
     this.start = null;
-    this.shopkeeper.dress([]).setSheet(friendSheets('momo').dressed).setVisible(true);
+    this.shopkeeper.dress([]).setSheet(friendSheets(newPlayerKeeper()).dressed).setVisible(true);
     setShopSign(this.room.sign, GAME_CONFIG.players.defaultShop.name);
     this.startSetup(
       (player) => this.play(() => addPlayer(this.services.save, player, Date.now())),
-      () => {
-        this.scene.restart();
-      },
+      () => this.scene.restart(),
     );
   }
 
   /** Applies a change to the save (choosing or adding a player), saves it and opens that player's shop. */
-  private play(change: () => object | boolean | null): void {
-    if (!change()) this.toast('That player could not be added.');
+  private play(change: () => unknown): void {
+    if (change() === null) this.toast('That player could not be added.');
     this.services.stage = 'play';
     this.saveNow();
     this.scene.restart();
@@ -227,7 +229,8 @@ export class ShopScene extends Phaser.Scene {
   /** Sets up a player (name, shop name, shopkeeper) before any customer comes in. */
   private startSetup(onDone: (player: NewPlayer) => void, onCancel?: () => void): void {
     this.closeShop();
-    this.bubble.say("Hi! I'm Momo. Let's open your very own ice cream shop!", LAYOUT.shopkeeper.x);
+    const greeter = friendName(newPlayerKeeper());
+    this.bubble.say(`Hi! I'm ${greeter}. Let's open your very own ice cream shop!`, LAYOUT.shopkeeper.x);
     this.setup?.destroy();
     this.setup = new NewPlayerSetup({
       scene: this,
@@ -251,10 +254,7 @@ export class ShopScene extends Phaser.Scene {
   private setUpNewGame(): void {
     const { profile } = this.manager;
     this.startSetup(({ name, shop }) =>
-      this.play(() => {
-        updatePlayer(profile, { name, shopName: shop.name, keeper: shop.keeper });
-        return true;
-      }),
+      this.play(() => updatePlayer(profile, { name, shopName: shop.name, keeper: shop.keeper })),
     );
     this.status.setVisible(true);
   }
@@ -359,9 +359,14 @@ export class ShopScene extends Phaser.Scene {
 
   /** The keypad takes answers only while the shop waits for one and the grown-ups area is closed. */
   private syncInput(): void {
-    const away =
-      this.gate || this.decorate || this.closet || this.shopMenu || this.calendar || this.myShop || this.setup;
-    this.keypad.setEnabled(!this.busy && !away);
+    this.keypad.setEnabled(!this.busy && !this.coveredOver());
+  }
+
+  /** True while a screen or card covers the shop and takes the taps. */
+  private coveredOver(): boolean {
+    return Boolean(
+      this.gate || this.decorate || this.closet || this.shopMenu || this.calendar || this.myShop || this.setup,
+    );
   }
 
   private async handleSubmit(value: string): Promise<void> {
@@ -644,8 +649,7 @@ export class ShopScene extends Phaser.Scene {
 
   /** ⚙ opens the player's own settings, over whatever the shop is doing. */
   private openMyShop(): void {
-    if (this.myShop || this.gate || this.decorate || this.closet || this.shopMenu || this.calendar || this.setup)
-      return;
+    if (this.coveredOver()) return;
     const profile = this.manager.profile;
     const calmBefore = profile.settings.reduceMotion;
     this.myShop = new MyShopPanel({
@@ -729,14 +733,11 @@ export class ShopScene extends Phaser.Scene {
   }
 
   private drawRegisterPanel(): Phaser.GameObjects.Graphics {
-    const { x, y, w, h } = LAYOUT.panel;
     const area = LAYOUT.registerArea;
     const g = this.add.graphics().setDepth(5);
     g.fillStyle(COLORS.brown, 1).fillRect(area.x, area.y, area.w, area.h);
     if (LAYOUT.orientation === 'portrait') g.fillStyle(COLORS.brownDark, 1).fillRect(area.x, area.y, area.w, 8);
-    g.fillStyle(0xffe9d6, 1).fillRoundedRect(x, y, w, h - 10, 26);
-    g.lineStyle(5, COLORS.brownDark, 1).strokeRoundedRect(x, y, w, h - 10, 26);
-    return g;
+    return drawPanelCard(g);
   }
 
   private showLoadNotices(): void {
@@ -752,7 +753,7 @@ export class ShopScene extends Phaser.Scene {
     const t = this.add
       .text(400, 840, message, text(22, CSS.white, { backgroundColor: '#7a6a88', padding: { x: 16, y: 8 } }))
       .setOrigin(0.5)
-      .setDepth(900);
+      .setDepth(DEPTH.toast);
     this.tweens.add({
       targets: t,
       alpha: 0,
