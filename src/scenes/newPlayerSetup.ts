@@ -10,7 +10,7 @@ import { friendName, isFriendId, type FriendId } from '../characters/friendArt';
 import { GAME_CONFIG } from '../config/gameConfig';
 import { createRng, randomSeed, type Rng } from '../core/rng';
 import type { NewPlayer } from '../save/profileActions';
-import { ownedShopName, rollShopName, SHOP_NAME_IDEAS, typeKey, type LetterKey } from '../shop/playerNames';
+import { letterAs, ownedShopName, rollShopName, SHOP_NAME_IDEAS, typeKey, type LetterKey } from '../shop/playerNames';
 import { Button } from '../ui/Button';
 import { gridCells, letterKeyCells, setupLayout, type SetupLayout } from '../ui/setupLayout';
 import { COLORS, CSS, LAYOUT, text, type Rect } from '../ui/theme';
@@ -32,7 +32,12 @@ export type EditStep = 'shop' | 'keeper';
 
 type Step = 'name' | 'shop' | 'typeShop' | 'keeper' | 'ready';
 const NEXT_STEP: Record<EditStep, Step> = { shop: 'keeper', keeper: 'ready' };
+/** Where ◀ goes from each step; the first step has none. */
+const PREVIOUS_STEP: Partial<Record<Step, Step>> = { shop: 'name', typeShop: 'shop', keeper: 'shop', ready: 'keeper' };
 const STEP_DOT: Record<Step, number> = { name: 0, shop: 1, typeShop: 1, keeper: 2, ready: 3 };
+
+/** What the keys that aren't letters show. */
+const KEY_LABELS: Record<string, string> = { done: '✓', back: '⌫', ' ': 'space' };
 
 const button = (scene: Phaser.Scene, r: Rect, label: string, fontSize: number, onTap: () => void) =>
   new Button(scene, r.x + r.w / 2, r.y + r.h / 2, { width: r.w, height: r.h, label, fontSize, onTap });
@@ -48,6 +53,8 @@ export class NewPlayerSetup {
   private shopName = '';
   private keeper: FriendId;
   private nameText: Phaser.GameObjects.Text | null = null;
+  /** The shop name before "Type my own" cleared it, for ◀. */
+  private shopNameBeforeTyping = '';
   private done = false;
 
   constructor(private readonly host: SetupHost) {
@@ -126,12 +133,32 @@ export class NewPlayerSetup {
     };
     const { onCancel } = this.host;
     if (onCancel) {
-      const close = { x: LAYOUT.panel.x + 12, y: LAYOUT.panel.y + 10, w: 60, h: 56 };
+      const close = { x: LAYOUT.panel.x + LAYOUT.panel.w - 72, y: LAYOUT.panel.y + 10, w: 60, h: 56 };
       this.page.add(button(scene, close, '✕', 26, () => this.cancel(onCancel)));
+    }
+    const previous = this.previousStep(step);
+    if (previous) {
+      const back = { x: LAYOUT.panel.x + 12, y: LAYOUT.panel.y + 10, w: 60, h: 56 };
+      this.page.add(button(scene, back, '◀', 26, () => this.goBack(previous)));
     }
     const title = scene.add.text(cx, this.layout.titleY, titles[step], text(this.layout.titleFont)).setOrigin(0.5);
     title.setScale(Math.min(1, (LAYOUT.panel.w - 30) / title.width));
     this.page.add([dots, title]);
+  }
+
+  /** The step ◀ goes back to: none from the first step, or from the one step being changed. */
+  private previousStep(step: Step): Step | undefined {
+    const { edit } = this.host;
+    if (edit && step === edit.step) return undefined;
+    return PREVIOUS_STEP[step];
+  }
+
+  private goBack(step: Step): void {
+    if (this.step === 'typeShop') {
+      this.shopName = this.shopNameBeforeTyping;
+      this.host.onShopName(this.shopName || this.players.defaultShop.name);
+    }
+    this.show(step);
   }
 
   private addNameBox(value: string, fontSize: number): void {
@@ -165,18 +192,28 @@ export class NewPlayerSetup {
       this.nameText?.setText(value);
       this.fitName();
     };
-    if (what === 'shop') this.shopName = '';
+    if (what === 'shop') {
+      this.shopNameBeforeTyping = this.shopName;
+      this.shopName = '';
+    }
     this.addNameBox(read(), what === 'name' ? 44 : 34);
     const short = this.layout.keys.h < 300;
+    const letters: { key: string; button: Button }[] = [];
+    // Letter keys show the case they type next: capitals to start a word, small after.
+    const relabel = () => letters.forEach(({ key, button }) => button.setLabel(letterAs(read(), key)));
     for (const { key, rect } of letterKeyCells(this.layout.keys, 8)) {
-      const label = key === 'done' ? '✓' : key === 'back' ? '⌫' : key === ' ' ? 'space' : key;
+      const label = KEY_LABELS[key] ?? key;
       const fontSize = key === ' ' ? 24 : short ? 26 : 30;
-      const b = button(this.host.scene, rect, label, fontSize, () =>
-        key === 'done' ? this.finishTyping(what) : write(typeKey(read(), key as LetterKey, max)),
-      );
+      const b = button(this.host.scene, rect, label, fontSize, () => {
+        if (key === 'done') return this.finishTyping(what);
+        write(typeKey(read(), key as LetterKey, max));
+        relabel();
+      });
       if (key === 'done') b.setFill(COLORS.mint, COLORS.mintDark);
+      else if (!KEY_LABELS[key]) letters.push({ key, button: b });
       this.page.add(b);
     }
+    relabel();
   }
 
   private finishTyping(what: 'name' | 'shop'): void {

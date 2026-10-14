@@ -79,7 +79,13 @@ test('a new game sets up the player, and the start screen greets whoever played 
   await page.waitForFunction(() => (window as HookWindow).__ssa?.scene.setup, null, { timeout: 30_000 });
   expect((await shown(page)).door).toBe('CLOSED');
 
-  for (const key of ['A', 'V', 'A', '✓']) await tapLabel(page, key);
+  // Keys show the case they type: a capital first, then small letters.
+  for (const key of ['A', 'v', 'a', '✓']) await tapLabel(page, key);
+  await onStep(page, 'shop');
+  // ◀ goes back to the name, still typed, and on again.
+  await tapLabel(page, '◀');
+  await onStep(page, 'name');
+  await tapLabel(page, '✓');
   await onStep(page, 'shop');
   expect((await shown(page)).sign).toMatch(/^Ava's /);
   await tapLabel(page, 'Sugar Cloud');
@@ -109,7 +115,7 @@ test('a new game sets up the player, and the start screen greets whoever played 
   expect(await greeting(page)).toEqual({ hello: 'Ava', others: [] });
   await tapStart(page, 'new');
   await onStep(page, 'name');
-  for (const key of ['L', 'E', 'O', '✓']) await tapLabel(page, key);
+  for (const key of ['L', 'e', 'o', '✓']) await tapLabel(page, key);
   await onStep(page, 'shop');
   await tapLabel(page, 'Next ▶');
   await onStep(page, 'keeper');
