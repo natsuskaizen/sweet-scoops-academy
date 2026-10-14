@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { skipSetup } from './shopHelpers';
 
 interface ShopHook {
   scene: {
@@ -28,7 +29,7 @@ async function startFresh(page: Page, errors: string[]): Promise<void> {
   await page.goto('/?e2e&fast');
   await page.evaluate(() => localStorage.clear());
   await page.reload();
-  await page.waitForFunction(() => (window as HookWindow).__ssa !== undefined);
+  await skipSetup(page);
 }
 
 const keypadReady = (page: Page) =>

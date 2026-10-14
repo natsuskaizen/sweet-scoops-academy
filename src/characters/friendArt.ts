@@ -662,6 +662,9 @@ export const FRIEND_ART = {
 export type FriendId = keyof typeof FRIEND_ART;
 export const FRIEND_IDS = Object.keys(FRIEND_ART) as FriendId[];
 
+/** A built-in character's name, as customers and shopkeepers say it: "Bonbon". */
+export const friendName = (id: FriendId): string => id.charAt(0).toUpperCase() + id.slice(1);
+
 /** True for a built-in character's id, so saved ids can be trusted before drawing them. */
 export const isFriendId = (id: string): id is FriendId => Object.hasOwn(FRIEND_ART, id);
 

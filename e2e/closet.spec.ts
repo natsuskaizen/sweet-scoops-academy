@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { atResultsWith200, SAVE_KEY, tapAt, type HookWindow } from './shopHelpers';
+import { atResultsWith200, SAVE_KEY, skipSetup, tapAt, type HookWindow } from './shopHelpers';
 
 test("Momo's Closet opens from the results card, and what she buys she wears in the shop", async ({
   page,
@@ -59,6 +59,7 @@ test('the Sprinkles balance opens the shop while a customer waits, and the order
   await page.goto('/?e2e&fast');
   await page.evaluate(() => localStorage.clear());
   await page.reload();
+  await skipSetup(page);
   await page.waitForFunction(() => (window as HookWindow).__ssa?.scene.keypad.isEnabled, null, { timeout: 30_000 });
   const pill = await page.evaluate(() => {
     const { width } = (window as HookWindow).__ssa!.scene.scale.gameSize;

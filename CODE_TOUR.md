@@ -302,6 +302,20 @@ if (!result.ok) return gate.notice('Not saved', `The change could not be saved: 
 scene.scene.restart();
 ```
 
+A brand new game (`services.needsSetup`, true when the load found no save) opens on the new-player setup instead of the first customer. It lives in the register panel, so the shop stays in view, and it only reports choices; the scene shows them and saves the result:
+
+```ts
+this.setup = new NewPlayerSetup({
+  // src/scenes/newPlayerSetup.ts
+  scene: this,
+  onShopName: (name) => setShopSign(this.room.sign, name), // the sign follows every roll, tap and letter
+  onKeeper: (id) => this.previewKeeper(id), // the friend steps behind the counter and says hi
+  onDone: (player) => this.finishSetup(player), // updatePlayer, write the save, restart into the first round
+});
+```
+
+Typing goes through `typeKey` in `src/shop/playerNames.ts` (capitals start each word, spaces never double), and the keys and cards are placed by `setupLayout()` in `src/ui/setupLayout.ts`, so both are unit tested.
+
 ## 7. Characters: `src/characters/`
 
 The shop's cast (Momo behind the counter and 13 customers) lives in `friendArt.ts`. Each one is its standing frame as a 32×40 text grid, and every other frame is redrawn from it, so every character gets the same expressions and steps:

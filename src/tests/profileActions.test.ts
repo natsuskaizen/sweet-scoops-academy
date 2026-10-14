@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { GAME_CONFIG } from '../config/gameConfig';
 import { mathSubject } from '../learning/mathSubject';
 import {
   addPlayer,
@@ -86,7 +87,7 @@ describe('players', () => {
     expect(addPlayer(save, { ...ava, shop: { name: '', keeper: 'kiki' } }, 2)).toBeNull();
     const p = addPlayer(save, { ...ava, name: '  Mia   Rose  ' }, 2)!;
     expect(p.displayName).toBe('Mia Rose');
-    const config = { maxPlayers: 2, maxNameLength: 12, maxShopNameLength: 28, defaultShop: ava.shop };
+    const config = { ...GAME_CONFIG.players, maxPlayers: 2 };
     expect(canAddPlayer(save, config)).toBe(false);
     expect(addPlayer(save, ava, 3, config)).toBeNull();
     expect(cleanName('Alexandrina-Rose', 12)).toBe('Alexandrina-');

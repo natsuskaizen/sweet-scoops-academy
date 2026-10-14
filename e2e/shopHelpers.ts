@@ -20,6 +20,7 @@ export interface Hook {
       close: () => void;
     } | null;
     shopkeeper: { list: { texture: { key: string } }[] };
+    setup: { complete: (player: object) => void } | null;
     shopMenu: { close: () => void } | null;
     placed: { room: { texture: { key: string } } };
     aid: { visible: boolean };
@@ -34,6 +35,17 @@ export type HookWindow = Window & { __ssa?: Hook };
 
 export const SAVE_KEY = 'sweet-scoops-academy.save';
 
+/** A brand new game opens on the new-player setup; this finishes it as "Player 1" at Sweet Scoops with Momo. */
+export async function skipSetup(page: Page): Promise<void> {
+  await page.waitForFunction(() => (window as HookWindow).__ssa?.scene.setup, null, { timeout: 30_000 });
+  await page.evaluate(() =>
+    (window as HookWindow).__ssa!.scene.setup!.complete({
+      name: 'Player 1',
+      shop: { name: 'Sweet Scoops', keeper: 'momo' },
+    }),
+  );
+}
+
 export async function tapAt(page: Page, x: number, y: number): Promise<void> {
   const width = await page.evaluate(() => (window as HookWindow).__ssa!.scene.scale.gameSize.width);
   const box = (await page.locator('canvas').boundingBox())!;
@@ -47,6 +59,7 @@ export async function atResultsWith200(page: Page, errors: string[]): Promise<vo
   await page.goto('/?e2e&fast');
   await page.evaluate(() => localStorage.clear());
   await page.reload();
+  await skipSetup(page);
   await page.waitForFunction(() => (window as HookWindow).__ssa?.scene.keypad.isEnabled, null, { timeout: 30_000 });
   await page.evaluate(() => {
     const ssa = (window as HookWindow).__ssa!;

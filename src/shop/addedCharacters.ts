@@ -214,8 +214,10 @@ export function toCustomerDef(c: AddedCharacter): CustomerDef {
 }
 
 /** Built-in customers plus every switched-on added customer. */
-export function customerRoster(added: readonly AddedCharacter[]): CustomerDef[] {
-  return [...CUSTOMERS, ...added.filter((c) => c.enabled && c.role === 'customer').map(toCustomerDef)];
+/** Everyone who can visit: the built-in customers and switched-on added ones, but never the player's own shopkeeper. */
+export function customerRoster(added: readonly AddedCharacter[], keeper?: string): CustomerDef[] {
+  const all = [...CUSTOMERS, ...added.filter((c) => c.enabled && c.role === 'customer').map(toCustomerDef)];
+  return all.filter((c) => c.id !== keeper);
 }
 
 /** The newest switched-on added shopkeeper, or null for the built-in puppy. */
