@@ -39,6 +39,25 @@ export function playersInOrder(save: SaveFile): Profile[] {
   return Object.values(save.profiles).sort((a, b) => b.lastPlayedAt - a.lastPlayedAt || a.createdAt - b.createdAt);
 }
 
+/** A player's totals in one line, as the grown-ups area and backup files show them. */
+export function playerStats(p: Profile): string {
+  return `${p.sprinkles} Sprinkles, ${p.roundHistory.length} rounds finished`;
+}
+
+/** A grown-up renames a player: null when done, or why not. */
+export function renamePlayer(
+  save: SaveFile,
+  id: string,
+  raw: string,
+  config: PlayersConfig = GAME_CONFIG.players,
+): string | null {
+  const profile = save.profiles[id];
+  if (!profile) return 'That player is no longer here.';
+  if (!cleanName(raw, config.maxNameLength)) return 'Type a name first.';
+  updatePlayer(profile, { name: raw }, config);
+  return null;
+}
+
 export function canAddPlayer(save: SaveFile, config: PlayersConfig = GAME_CONFIG.players): boolean {
   return Object.keys(save.profiles).length < config.maxPlayers;
 }

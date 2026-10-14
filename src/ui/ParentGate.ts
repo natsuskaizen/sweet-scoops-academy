@@ -28,8 +28,8 @@ export interface ParentGateOptions {
  * Every destructive action then needs a second "Yes" on a confirmation step.
  */
 const ACTION_COLUMNS = [420, 860];
-const ACTION_ROW_Y = 520;
-const ACTION_ROW_GAP = 80;
+const ACTION_ROW_Y = 460;
+const ACTION_ROW_GAP = 78;
 
 export class ParentGate {
   private root: Phaser.GameObjects.Container;

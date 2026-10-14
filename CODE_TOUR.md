@@ -302,6 +302,14 @@ if (!result.ok) return gate.notice('Not saved', `The change could not be saved: 
 scene.scene.restart();
 ```
 
+Players (`src/scenes/playerActions.ts`) opens a DOM dialog, `PlayersDialog`, so a grown-up renames with the device keyboard. The dialog only reports choices; each one is saved at once, and undone if the save fails:
+
+```ts
+rename: (id, name) => change(() => renamePlayer(services.save, id, name)), // null, or why not
+remove: (id) => change(() => (removePlayer(services.save, id) ? null : "The last player can't be removed.")),
+// On close: rebuild from the save, on the start screen if the player who was playing is gone.
+```
+
 `services.stage` says where the shop opens: `'setup'` when the load found no save, `'start'` whenever the game comes back (or a backup is loaded), and `'play'` once someone opens their shop. `ShopScene.create()` ends with `this.openAt(this.services.stage)`, and a rotation restarts into the same stage.
 
 The start screen (`src/scenes/startScreen.ts`) shows the active player's own shop behind it with the door shut, and only reports choices; the scene does what they mean:

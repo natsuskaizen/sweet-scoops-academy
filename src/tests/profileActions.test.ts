@@ -7,7 +7,9 @@ import {
   choosePlayer,
   cleanName,
   playersInOrder,
+  playerStats,
   removePlayer,
+  renamePlayer,
   resetLearning,
   resetProfile,
   updatePlayer,
@@ -132,5 +134,23 @@ describe('players', () => {
     const save = createSaveFile(1);
     addPlayer(save, ava, 2);
     expect(resetProfile(save, 3).shop).toEqual(ava.shop);
+  });
+});
+
+describe('renamePlayer', () => {
+  it('renames a player with a tidied name, and says why when it cannot', () => {
+    const save = createSaveFile(1);
+    const leo = addPlayer(save, { ...ava, name: 'Leo' }, 5)!;
+    expect(renamePlayer(save, leo.id, '  Leo   Max ')).toBeNull();
+    expect(leo.displayName).toBe('Leo Max');
+    expect(renamePlayer(save, leo.id, '   ')).toBe('Type a name first.');
+    expect(leo.displayName).toBe('Leo Max');
+    expect(renamePlayer(save, 'gone', 'Mia')).toBe('That player is no longer here.');
+    expect(validateSaveFile(save)).toEqual([]);
+  });
+
+  it('sums a player up in one line', () => {
+    const { p } = playedSave();
+    expect(playerStats(p)).toBe('50 Sprinkles, 0 rounds finished');
   });
 });
