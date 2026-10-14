@@ -66,8 +66,12 @@ test('a backup file can be saved and loaded back', async ({ page }, testInfo) =>
 
   const choosing = page.waitForEvent('filechooser');
   await runAction(page, 'Load a backup file');
-  await (await choosing).setFiles(edited);
+  const chooser = await choosing;
+  // Safari on iPad loses the choice from a picker that isn't on the page.
+  expect(await chooser.element().evaluate((input) => input.isConnected)).toBe(true);
+  await chooser.setFiles(edited);
   await page.waitForFunction(() => (window as HookWindow).__gate!.asked.length === 1);
+  expect(await page.locator('input[type=file]').count()).toBe(0);
   await page.evaluate(() => {
     const w = window as HookWindow;
     w.__gate!.asked[0]!.run(w.__gate);
