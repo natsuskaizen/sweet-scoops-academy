@@ -157,7 +157,7 @@ The two operations must maintain independent adaptive learning records for every
 
 Each child has a grade level, chosen by a grown-up in the parent area (new players start in 3rd grade). The grade decides what the shop's questions practise:
 
-- **3rd grade**: three games: Times tables (multiplication only), Sharing (division only) and Mix it up (both).
+- **3rd grade**: three games: Grouping (multiplication only), Sharing (division only) and Mix it up (both).
 - **Kindergarten**: three games: How many? (counting up to 5), Adding (within 5) and Mix it up (both). Players can't read yet, so orders are drawn as pictures (a cone of scoops, or piles of scoops with a plus between) and the number keys show dots, so a child can match a count to its key. Every scoop is drawn whole and clear of its neighbours so none can be mistaken for hidden. More kindergarten question types (take away, make 10, which is more) and kindergarten reading follow; see the Milestone 5 tracker.
 
 Changing grade starts a fresh round. Each operation's learning record is kept, so a child who switches back carries on where they left off.

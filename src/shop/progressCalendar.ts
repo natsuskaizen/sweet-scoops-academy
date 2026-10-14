@@ -1,7 +1,7 @@
 /**
  * The kids' progress calendar. Each finished round (a "game", in any subject)
  * is added to the day it finished on, with which kind of game it was. Playing
- * the day's goal of different games (times tables, then sharing, then a mix)
+ * the day's goal of different games (grouping, then sharing, then a mix)
  * stamps a heart on that date with the time played; the same game again
  * still counts as played but adds no slice. Phaser-free: src/ui/CalendarScreen.ts
  * and src/ui/WallCalendar.ts only draw what this returns.

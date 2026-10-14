@@ -26,7 +26,7 @@ export interface MathConfig {
   factorTiers: Readonly<Record<number, number>>;
 }
 
-/** One game a child can pick for a round, e.g. "Times tables". */
+/** One game a child can pick for a round, e.g. "Grouping". */
 export interface MathMode {
   id: string;
   /** Shown on the pick-a-game card. */
@@ -153,7 +153,7 @@ export interface GameConfig {
   /** The kids' progress calendar: a heart stamp on each day the goal is reached. */
   calendar: {
     /**
-     * Different games (finished rounds of different kinds, e.g. times tables then sharing) in a day for a
+     * Different games (finished rounds of different kinds, e.g. grouping then sharing) in a day for a
      * heart, until a grown-up picks another goal. Never more than the games the player's grade has.
      */
     defaultDailyGoal: number;
@@ -268,7 +268,7 @@ export const GAME_CONFIG: GameConfig = {
         mathModes: [
           {
             id: 'multiplication',
-            label: 'Times tables',
+            label: 'Grouping',
             symbol: '×',
             hint: 'Groups of scoops',
             operations: ['multiplication'],
