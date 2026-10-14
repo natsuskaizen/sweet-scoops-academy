@@ -52,6 +52,7 @@ function restoreAction(
       if (!result.ok) return gate.notice('Backup not loaded', result.error);
       services.characters.merge(characters);
       services.save = save;
+      services.needsSetup = false;
       onRestored();
     },
   };

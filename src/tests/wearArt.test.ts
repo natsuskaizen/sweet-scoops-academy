@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { FRIEND_ART, FRIEND_EYES, FRIEND_H, FRIEND_W } from '../characters/friendArt';
+import { FRIEND_ART, FRIEND_EYES, FRIEND_H, FRIEND_IDS, FRIEND_W } from '../characters/friendArt';
 import { SCOOPER_LOOKS } from '../characters/scooperArt';
-import { MOMO_HATLESS, onFrame, WEAR_ART, withoutChefHat } from '../characters/wearArt';
+import { bareArt, onFrame, TOPPERS, WEAR_ART } from '../characters/wearArt';
 import { designsIn, TIERS } from '../shop/catalog';
 
 const LETTERS = /^[.oLlwgGyrBk]+$/;
@@ -39,11 +39,30 @@ describe('wear art', () => {
 
   it('takes off the chef hat and leaves the rest of Momo as she was', () => {
     const before = FRIEND_ART.momo.rows;
-    const after = withoutChefHat(before);
+    const after = bareArt('momo')!.rows;
     expect(after.slice(0, 10).join('')).not.toContain('a');
     expect(after.slice(10)).toEqual(before.slice(10));
     // Her ears keep their outline.
     expect(after[4]).toBe('...oobbo................obboo...');
-    expect(MOMO_HATLESS.rows).toEqual(after);
+  });
+
+  it("takes off each friend's topper (Bonbon's flower, Kiki's star...) and nothing below it", () => {
+    for (const id of FRIEND_IDS) {
+      const topper = TOPPERS[id];
+      if (!topper) {
+        expect(bareArt(id), id).toBeNull();
+        continue;
+      }
+      const before = FRIEND_ART[id].rows;
+      const after = bareArt(id)!.rows;
+      const top = after.slice(0, topper.rows).join('');
+      for (const ch of topper.chars) expect(top, `${id} ${ch}`).not.toContain(ch);
+      expect(after.slice(topper.rows), id).toEqual(before.slice(topper.rows));
+      // Only the topper and its outline go: the head and ears above the cut stay.
+      for (const ch of topper.edge) {
+        const count = (rows: readonly string[]) => rows.slice(0, topper.rows).join('').split(ch).length;
+        if (!topper.chars.includes(ch)) expect(count(after), `${id} ${ch}`).toBe(count(before));
+      }
+    }
   });
 });

@@ -1,13 +1,14 @@
 /**
- * Momo's Closet: a dressing room drawn over the shop, with Momo on a little
- * stage and a panel of hats, bows, glasses, hearing aids and scoopers. Any
- * colour tried is shown on Momo straight away; buying (or wearing an owned
- * one) keeps it on, in the shop too. Rules live in shop/purchases.ts; this
+ * The Closet: a dressing room drawn over the shop, with the player's
+ * shopkeeper on a little stage and a panel of hats, bows, glasses, hearing
+ * aids and scoopers. Any colour tried is shown on them straight away; buying
+ * (or wearing an owned one) keeps it on, in the shop too. Rules live in shop/purchases.ts; this
  * only shows them.
  */
 import type Phaser from 'phaser';
-import { CharacterView, friendLook, MOMO_SHEETS } from '../characters/characterManager';
-import { dressMomo } from '../characters/wearArt';
+import { CharacterView, friendLook, friendSheets } from '../characters/characterManager';
+import { friendName, keeperOrMomo, type FriendId } from '../characters/friendArt';
+import { dressFriend } from '../characters/wearArt';
 import type { Profile } from '../save/saveTypes';
 import {
   designsIn,
@@ -51,14 +52,18 @@ export class ClosetMode {
   private readonly root: Phaser.GameObjects.Container;
   private readonly layout: ClosetLayout;
   private readonly balance: Phaser.GameObjects.Text;
-  private readonly momo: CharacterView;
+  /** The shopkeeper trying things on. */
+  private readonly wearer: CharacterView;
+  private readonly keeper: FriendId;
+  /** The shopkeeper's fur colour, for paws holding scoopers. */
+  private readonly paw: string;
   private readonly card: TierCard;
   /** Things redrawn on every change: tabs, tiles, captions, the scooper and sparkles. */
   private readonly changing: Phaser.GameObjects.Container;
   private tab: ClosetTab = TABS[0]!;
   private design: CatalogDesign;
   private tier: TierId = 'pink';
-  /** Whether Momo is trying on the chosen colour (off once it is taken off). */
+  /** Whether the shopkeeper is trying on the chosen colour (off once it is taken off). */
   private trying = true;
 
   constructor(private readonly host: ClosetHost) {
@@ -66,10 +71,12 @@ export class ClosetMode {
     this.layout = closetLayout(LAYOUT);
     this.root = scene.add.container(0, 0).setDepth(600); // above the results card
     this.root.add(drawBackdrop(scene, this.layout));
-    this.balance = drawTopBar(scene, this.root, () => this.close());
+    this.keeper = keeperOrMomo(host.profile().shop.keeper);
+    this.balance = drawTopBar(scene, this.root, `${friendName(this.keeper)}'s Closet`, () => this.close());
     const { momo } = this.layout;
-    this.momo = new CharacterView(scene, momo.x, momo.y, friendLook('momo'));
-    this.momo.setScale(momo.scale).idle(true);
+    this.wearer = new CharacterView(scene, momo.x, momo.y, friendLook(this.keeper));
+    this.wearer.setScale(momo.scale).idle(true);
+    this.paw = `#${this.wearer.bodyColor().toString(16).padStart(6, '0')}`;
     this.changing = scene.add.container(0, 0);
     this.card = new TierCard(scene, this.layout.card, {
       labels: (design) =>
@@ -79,7 +86,7 @@ export class ClosetMode {
       onPick: (tier) => this.pick(tier),
       onAction: () => this.act(),
     });
-    this.root.add([this.momo, this.changing, this.card]);
+    this.root.add([this.wearer, this.changing, this.card]);
     this.design = designsFor(this.tab)[0]!;
     this.showTab(this.tab.id);
   }
@@ -143,18 +150,19 @@ export class ClosetMode {
       ownedCount: owned.length,
       on,
       onTap: () => this.select(design),
+      paw: this.paw,
     };
     this.changing.add(drawTile(this.host.scene, tileRect(this.layout.grid, i), info));
   }
 
-  /** Momo in what she has on, with the colour being tried in place of her own for that slot. */
+  /** The shopkeeper in what they have on, with the colour being tried in place of their own for that slot. */
   private dressUp(): void {
     const profile = this.host.profile();
     const items = this.trying ? wornWith(profile, this.item()) : equippedItems(profile);
-    dressMomo(this.momo, items, MOMO_SHEETS);
+    dressFriend(this.wearer, this.keeper, items, friendSheets(this.keeper));
     const { momo } = this.layout;
     const scooper = items.find((i) => slotOf(i) === 'handheld');
-    const held = heldScooper(this.host.scene, scooper, momo.scale);
+    const held = heldScooper(this.host.scene, scooper, this.paw, momo.scale);
     this.changing.add(held.setPosition(momo.x - 8 * momo.scale, momo.y - 10 * momo.scale));
     if (items.some((i) => i.tier === 'rainbow')) {
       const box = this.host.scene.add.container(momo.x, momo.y);
@@ -177,7 +185,7 @@ export class ClosetMode {
     const item = this.item();
     if (!this.trying) return "Taken off. It's still yours.";
     if (isInUse(profile, item))
-      return slotOf(item) === 'handheld' ? 'Momo scoops with this one!' : 'Momo is wearing it!';
+      return `${friendName(this.keeper)} ${slotOf(item) === 'handheld' ? 'scoops with this one' : 'is wearing it'}!`;
     if (owns(profile, item)) return "It's yours! Tap the button to use it.";
     return 'Trying it on. Tap Buy to keep it.';
   }

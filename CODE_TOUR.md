@@ -302,6 +302,20 @@ if (!result.ok) return gate.notice('Not saved', `The change could not be saved: 
 scene.scene.restart();
 ```
 
+A brand new game (`services.needsSetup`, true when the load found no save) opens on the new-player setup instead of the first customer. It lives in the register panel, so the shop stays in view, and it only reports choices; the scene shows them and saves the result:
+
+```ts
+this.setup = new NewPlayerSetup({
+  // src/scenes/newPlayerSetup.ts
+  scene: this,
+  onShopName: (name) => setShopSign(this.room.sign, name), // the sign follows every roll, tap and letter
+  onKeeper: (id) => this.previewKeeper(id), // the friend steps behind the counter and says hi
+  onDone: (player) => this.finishSetup(player), // updatePlayer, write the save, restart into the first round
+});
+```
+
+Typing goes through `typeKey` in `src/shop/playerNames.ts` (capitals start each word, spaces never double), and the keys and cards are placed by `setupLayout()` in `src/ui/setupLayout.ts`, so both are unit tested.
+
 ## 7. Characters: `src/characters/`
 
 The shop's cast (Momo behind the counter and 13 customers) lives in `friendArt.ts`. Each one is its standing frame as a 32×40 text grid, and every other frame is redrawn from it, so every character gets the same expressions and steps:
@@ -333,12 +347,13 @@ const scooper = equippedIn(profile, 'handheld')?.tier ?? 'wooden';
 await scoopOntoCone(scene, { keeper: shopkeeper, scooper }, treat, flavor, count);
 ```
 
-What Momo wears from her Closet is drawn in `wearArt.ts` on her own 32×40 frame, so each item is a layer the same size as her picture. A hat replaces her chef hat, so she is then drawn from a copy of her picture with it taken off:
+What the shopkeeper wears from the Closet is drawn in `wearArt.ts` on the friends' shared 32×40 frame (fitted to Momo), so each item is a layer the same size as their picture and fits any of the six shopkeepers. Some friends wear something of their own on their head (Momo's chef hat, Bonbon's flower, Kiki's star); a hat, or for some a bow, takes its place, so they are then drawn from a copy of their picture with it taken off:
 
 ```ts
-WEAR_ART['glasses-round']; // { rows: [...], x: 0, y: 16 }: lenses around her eyes on rows 18-20
-withoutChefHat(FRIEND_ART.momo.rows); // registered as MOMO_SHEETS.hatless
-dressMomo(view, equippedItems(profile), MOMO_SHEETS); // swaps her sheet, then view.dress([...texture keys])
+WEAR_ART['glasses-round']; // { rows: [...], x: 0, y: 16 }: lenses around the eyes on rows 18-20
+TOPPERS.bonbon; // { chars: 'cd', rows: 9, edge: 'ab', under: ['hat', 'bow'] }: her flower, replaced by a hat or bow
+bareArt('bonbon'); // her picture without it, registered as friendSheets('bonbon').bare
+dressFriend(view, 'bonbon', equippedItems(profile), friendSheets('bonbon')); // picks the sheet, then view.dress([...])
 ```
 
 The older 16×20 species in `sprites.ts` share one grid so clothing layers line up on any of them:
@@ -416,7 +431,7 @@ new TierCard(scene, rect, {
 });
 ```
 
-Momo's Closet opens the same two ways and covers the whole screen (`closetLayout()` in `theme.ts`): Momo on a stage, three tabs (Clothing: hats, T-shirt, dress, skirt, shoes; Accessories: glasses, sunglasses, hearing aids, bow; Ice Cream Tools: the scooper), a tile per design and the same `TierCard`. A dress is worn instead of a T-shirt and skirt (`SLOT_CLASHES` in `catalog.ts`), and `wornWith(profile, item)` gives what Momo would have on while trying something. Whatever colour is picked is shown on Momo at once; buying keeps it on, and when the Closet closes the shop rebuilds her in what she now has on.
+The Closet (named after the player's shopkeeper, "Kiki's Closet") opens the same two ways and covers the whole screen (`closetLayout()` in `theme.ts`): the shopkeeper on a stage, three tabs (Clothing: hats, T-shirt, dress, skirt, shoes; Accessories: glasses, sunglasses, hearing aids, bow; Ice Cream Tools: the scooper), a tile per design and the same `TierCard`. A dress is worn instead of a T-shirt and skirt (`SLOT_CLASHES` in `catalog.ts`), and `wornWith(profile, item)` gives what the shopkeeper would have on while trying something. Whatever colour is picked is shown on them at once; buying keeps it on, and when the Closet closes the shop rebuilds them in what they now have on.
 
 ## Tests
 

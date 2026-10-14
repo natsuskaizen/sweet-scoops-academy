@@ -3,6 +3,8 @@ import { Button } from './Button';
 import { COLORS, LAYOUT, text } from './theme';
 
 export interface ShopMenuOptions {
+  /** Whose Closet it is: the player's shopkeeper. */
+  keeperName: string;
   onDecorate: () => void;
   onCloset: () => void;
   onClose: () => void;
@@ -13,7 +15,7 @@ const H = 380;
 
 /**
  * The Sprinkle Shop's front door, opened from the Sprinkles balance in the
- * top bar: two big buttons, Decorate and Momo's Closet. Tapping outside the
+ * top bar: two big buttons, Decorate and the shopkeeper's Closet. Tapping outside the
  * card, or ✕, closes it.
  */
 export class ShopMenu {
@@ -63,7 +65,7 @@ export class ShopMenu {
       title,
       close,
       big(160, 'Decorate the shop', COLORS.lavender, COLORS.lavenderDark, opts.onDecorate),
-      big(286, "Momo's Closet", COLORS.mint, COLORS.mintDark, opts.onCloset),
+      big(286, `${opts.keeperName}'s Closet`, COLORS.mint, COLORS.mintDark, opts.onCloset),
     ]);
   }
 

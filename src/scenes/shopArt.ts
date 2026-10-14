@@ -85,8 +85,23 @@ export function roomTexture(scene: Phaser.Scene, look: RoomLook): string {
   return key;
 }
 
-/** Draws the room; the image is returned so wall paint and doors can repaint it. */
-export function drawShopRoom(scene: Phaser.Scene, shopName: string): Phaser.GameObjects.Image {
+export interface ShopRoom {
+  /** Wall paint and doors repaint this. */
+  room: Phaser.GameObjects.Image;
+  /** The shop's name over the window (setShopSign changes it). */
+  sign: Phaser.GameObjects.Text;
+  /** The sign hanging on the door. */
+  doorSign: Phaser.GameObjects.Text;
+}
+
+/** Writes a name on the shop sign, shrinking a long one to fit. */
+export function setShopSign(sign: Phaser.GameObjects.Text, name: string): void {
+  sign.setText(name).setScale(1);
+  sign.setScale(Math.min(1, ROOM_TEXT.sign.w / Math.max(1, sign.width)));
+}
+
+/** Draws the room, its shop sign and the door's OPEN sign. */
+export function drawShopRoom(scene: Phaser.Scene, shopName: string): ShopRoom {
   const room = roomArt();
   paintTexture(scene, 'room-counter', COUNTER_ART, paintCounter);
   const image = scene.add
@@ -98,11 +113,10 @@ export function drawShopRoom(scene: Phaser.Scene, shopName: string): Phaser.Game
   scene.add.image(COUNTER_ART.x, COUNTER_ART.y, 'room-counter').setOrigin(0).setScale(ROOM_SCALE).setDepth(30);
   const { sign, open } = ROOM_TEXT;
   const name = scene.add
-    .text(sign.x, sign.y, shopName, text(40, CSS.white, { stroke: CSS.ink, strokeThickness: 6 }))
+    .text(sign.x, sign.y, '', text(40, CSS.white, { stroke: CSS.ink, strokeThickness: 6 }))
     .setOrigin(0.5)
     .setDepth(1);
-  // A long shop name shrinks to fit the sign rather than spilling past it.
-  name.setScale(Math.min(1, sign.w / name.width));
-  scene.add.text(open.x, open.y, 'OPEN', text(20, CSS.white)).setOrigin(0.5).setDepth(1);
-  return image;
+  setShopSign(name, shopName);
+  const doorSign = scene.add.text(open.x, open.y, 'OPEN', text(20, CSS.white)).setOrigin(0.5).setDepth(1);
+  return { room: image, sign: name, doorSign };
 }

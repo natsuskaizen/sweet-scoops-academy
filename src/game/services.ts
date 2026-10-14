@@ -24,6 +24,8 @@ export interface GameServices {
   subject: LearningSubject<ChallengeSpec, unknown>;
   /** Characters a grown-up added on this device. */
   characters: CharacterLibrary;
+  /** A brand new game sets up its first player before playing, even if the screen rotates meanwhile. */
+  needsSetup: boolean;
 }
 
 function browserStorage(): StorageLike | null {
@@ -49,7 +51,11 @@ function chooseSubject(): LearningSubject<ChallengeSpec, unknown> {
   });
 }
 
-const fromLoad = (load: LoadResult) => ({ save: load.save, loadNotice: load.status });
+const fromLoad = (load: LoadResult) => ({
+  save: load.save,
+  loadNotice: load.status,
+  needsSetup: load.status === 'fresh',
+});
 
 export function createServices(): GameServices {
   const storage = browserStorage();

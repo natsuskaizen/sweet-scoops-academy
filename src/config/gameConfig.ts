@@ -96,6 +96,8 @@ export interface GameConfig {
     maxShopNameLength: number;
     /** The shop a player has before choosing their own (and every save from before players chose). */
     defaultShop: { name: string; keeper: string };
+    /** The friends a new player can choose to work behind their counter, in the order shown. */
+    starterKeepers: readonly string[];
   };
   parentArea: {
     /** Round cards per page in the grown-ups "Rounds" view (a 2x2 grid). */
@@ -209,6 +211,7 @@ export const GAME_CONFIG: GameConfig = {
     maxNameLength: 12,
     maxShopNameLength: 28,
     defaultShop: { name: 'Sweet Scoops', keeper: 'momo' },
+    starterKeepers: ['momo', 'bonbon', 'kiki', 'mallow', 'pom', 'lulu'],
   },
   parentArea: {
     roundCardsPerPage: 4,

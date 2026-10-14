@@ -662,8 +662,14 @@ export const FRIEND_ART = {
 export type FriendId = keyof typeof FRIEND_ART;
 export const FRIEND_IDS = Object.keys(FRIEND_ART) as FriendId[];
 
+/** A built-in character's name, as customers and shopkeepers say it: "Bonbon". */
+export const friendName = (id: FriendId): string => id.charAt(0).toUpperCase() + id.slice(1);
+
 /** True for a built-in character's id, so saved ids can be trusted before drawing them. */
 export const isFriendId = (id: string): id is FriendId => Object.hasOwn(FRIEND_ART, id);
+
+/** A saved shopkeeper id as a built-in friend, or Momo for one the game doesn't know. */
+export const keeperOrMomo = (id: string): FriendId => (isFriendId(id) ? id : 'momo');
 
 /** Colour for a grid letter, or null for clear. */
 export function friendColor(art: FriendArt, ch: string): string | null {
