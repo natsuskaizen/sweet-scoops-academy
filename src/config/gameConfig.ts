@@ -3,7 +3,8 @@
  * the Phaser-free ones also accept an override so tests (or a future grown-ups
  * screen) can change behaviour without editing code.
  *
- * To turn on addition and subtraction, add them to `math.enabledOperations`.
+ * Which operations a player practises comes from their grade (`grades`);
+ * `math.enabledOperations` is the default for code and tests that pass no grade.
  */
 import type { AttemptOutcome } from '../learning/types';
 
@@ -21,6 +22,23 @@ export interface MathConfig {
   subtraction: { minuend: RangeRule; subtrahend: RangeRule; minDifference: number };
   /** How hard each times-table factor feels to a young learner (lower is easier). */
   factorTiers: Readonly<Record<number, number>>;
+}
+
+/** One way to practise a grade's math, e.g. "multiplication only". */
+export interface MathMode {
+  id: string;
+  label: string;
+  /** The operations this mode puts in rounds, split evenly (as `math.enabledOperations`). */
+  operations: readonly string[];
+}
+
+export interface GradeLevel {
+  id: string;
+  label: string;
+  /** This grade's number ranges, in place of the ones in `math`. */
+  math: Partial<Omit<MathConfig, 'enabledOperations'>>;
+  /** The ways to practise; the first is what a player gets on moving to this grade. */
+  mathModes: readonly MathMode[];
 }
 
 export interface AdaptiveConfig {
@@ -70,6 +88,12 @@ export interface GameConfig {
   rewards: RewardConfig;
   adaptive: AdaptiveConfig;
   math: MathConfig;
+  /** The grades a grown-up can choose for each player, in the order shown. */
+  grades: {
+    /** New players, and every player from before grades, start here. */
+    defaultGrade: string;
+    levels: readonly GradeLevel[];
+  };
   backup: {
     /** Larger files are refused before reading; a real backup is a few KB (more with added characters). */
     maxImportBytes: number;
@@ -196,6 +220,31 @@ export const GAME_CONFIG: GameConfig = {
     subtraction: { minuend: { min: 2, max: 20 }, subtrahend: { min: 1, max: 10 }, minDifference: 0 },
     // ×1, ×2, ×10 are easiest, then ×5 ×11, then ×3 ×4, then ×9, then ×6 ×7 ×8 ×12.
     factorTiers: { 1: 0, 2: 1, 10: 1, 5: 2, 11: 2, 3: 3, 4: 3, 9: 4, 6: 5, 7: 5, 8: 5, 12: 5 },
+  },
+  grades: {
+    defaultGrade: 'grade3',
+    levels: [
+      {
+        id: 'kindergarten',
+        label: 'Kindergarten',
+        // Adding and taking away within 5 first (Common Core K fluency); within 10 comes later.
+        math: {
+          addition: { addend: { min: 1, max: 5 }, maxSum: 5 },
+          subtraction: { minuend: { min: 1, max: 5 }, subtrahend: { min: 1, max: 5 }, minDifference: 0 },
+        },
+        mathModes: [{ id: 'addSubtract', label: 'Adding and taking away', operations: ['addition', 'subtraction'] }],
+      },
+      {
+        id: 'grade3',
+        label: '3rd grade',
+        math: {},
+        mathModes: [
+          { id: 'mixed', label: 'Multiplication and division', operations: ['multiplication', 'division'] },
+          { id: 'multiplication', label: 'Multiplication only', operations: ['multiplication'] },
+          { id: 'division', label: 'Division only', operations: ['division'] },
+        ],
+      },
+    ],
   },
   backup: { maxImportBytes: 2_000_000 },
   addedCharacters: {

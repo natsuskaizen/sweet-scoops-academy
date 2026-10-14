@@ -16,6 +16,22 @@ export const GAME_CONFIG: GameConfig = {
 };
 ```
 
+Each player's grade and math mode (`profile.settings.grade`, `mathMode`) pick which math subject they play. `src/learning/grades.ts` merges the grade's ranges into `math`, switches on the mode's operations, and builds that subject once:
+
+```ts
+export function mathConfigFor(choice: GradeChoice, config: GameConfig = GAME_CONFIG): MathConfig {
+  return {
+    ...config.math,
+    ...gradeLevel(choice.grade, config.grades).math, // kindergarten: within 5
+    enabledOperations: mathModeOf(choice, config.grades).operations, // e.g. ['division']
+  };
+}
+
+services.subjectFor(profile); // subjectForGrade(profile.settings): what OrderManager is given
+```
+
+Every grade's subject has the id `math` and each operation keeps its own record, so switching mode keeps what a child has mastered. A saved round is checked against the player's own grade on load. `chooseGrade` (`src/save/profileActions.ts`) drops the round in play, because it was planned for the old choice; the grown-ups area's grade screen (`src/scenes/gradeAction.ts`) saves each tap, and the shop restarts when the area closes on a new choice.
+
 ## 1. Operations: `src/learning/math/`
 
 Each operation is one file implementing `MathOperation`. It owns its fact table, rules, wording and visuals, so adding addition touched nothing else:
@@ -295,7 +311,7 @@ The grown-ups area's content lives in `src/scenes/parentArea.ts`, so the scene o
 
 ```ts
 // services.save is the live save; services.loadNotice is how it was found at startup, shown once
-resetLearning(profile, services.subject); // src/save/profileActions.ts
+resetLearning(profile, services.subjectFor(profile)); // src/save/profileActions.ts
 resetProfile(services.save, Date.now()); // replaces only the active player, keeping their shop
 const result = services.saves.write(services.save);
 if (!result.ok) return gate.notice('Not saved', `The change could not be saved: ${result.error}`);

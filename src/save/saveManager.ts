@@ -9,6 +9,7 @@
  * overwritten: bad data is copied to quarantine before the game moves on.
  */
 import { GAME_CONFIG } from '../config/gameConfig';
+import { defaultGradeChoice } from '../learning/grades';
 import { mathSubject } from '../learning/mathSubject';
 import { randomSeed } from '../core/rng';
 import { migrateToVersion } from './migrations';
@@ -67,7 +68,12 @@ export function createProfile(
     roundHistory: [],
     dailyLog: {},
     achievements: [],
-    settings: { showHints: true, reduceMotion: false, dailyGoal: GAME_CONFIG.calendar.defaultDailyGoal },
+    settings: {
+      showHints: true,
+      reduceMotion: false,
+      dailyGoal: GAME_CONFIG.calendar.defaultDailyGoal,
+      ...defaultGradeChoice(),
+    },
   };
 }
 

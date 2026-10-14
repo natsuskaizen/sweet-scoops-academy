@@ -5,6 +5,7 @@
  */
 import { GAME_CONFIG } from '../config/gameConfig';
 import { randomSeed } from '../core/rng';
+import { settleChoice, startOfGrade, type GradeChoice } from '../learning/grades';
 import type { ChallengeSpec, LearningSubject } from '../learning/types';
 import { createProfile } from './saveManager';
 import { resetSubjectProgress, type Profile, type SaveFile, type ShopDetails } from './saveTypes';
@@ -19,15 +20,35 @@ export function resetLearning(profile: Profile, subject: Subject): void {
   profile.currentRound = null;
 }
 
-/** Starts the active player over under the same name and shop; any other players are left alone. */
+/** Starts the active player over under the same name, shop and grade; any other players are left alone. */
 export function resetProfile(save: SaveFile, now: number): Profile {
   const old = save.profiles[save.activeProfileId];
   const fresh = createProfile(old?.displayName ?? GAME_CONFIG.players.firstPlayerName, now, randomSeed(), old?.shop);
+  if (old) Object.assign(fresh.settings, settleChoice(old.settings));
   delete save.profiles[save.activeProfileId];
   save.profiles[fresh.id] = fresh;
   save.activeProfileId = fresh.id;
   return fresh;
 }
+
+/**
+ * A grown-up picks a player's grade and math mode. The round in play was
+ * planned for the old choice, so it is dropped (Sprinkles already paid stay)
+ * and the next round follows the new one. False when nothing changed.
+ */
+export function chooseGrade(profile: Profile, choice: GradeChoice): boolean {
+  const next = settleChoice(choice);
+  const now = settleChoice(profile.settings);
+  if (next.grade === now.grade && next.mathMode === now.mathMode) return false;
+  profile.settings.grade = next.grade;
+  profile.settings.mathMode = next.mathMode;
+  profile.currentRound = null;
+  return true;
+}
+
+/** Moves a player to another grade, starting on that grade's first math mode. */
+export const chooseGradeLevel = (profile: Profile, gradeId: string): boolean =>
+  settleChoice(profile.settings).grade !== startOfGrade(gradeId).grade && chooseGrade(profile, startOfGrade(gradeId));
 
 /** A typed name made tidy: no spaces at the ends or doubled inside, at most `max` letters. */
 export function cleanName(raw: string, max: number): string {

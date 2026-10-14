@@ -153,6 +153,15 @@ Multiplication and division must both be available from the beginning.
 
 The two operations must maintain independent adaptive learning records for every child.
 
+### Grade levels
+
+Each child has a grade level, chosen by a grown-up in the parent area (new players start in 3rd grade). The grade decides what the shop's questions practise:
+
+- **3rd grade**: multiplication and division, with a choice of multiplication only, division only, or both mixed.
+- **Kindergarten**: adding and taking away within 5. Picture orders a pre-reader can follow, and more kindergarten question types, come next (see the kindergarten research notes); kindergarten vocabulary follows straight after.
+
+Changing grade or math mode starts a fresh round. Each operation's learning record is kept, so a child who switches back carries on where they left off.
+
 ### Multiplication rules
 
 - Both factors must be integers from 1 through 11, inclusive.

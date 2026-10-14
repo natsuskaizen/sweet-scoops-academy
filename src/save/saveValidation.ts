@@ -3,7 +3,7 @@
  * Returns a list of problems; an empty list means the data is safe to use.
  */
 import { GAME_CONFIG } from '../config/gameConfig';
-import { mathSubject } from '../learning/mathSubject';
+import { subjectForGrade, type GradeChoice } from '../learning/grades';
 import type { SaveFile } from './saveTypes';
 
 type Obj = Record<string, unknown>;
@@ -52,7 +52,17 @@ function checkSkill(v: unknown, path: string, out: string[]): void {
   }
 }
 
-function checkRound(v: unknown, path: string, out: string[]): void {
+/** Saved questions are checked against the player's own grade (an unknown grade plays, and checks as, the default). */
+type SpecCheck = (spec: unknown) => boolean;
+
+function specCheckFor(settings: unknown): SpecCheck {
+  const s = isObj(settings) ? settings : {};
+  const choice: GradeChoice = { grade: isStr(s.grade) ? s.grade : '', mathMode: isStr(s.mathMode) ? s.mathMode : '' };
+  const subject = subjectForGrade(choice);
+  return (spec) => subject.isValidSpec(spec);
+}
+
+function checkRound(v: unknown, path: string, out: string[], isValidSpec: SpecCheck): void {
   if (v === null) return;
   if (!isObj(v)) {
     out.push(`${path} not an object`);
@@ -75,7 +85,7 @@ function checkRound(v: unknown, path: string, out: string[]): void {
       out.push(`${p} not an object`);
       return;
     }
-    if (!mathSubject.isValidSpec(o.spec)) out.push(`${p}.spec invalid`);
+    if (!isValidSpec(o.spec)) out.push(`${p}.spec invalid`);
     if (!isStr(o.customerId)) out.push(`${p}.customerId invalid`);
     if (!isNonNegInt(o.attempts) || o.attempts > GAME_CONFIG.round.attemptsPerOrder) out.push(`${p}.attempts invalid`);
     if (o.outcome !== null && !OUTCOMES.has(o.outcome as string)) out.push(`${p}.outcome invalid`);
@@ -139,7 +149,12 @@ const isDailyGoal = (v: unknown): boolean => isNonNegInt(v) && v >= 1;
 function checkSettings(v: unknown, path: string, out: string[]): void {
   if (!isObj(v) || typeof v.showHints !== 'boolean' || typeof v.reduceMotion !== 'boolean') {
     out.push(`${path} invalid`);
-  } else if (!isDailyGoal(v.dailyGoal)) out.push(`${path}.dailyGoal invalid`);
+    return;
+  }
+  if (!isDailyGoal(v.dailyGoal)) out.push(`${path}.dailyGoal invalid`);
+  // Any text: a grade this game doesn't have plays the default grade.
+  if (!isText(v.grade)) out.push(`${path}.grade invalid`);
+  if (!isText(v.mathMode)) out.push(`${path}.mathMode invalid`);
 }
 
 /** Simple per-field shape checks for a profile. */
@@ -172,7 +187,7 @@ function checkProfile(v: unknown, id: string, out: string[]): void {
   checkHistory(v.roundHistory, `${path}.roundHistory`, out);
   checkDailyLog(v.dailyLog, `${path}.dailyLog`, out);
   checkLearning(v.learning, `${path}.learning`, out);
-  checkRound(v.currentRound, `${path}.currentRound`, out);
+  checkRound(v.currentRound, `${path}.currentRound`, out, specCheckFor(v.settings));
 }
 
 function checkLearning(learning: unknown, path: string, out: string[]): void {
@@ -202,7 +217,7 @@ export function dropUnplayableRounds(data: unknown): number {
   for (const profile of Object.values(data.profiles)) {
     if (!isObj(profile) || profile.currentRound === null || profile.currentRound === undefined) continue;
     const problems: string[] = [];
-    checkRound(profile.currentRound, 'currentRound', problems);
+    checkRound(profile.currentRound, 'currentRound', problems, specCheckFor(profile.settings));
     if (problems.length === 0) continue;
     profile.currentRound = null;
     dropped++;

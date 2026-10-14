@@ -4,6 +4,7 @@
  * result is still validated before anything uses it.
  */
 import { GAME_CONFIG } from '../config/gameConfig';
+import { defaultGradeChoice } from '../learning/grades';
 import { logFromHistory } from '../shop/progressCalendar';
 
 type Obj = Record<string, unknown>;
@@ -67,10 +68,21 @@ function addShops(data: Obj): void {
   }
 }
 
+/** Version 5 gives every player a grade. Everyone so far practised 3rd grade multiplication and division. */
+function addGrades(data: Obj): void {
+  for (const profile of profilesOf(data)) {
+    if (!isObj(profile.settings)) continue;
+    const start = defaultGradeChoice();
+    profile.settings.grade ??= start.grade;
+    profile.settings.mathMode ??= start.mathMode;
+  }
+}
+
 export const MIGRATIONS: Readonly<Record<number, (data: Obj) => void>> = {
   1: addRoundTiming,
   2: addDailyLog,
   3: addShops,
+  4: addGrades,
 };
 
 /** Runs every step from the save's version up to `target`. Returns false if a step is missing. */

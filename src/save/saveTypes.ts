@@ -2,12 +2,13 @@
  * Persisted data shapes. Bump SAVE_SCHEMA_VERSION and add a migration in
  * saveManager.ts whenever these change incompatibly.
  */
+import type { GradeChoice } from '../learning/grades';
 import type { MathProgress } from '../learning/mathSubject';
 import type { AttemptOutcome, ChallengeSpec, LearningSubject } from '../learning/types';
 import type { EquipSlot, ShopSpot } from '../shop/catalog';
 import type { RoundBonus } from '../shop/rewards';
 
-export const SAVE_SCHEMA_VERSION = 4;
+export const SAVE_SCHEMA_VERSION = 5;
 
 export interface OrderState {
   /** Checked by the owning subject's isValidSpec on load. */
@@ -62,7 +63,8 @@ export interface PlacedDecoration {
   spot: ShopSpot;
 }
 
-export interface ProfileSettings {
+/** `grade` and `mathMode` (GradeChoice) are set by a grown-up and pick what the shop's questions practise. */
+export interface ProfileSettings extends GradeChoice {
   showHints: boolean;
   reduceMotion: boolean;
   /** Games (finished rounds) in a day that earn the day's heart stamp; a grown-up can change it. */

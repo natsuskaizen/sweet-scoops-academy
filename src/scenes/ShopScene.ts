@@ -26,6 +26,7 @@ import { chosenShopkeeper, customerRoster } from '../shop/addedCharacters';
 import { equippedIn, equippedItems } from '../shop/purchases';
 import { lineFor, type CustomerDef } from '../shop/customerManager';
 import { OrderManager, type ActiveOrder, type RoundSticker } from '../shop/orderManager';
+import { describeChoice } from '../learning/grades';
 import type { AttemptOutcome, ChallengePresentation } from '../learning/types';
 import { Button } from '../ui/Button';
 import { CalendarScreen } from '../ui/CalendarScreen';
@@ -119,7 +120,7 @@ export class ShopScene extends Phaser.Scene {
     this.manager = new OrderManager({
       save: this.services.save,
       persister: this.services.saves,
-      subject: this.services.subject,
+      subject: this.services.subjectFor(this.activeProfile()),
       onSaveError: () => this.toast('Progress could not be saved just now.'),
       roster: customerRoster(this.services.characters.list(), this.activeProfile().shop.keeper),
     });
@@ -574,7 +575,7 @@ export class ShopScene extends Phaser.Scene {
     if (this.busy && !this.results) return;
     this.calendar = new CalendarScreen(this, {
       profile: () => this.manager.profile,
-      subjects: [this.services.subject],
+      subjects: [this.services.subjectFor(this.manager.profile)],
       now: () => Date.now(),
       onClose: () => {
         this.calendar = null;
@@ -722,10 +723,13 @@ export class ShopScene extends Phaser.Scene {
 
   private openParentGate(): void {
     if (this.gate) return;
+    const gradeBefore = describeChoice(this.manager.profile.settings);
     this.gate = new ParentGate(this, {
       ...this.parentArea,
       onClose: () => {
         this.gate = null;
+        // A new grade or math mode dropped the round in play; the next one follows the new choice.
+        if (describeChoice(this.manager.profile.settings) !== gradeBefore) return this.scene.restart();
         // The daily goal may have changed.
         this.wallCalendar.refresh(this.manager.profile, Date.now());
         this.syncInput();

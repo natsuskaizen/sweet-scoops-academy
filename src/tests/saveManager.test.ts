@@ -246,6 +246,31 @@ describe('SaveManager', () => {
     expect(profile.lastPlayedAt).toBe(9000);
   });
 
+  it('upgrades a version 4 save: every player practises 3rd grade multiplication and division', () => {
+    const v4 = createSaveFile(1000);
+    v4.schemaVersion = 4;
+    const settings = v4.profiles[v4.activeProfileId]!.settings as unknown as Record<string, unknown>;
+    delete settings.grade;
+    delete settings.mathMode;
+
+    const parsed = parseSave(JSON.stringify(v4));
+    if (!parsed.ok) throw new Error(parsed.problems.join());
+    expect(parsed.save.profiles[v4.activeProfileId]!.settings).toMatchObject({ grade: 'grade3', mathMode: 'mixed' });
+  });
+
+  it('rejects a player with no grade, but loads a grade this game does not know', () => {
+    const save = createSaveFile(1);
+    const settings = save.profiles[save.activeProfileId]!.settings;
+    settings.grade = 'grade7';
+    expect(validateSaveFile(save)).toEqual([]);
+    settings.grade = '';
+    settings.mathMode = 3 as never;
+    expect(validateSaveFile(save).map((problem) => problem.replace(/^profiles\[[^\]]+\]\./, ''))).toEqual([
+      'settings.grade invalid',
+      'settings.mathMode invalid',
+    ]);
+  });
+
   it('rejects a player whose shop has no name', () => {
     const save = createSaveFile(1);
     save.profiles[save.activeProfileId]!.shop.name = '  ';

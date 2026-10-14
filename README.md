@@ -63,14 +63,15 @@ src/
       operation.ts           the MathOperation contract + small shared helpers
       multiplication.ts      one file per operation: facts, rules, wording, hints
       division.ts
-      addition.ts            (built, off by default)
-      subtraction.ts         (built, off by default)
+      addition.ts            (kindergarten)
+      subtraction.ts         (kindergarten)
       registry.ts            the list of operations; which ones are enabled
     mathValidator.ts         entry point for validating a question (delegates to its operation)
     questionGenerator.ts     builds validated questions from fact keys
     adaptiveEngine.ts        learning -> practicing -> mastered, round planning
     aidBeats.ts              the steps an explanation plays out (fill a cup, deal a round)
     mathSubject.ts           math as a LearningSubject, built from the enabled operations
+    grades.ts                grade levels and math modes: which math subject each player plays
   shop/
     orderManager.ts          round/order state machine; persists every step
     rewards.ts               the only place Sprinkles are calculated and paid
@@ -113,6 +114,7 @@ src/
     backupActions.ts         grown-ups area actions for saving and loading backup files
     characterActions.ts      grown-ups area action that opens the Characters dialog
     playerActions.ts         grown-ups area action that opens the Players dialog (rename, remove)
+    gradeAction.ts           grown-ups area screen for a player's grade and math mode
     ResultsOverlay.ts        end-of-round sticker card (one sticker per customer, confetti)
     parade.ts                a perfect round's parade before the card, with Skip
     serveAnimation.ts        the shopkeeper's scooper carries each scoop from its tub to the cone
@@ -154,7 +156,21 @@ math: {
 }
 ```
 
-To try other operations without editing the config, run `npm run dev` and open `http://localhost:5173/?ops=addition,subtraction`.
+Which operations a player practises comes from their grade, chosen in the grown-ups area. Each grade in `grades.levels` has its own number ranges (on top of `math`) and one or more math modes:
+
+```ts
+grades: {
+  defaultGrade: 'grade3',
+  levels: [
+    { id: 'kindergarten', label: 'Kindergarten', math: { addition: { addend: { min: 1, max: 5 }, maxSum: 5 }, ... },
+      mathModes: [{ id: 'addSubtract', label: 'Adding and taking away', operations: ['addition', 'subtraction'] }] },
+    { id: 'grade3', label: '3rd grade', math: {},
+      mathModes: [{ id: 'mixed', ... }, { id: 'multiplication', ... }, { id: 'division', ... }] },
+  ],
+}
+```
+
+`math.enabledOperations` is the default for code and tests that don't pass a grade. To try other operations for every player without editing the config, run `npm run dev` and open `http://localhost:5173/?ops=addition,subtraction`.
 
 ### Adding a math operation or a subject
 

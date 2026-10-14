@@ -177,6 +177,43 @@ test('opening and closing the grown-ups area while a customer walks in leaves th
   expect(errors).toEqual([]);
 });
 
+test('a grown-up moves the player to kindergarten and the next round adds and takes away', async ({ page }) => {
+  const errors: string[] = [];
+  await startFresh(page, errors);
+  await keypadReady(page);
+  await page.evaluate(() => {
+    type Tappable = { list?: Tappable[]; text?: string; emit?: (event: string) => void };
+    const scene = (window as HookWindow).__ssa!.scene as unknown as {
+      openParentGate: () => void;
+      gate: { showMenu: () => void; close: () => void; content: { list: Tappable[] } };
+      parentArea: { actions: () => { label: string; run: (gate: unknown) => void }[] };
+    };
+    scene.openParentGate();
+    scene.gate.showMenu();
+    scene.parentArea
+      .actions()
+      .find((a) => a.label.startsWith('Grade:'))!
+      .run(scene.gate);
+    const button = scene.gate.content.list.find((o) => o.list?.some((t) => t.text === 'Kindergarten'))!;
+    button.emit!('pointerdown');
+    button.emit!('pointerup');
+    scene.gate.close();
+  });
+  await keypadReady(page);
+  const skills = await page.evaluate(() => {
+    const manager = (window as HookWindow).__ssa!.manager() as unknown as {
+      profile: { settings: { grade: string }; currentRound: { orders: { spec: { skillId: string } }[] } };
+    };
+    return {
+      grade: manager.profile.settings.grade,
+      ops: manager.profile.currentRound.orders.map((o) => o.spec.skillId),
+    };
+  });
+  expect(skills.grade).toBe('kindergarten');
+  expect(new Set(skills.ops)).toEqual(new Set(['addition', 'subtraction']));
+  expect(errors).toEqual([]);
+});
+
 test('restarting while the results card is open (as rotating does) starts clean', async ({ page }) => {
   const errors: string[] = [];
   await startFresh(page, errors);
