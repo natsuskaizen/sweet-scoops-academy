@@ -131,6 +131,7 @@ describe('in the shop', () => {
     const minty = at(1);
     const off = { ...at(2), enabled: false };
     const keeper = at(3, { role: 'shopkeeper' });
+    expect(customerRoster([], 'bonbon').map((c) => c.id)).not.toContain('bonbon');
     const roster = customerRoster([minty, off, keeper]);
     expect(roster).toHaveLength(CUSTOMERS.length + 1);
     expect(roster.at(-1)).toMatchObject({

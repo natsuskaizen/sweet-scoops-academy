@@ -60,6 +60,13 @@ export class Button extends Phaser.GameObjects.Container {
     return this;
   }
 
+  /** Recolours the button, e.g. to mark the chosen one of a set. */
+  setFill(fill: number, shade: number): this {
+    this.opts = { ...this.opts, fill, shade };
+    this.draw();
+    return this;
+  }
+
   setEnabled(enabled: boolean): this {
     this.enabled = enabled;
     this.pressed = false;

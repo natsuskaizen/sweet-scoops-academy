@@ -8,7 +8,8 @@
  */
 import Phaser from 'phaser';
 import { addedLook, CharacterView, friendLook, MOMO_SHEETS, type AnyLook } from '../characters/characterManager';
-import { isFriendId } from '../characters/friendArt';
+import { friendName, isFriendId, type FriendId } from '../characters/friendArt';
+import { updatePlayer, type NewPlayer } from '../save/profileActions';
 import type { ScooperId } from '../characters/scooperArt';
 import { dressMomo } from '../characters/wearArt';
 import { SERVICES_KEY, type GameServices } from '../game/services';
@@ -37,7 +38,8 @@ import { scoopOntoCone } from './serveAnimation';
 import { ClosetMode } from './closetMode';
 import { PlacedDecorations } from './decorArt';
 import { DecorateMode } from './decorateMode';
-import { drawShopRoom } from './shopArt';
+import { NewPlayerSetup } from './newPlayerSetup';
+import { drawShopRoom, setShopSign, type ShopRoom } from './shopArt';
 
 /** Test hooks (`window.__ssa`, `?fast`) exist in dev, and in a build only when opened with `?e2e`. */
 const testHooksEnabled = (): boolean => import.meta.env.DEV || new URLSearchParams(window.location.search).has('e2e');
@@ -76,6 +78,10 @@ export class ShopScene extends Phaser.Scene {
   /** The calendar on the shop wall, and the progress calendar it opens (the e2e test drives both through `__ssa`). */
   private wallCalendar!: WallCalendar;
   private calendar: CalendarScreen | null = null;
+  /** The shop's sign and door sign. */
+  private room!: ShopRoom;
+  /** A new player's setup, shown on the first visit before any customer (the e2e test skips it through `__ssa`). */
+  private setup: NewPlayerSetup | null = null;
   /** The results card and any parade, hidden while Decorate is open over them. */
   private resultsCover: Phaser.GameObjects.GameObject[] = [];
 
@@ -97,12 +103,13 @@ export class ShopScene extends Phaser.Scene {
       persister: this.services.saves,
       subject: this.services.subject,
       onSaveError: () => this.toast('Progress could not be saved just now.'),
-      roster: customerRoster(this.services.characters.list()),
+      roster: customerRoster(this.services.characters.list(), this.activeProfile().shop.keeper),
     });
 
     this.parentArea = parentArea({ scene: this, services: this.services, profile: () => this.manager.profile });
 
-    this.placed = new PlacedDecorations(this, drawShopRoom(this, this.manager.profile.shop.name));
+    this.room = drawShopRoom(this, this.manager.profile.shop.name);
+    this.placed = new PlacedDecorations(this, this.room.room);
     this.placed.draw(this.manager.profile.decorations);
     this.wallCalendar = new WallCalendar(this, () => this.openCalendar());
     this.wallCalendar.refresh(this.manager.profile, Date.now());
@@ -131,8 +138,44 @@ export class ShopScene extends Phaser.Scene {
     if (testHooksEnabled())
       (window as unknown as Record<string, unknown>).__ssa = { scene: this, manager: () => this.manager };
 
+    if (this.services.needsSetup) return this.startSetup();
     this.manager.ensureRound();
     void this.runOrder();
+  }
+
+  private activeProfile() {
+    return this.services.save.profiles[this.services.save.activeProfileId]!;
+  }
+
+  // -------------------------------------------------------------------------
+  // New player
+  // -------------------------------------------------------------------------
+
+  /** The first visit sets up the player (name, shop name, shopkeeper) before any customer comes in. */
+  private startSetup(): void {
+    this.room.doorSign.setText('CLOSED');
+    this.bubble.say("Hi! I'm Momo. Let's open your very own ice cream shop!", LAYOUT.shopkeeper.x);
+    this.setup?.destroy();
+    this.setup = new NewPlayerSetup({
+      scene: this,
+      onShopName: (name) => setShopSign(this.room.sign, name),
+      onKeeper: (id) => this.previewKeeper(id),
+      onDone: (player) => this.finishSetup(player),
+    });
+  }
+
+  private previewKeeper(id: FriendId): void {
+    this.shopkeeper.dress([]).setSheet(friendLook(id).sheet.key);
+    this.shopkeeper.setExpression('happy');
+    this.bubble.say(`Hi! I'm ${friendName(id)}!`, LAYOUT.shopkeeper.x);
+  }
+
+  private finishSetup(player: NewPlayer): void {
+    this.services.needsSetup = false;
+    updatePlayer(this.manager.profile, { name: player.name, shopName: player.shop.name, keeper: player.shop.keeper });
+    const result = this.services.saves.write(this.services.save);
+    if (!result.ok) this.toast('Progress could not be saved just now.');
+    this.scene.restart();
   }
 
   update(): void {
@@ -222,6 +265,7 @@ export class ShopScene extends Phaser.Scene {
     this.calendar = null;
     this.decorate = null;
     this.closet = null;
+    this.setup = null;
   }
 
   /** Hands control back to the player. */
