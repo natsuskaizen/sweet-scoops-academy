@@ -40,6 +40,21 @@ export function createPropTextures(scene: Phaser.Scene): void {
     ['oooooooooooo', 'owwwwwwwwwwo', '.oppPppPppo.', '.oppPppPppo.', '..opPppPpo..', '..oooooooo..'],
     (ch) => ({ o: '#7a4a62', w: '#fffaf3', p: '#ff8fb3', P: '#ffd1df' })[ch] ?? null,
   );
+  // Progress calendar hearts: a stamp once earned, a pale outline until then.
+  const heart = ['.ooo...ooo.', 'oPWPo.oPPPo', 'oWPPPoPPPPo', 'oPPPPPPPPPo', 'oPPPPPPPPPo', '.oPPPPPPPo.'];
+  const tip = ['..oPPPPPo..', '...oPPPo...', '....oPo....', '.....o.....'];
+  makePixelTexture(
+    scene,
+    'heart',
+    [...heart, ...tip],
+    (ch) => ({ o: '#8f2f4c', P: '#ff8fb3', W: '#ffffff' })[ch] ?? null,
+  );
+  makePixelTexture(
+    scene,
+    'heart-empty',
+    [...heart, ...tip],
+    (ch) => ({ o: '#e8a8bc', P: '#ffe3ec', W: '#ffe3ec' })[ch] ?? null,
+  );
   for (const [flavor, color] of Object.entries(FLAVOR_COLORS)) {
     makePixelTexture(
       scene,
@@ -71,7 +86,7 @@ export function roomTexture(scene: Phaser.Scene, look: RoomLook): string {
 }
 
 /** Draws the room; the image is returned so wall paint and doors can repaint it. */
-export function drawShopRoom(scene: Phaser.Scene): Phaser.GameObjects.Image {
+export function drawShopRoom(scene: Phaser.Scene, shopName: string): Phaser.GameObjects.Image {
   const room = roomArt();
   paintTexture(scene, 'room-counter', COUNTER_ART, paintCounter);
   const image = scene.add
@@ -82,10 +97,12 @@ export function drawShopRoom(scene: Phaser.Scene): Phaser.GameObjects.Image {
   // The counter sits on a higher layer so it hides the shopkeeper's legs.
   scene.add.image(COUNTER_ART.x, COUNTER_ART.y, 'room-counter').setOrigin(0).setScale(ROOM_SCALE).setDepth(30);
   const { sign, open } = ROOM_TEXT;
-  scene.add
-    .text(sign.x, sign.y, 'Sweet Scoops', text(40, CSS.white, { stroke: CSS.ink, strokeThickness: 6 }))
+  const name = scene.add
+    .text(sign.x, sign.y, shopName, text(40, CSS.white, { stroke: CSS.ink, strokeThickness: 6 }))
     .setOrigin(0.5)
     .setDepth(1);
+  // A long shop name shrinks to fit the sign rather than spilling past it.
+  name.setScale(Math.min(1, sign.w / name.width));
   scene.add.text(open.x, open.y, 'OPEN', text(20, CSS.white)).setOrigin(0.5).setDepth(1);
   return image;
 }

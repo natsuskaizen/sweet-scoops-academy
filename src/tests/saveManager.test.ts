@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { GAME_CONFIG } from '../config/gameConfig';
 import type { ChallengeSpec } from '../learning/types';
 import { MemoryStorage, SAVE_KEYS, SaveManager, createSaveFile, parseSave } from '../save/saveManager';
 import { migrateToVersion } from '../save/migrations';
-import { SAVE_SCHEMA_VERSION } from '../save/saveTypes';
+import { SAVE_SCHEMA_VERSION, type SaveFile } from '../save/saveTypes';
 import { validateSaveFile } from '../save/saveValidation';
 
 let clock = 1_700_000_000_000;
@@ -186,6 +187,69 @@ describe('SaveManager', () => {
       missFacts: [],
     });
     expect(profile.currentRound).toMatchObject({ playMs: null, lastActiveAt: 6000 });
+  });
+
+  it('upgrades a version 2 save: the calendar is rebuilt from round history', () => {
+    const v2 = { ...createSaveFile(1), schemaVersion: 2 };
+    const p = v2.profiles[v2.activeProfileId]! as unknown as Record<string, unknown> & { settings: object };
+    const finished = (hour: number, playMs: number | null) => ({
+      ...{ roundNumber: 1, startedAt: null, finishedAt: new Date(2026, 9, 12, hour).getTime(), playMs },
+      ...{ ordersCompleted: 10, firstTryCorrect: 10, retryCorrect: 0, missed: 0, orderSprinkles: 100 },
+      ...{ completionBonus: 10, perfectBonus: 50, total: 160, perfect: true, retryFacts: [], missFacts: [] },
+    });
+    p.roundHistory = [finished(9, 60_000), finished(10, null), finished(11, 120_000)];
+    delete p.dailyLog;
+    p.settings = { showHints: true, reduceMotion: false };
+
+    const parsed = parseSave(JSON.stringify(v2));
+    if (!parsed.ok) throw new Error(parsed.problems.join());
+    const profile = parsed.save.profiles[parsed.save.activeProfileId]!;
+    expect(profile.settings.dailyGoal).toBe(GAME_CONFIG.calendar.defaultDailyGoal);
+    expect(profile.dailyLog).toEqual({
+      '2026-10-12': { rounds: 3, playMs: 180_000, subjects: { math: 3 }, heart: true },
+    });
+  });
+
+  it('rejects a calendar log or daily goal that is malformed', () => {
+    const save = createSaveFile(1);
+    const p = save.profiles[save.activeProfileId]!;
+    p.settings.dailyGoal = 0;
+    p.dailyLog = { yesterday: { rounds: 1 } as never, '2026-10-12': 'oops' as never };
+    expect(validateSaveFile(save).map((problem) => problem.replace(/^profiles\[[^\]]+\]\./, ''))).toEqual([
+      'settings.dailyGoal invalid',
+      'dailyLog[yesterday] not a date',
+      'dailyLog[yesterday].playMs invalid',
+      'dailyLog[yesterday].heart invalid',
+      'dailyLog[yesterday].subjects invalid',
+      'dailyLog[2026-10-12] not an object',
+    ]);
+    p.dailyLog = [] as never;
+    expect(validateSaveFile(save).join()).toContain('dailyLog invalid');
+  });
+
+  it('upgrades a version 3 save: each player keeps Sweet Scoops with Momo and last played at their last round', () => {
+    const v3 = createSaveFile(1000) as unknown as Record<string, unknown> & SaveFile;
+    v3.schemaVersion = 3;
+    const p = v3.profiles[v3.activeProfileId]! as unknown as Record<string, unknown>;
+    delete p.shop;
+    delete p.lastPlayedAt;
+    p.roundHistory = [3000, 9000].map((finishedAt, i) => ({
+      ...{ roundNumber: i + 1, startedAt: null, playMs: null, ordersCompleted: 10, firstTryCorrect: 10 },
+      ...{ retryCorrect: 0, missed: 0, orderSprinkles: 100, completionBonus: 10, perfectBonus: 5, total: 115 },
+      ...{ perfect: true, retryFacts: [], missFacts: [], finishedAt },
+    }));
+
+    const parsed = parseSave(JSON.stringify(v3));
+    if (!parsed.ok) throw new Error(parsed.problems.join());
+    const profile = parsed.save.profiles[parsed.save.activeProfileId]!;
+    expect(profile.shop).toEqual({ name: 'Sweet Scoops', keeper: 'momo' });
+    expect(profile.lastPlayedAt).toBe(9000);
+  });
+
+  it('rejects a player whose shop has no name', () => {
+    const save = createSaveFile(1);
+    save.profiles[save.activeProfileId]!.shop.name = '  ';
+    expect(validateSaveFile(save).join()).toMatch(/shop invalid/);
   });
 
   it('refuses a save whose version has no migration step', () => {

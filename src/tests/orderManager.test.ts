@@ -46,6 +46,23 @@ describe('OrderManager', () => {
     expect(manager.profile.roundHistory).toHaveLength(1);
   });
 
+  it('puts each finished round on the progress calendar and says when it earns the heart', () => {
+    const { manager } = boot();
+    manager.profile.settings.dailyGoal = 2;
+    const playRound = () => {
+      manager.ensureRound();
+      for (;;) {
+        manager.submit(manager.current()!.presentation.correctAnswer);
+        const done = manager.finishOrder();
+        if (done.kind === 'round-complete') return done.heartEarned;
+      }
+    };
+    expect([playRound(), playRound(), playRound()]).toEqual([false, true, false]);
+    const days = Object.values(manager.profile.dailyLog);
+    expect(days).toEqual([{ rounds: 3, playMs: expect.any(Number), subjects: { math: 3 }, heart: true }]);
+    expect(days[0]!.playMs).toBeGreaterThan(0);
+  });
+
   it('allows one retry, then reveals the answer and still pays 2', () => {
     const { manager } = boot();
     manager.ensureRound();

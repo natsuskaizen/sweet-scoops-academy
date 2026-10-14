@@ -89,6 +89,14 @@ export interface GameConfig {
     maxLines: number;
     maxLineLength: number;
   };
+  /** The children who play on this device, each with their own shop. */
+  players: {
+    maxPlayers: number;
+    maxNameLength: number;
+    maxShopNameLength: number;
+    /** The shop a player has before choosing their own (and every save from before players chose). */
+    defaultShop: { name: string; keeper: string };
+  };
   parentArea: {
     /** Round cards per page in the grown-ups "Rounds" view (a 2x2 grid). */
     roundCardsPerPage: number;
@@ -102,6 +110,15 @@ export interface GameConfig {
     practiceLookbackRounds: number;
     /** ...and lists at most this many questions. */
     practiceFacts: number;
+  };
+  /** The kids' progress calendar: a heart stamp on each day the goal is reached. */
+  calendar: {
+    /** Games (finished rounds, any subject) in a day for a heart, until a grown-up picks another goal. */
+    defaultDailyGoal: number;
+    /** The goals a grown-up can choose from. */
+    dailyGoal: { min: number; max: number };
+    /** Days kept in the log (about 13 months), so the save stays small. */
+    keepDays: number;
   };
   timing: {
     /** How long to hold the ⚙ button to open the grown-ups area. */
@@ -187,6 +204,12 @@ export const GAME_CONFIG: GameConfig = {
     maxLines: 3,
     maxLineLength: 24,
   },
+  players: {
+    maxPlayers: 6,
+    maxNameLength: 12,
+    maxShopNameLength: 28,
+    defaultShop: { name: 'Sweet Scoops', keeper: 'momo' },
+  },
   parentArea: {
     roundCardsPerPage: 4,
     cardPracticeFacts: 3,
@@ -195,6 +218,7 @@ export const GAME_CONFIG: GameConfig = {
     practiceLookbackRounds: 5,
     practiceFacts: 8,
   },
+  calendar: { defaultDailyGoal: 3, dailyGoal: { min: 1, max: 5 }, keepDays: 400 },
   timing: {
     parentHoldMs: 1200,
     greetingMs: 900,

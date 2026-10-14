@@ -42,6 +42,7 @@ export function createMathSubject(options: MathSubjectOptions = {}): MathSubject
 
   return {
     id: 'math',
+    badge: '123',
 
     createProgress: () => Object.fromEntries(operations.enabled.map((op) => [op.id, { facts: {} }])),
 

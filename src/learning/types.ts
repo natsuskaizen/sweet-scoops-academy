@@ -113,6 +113,8 @@ export interface OutcomeContext {
  */
 export interface LearningSubject<S extends ChallengeSpec, P> {
   readonly id: string;
+  /** A few characters a young child can recognise, shown on the progress calendar (e.g. "123", "ABC"). */
+  readonly badge: string;
   createProgress(): P;
   /** Choose `ctx.count` challenges for the next round, adapting to `progress`. */
   planRound(progress: P, ctx: PlanContext): S[];

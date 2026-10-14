@@ -83,7 +83,12 @@ const CASE = { x: 116, y: 62, w: 84, h: 42 };
 
 /** Where the room's text labels go, in game pixels. */
 export const ROOM_TEXT = {
-  sign: { x: (SIGN.x + SIGN.w / 2) * ROOM_SCALE, y: LAYOUT.shop.y + (SIGN.y + SIGN.h / 2) * ROOM_SCALE },
+  sign: {
+    x: (SIGN.x + SIGN.w / 2) * ROOM_SCALE,
+    y: LAYOUT.shop.y + (SIGN.y + SIGN.h / 2) * ROOM_SCALE,
+    /** Room for the shop's name inside the sign's border. */
+    w: (SIGN.w - 6) * ROOM_SCALE,
+  },
   open: { x: LAYOUT.door.x + LAYOUT.door.w / 2, y: LAYOUT.shop.y + (doorArt().y + 31.5) * ROOM_SCALE },
 };
 
