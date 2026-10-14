@@ -108,6 +108,7 @@ src/
     ShopScene.ts             the persistent shop: runs the order flow, animating what OrderManager decides
     newPlayerSetup.ts        a new player's setup in the register: name, shop name, shopkeeper
     startScreen.ts           the start screen: hello to whoever played last, Open the shop!, the other players and New
+    myShop.ts                My shop, the kids' settings from ⚙: shop name, shopkeeper, hints, calm mode, switch player
     parentArea.ts            what the grown-ups area shows and every action in it
     backupActions.ts         grown-ups area actions for saving and loading backup files
     characterActions.ts      grown-ups area action that opens the Characters dialog
@@ -129,7 +130,8 @@ src/
                              tweenAsync.ts turns tweens and timers into awaitable promises;
                              aidLayout.ts sizes the hint board's scoops and cups (unit tested);
                              setupLayout.ts places the new-player setup's keys and cards (unit tested);
-                             startLayout.ts places the start screen in the register panel (unit tested)
+                             startLayout.ts and myShopLayout.ts place the start screen and My shop (unit tested);
+                             motion.ts holds calm mode for the character animations and confetti
   tests/                     Vitest suites
 e2e/                         Playwright: smoke test, new player, offline and backup, redeploy
 scripts/                     offline-plugin.mjs (writes dist/sw.js), make-icons.mjs, check-live-site.mjs
@@ -174,9 +176,13 @@ The shop room is always the same 800x880 drawing. Only the register (order ticke
 
 All positions come from `LAYOUT` in `src/ui/theme.ts`, built by `layoutFor(screenW, screenH)`. When the screen turns, `main.ts` resizes the game and restarts the shop scene, which rebuilds from the save exactly like a reload, so nothing is lost mid-order. This replaces the spec's "please rotate" screen.
 
+### My shop (kids' settings)
+
+Tap the ⚙ button in the top-right corner. The register panel shows the player's own settings, with no lock because they only change that player's things: change the shop's name or shopkeeper (the matching setup step, with Done), Hints on or off, Calm mode (characters stand still instead of breathing and hopping, and no confetti falls), Switch player (back to the start screen), and a button to the grown-ups area.
+
 ### Grown-ups area
 
-Press and hold the ⚙ button in the top-right corner for about a second, then type the number shown in words. Inside: progress per operation, facts that need practice, and these actions:
+Press and hold the ⚙ button in the top-right corner for about a second (or tap Grown-ups in My shop or on the start screen), then type the number shown in words. Inside: progress per operation, facts that need practice, and these actions:
 
 - **Progress**: a switch in the top-left corner (mirroring Close) flips between two views. **Rounds** shows totals (rounds played, time playing, % right first try) over a 2x2 grid of cards, newest first with Newer/Older pages. Each card has when the round was played, how long it took, the first-try count, one dot per order (green first try, blue 2nd try, pink answer shown) and up to three questions to practise. **Overview** shows the last 7 days (rounds, time playing, average round length), a bar for each of the last 10 rounds, and the questions that needed help most in the last 5 rounds. Time is active play: any gap between taps counts as 2 minutes at most (`GAME_CONFIG.round.playTimeIdleCapMs`), so a round left open overnight still shows minutes. Rounds finished before timing was added show a dash. Page sizes and look-backs are in `GAME_CONFIG.parentArea`. None of this appears outside the grown-ups area.
 - **Save a backup file**: the whole save as JSON, through the share sheet on iPad and iPhone (Save to Files, AirDrop, Mail) or as a download elsewhere.
@@ -206,7 +212,7 @@ All items in the spec's acceptance checklist are implemented. Verified automatic
 
 - **Not yet tested on a real iPad or iPhone.** It was checked in desktop Chromium at iPad and iPhone viewport sizes with touch emulation. Safari on a real device still needs a look.
 - Art is original pixel art: the room is painted at 1/4 resolution and scaled up so it matches the characters; the built-in cast waddles on stepping feet, breathes and blinks while waiting, cheers or tilts their head at an answer, and Momo scoops from the tubs. Timings are in `GAME_CONFIG.animation`.
-- Milestone 4 (in progress): the save holds several players, each with their own shop name, shopkeeper, Sprinkles, items and progress (`src/save/profileActions.ts`). A brand new game first asks the child's name, lets them roll, pick or type a shop name (the sign follows) and choose one of six friends for behind the counter. Coming back opens on a start screen in front of the shop of whoever played last (door shut), with one big "Open the shop!" button; under "Not Ava?" the other players switch in, and New sets up another child. The kids' settings and managing players in the grown-ups area are coming next.
+- Milestone 4 (in progress): the save holds several players, each with their own shop name, shopkeeper, Sprinkles, items and progress (`src/save/profileActions.ts`). A brand new game first asks the child's name, lets them roll, pick or type a shop name (the sign follows) and choose one of six friends for behind the counter. Coming back opens on a start screen in front of the shop of whoever played last (door shut), with one big "Open the shop!" button; under "Not Ava?" the other players switch in, and New sets up another child. Tapping ⚙ opens My shop, where a child changes their shop's name or shopkeeper, turns hints or calm mode on and off, or switches player. Managing players in the grown-ups area is coming next.
 - Decorate and the Closet (Milestone 3) open from the results card, or by tapping the Sprinkles balance in the top bar (between rounds or while a customer waits, not while serving). Decorate sells furniture and little decorations, wall paint and three doors; the Closet sells clothes, accessories and scoopers; everything comes in six tiers. The player's shopkeeper (any of the six) wears Closet items; a shopkeeper added from a picture serves with the chosen scooper but does not wear clothes or accessories.
 - Division practice uses divisors 1-12 (`GAME_CONFIG.math.division.divisor`); the spec itself only requires a positive divisor.
 - Addition and subtraction are built and tested but switched off, since Milestone 1 is multiplication and division. Their hints use simple piles of scoops; the difficulty curve for them is a first guess.

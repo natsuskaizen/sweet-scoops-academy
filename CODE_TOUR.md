@@ -334,6 +334,25 @@ this.setup = new NewPlayerSetup({
 
 Typing goes through `typeKey` in `src/shop/playerNames.ts` (capitals start each word, spaces never double), and the keys and cards are placed by `setupLayout()` in `src/ui/setupLayout.ts`, so both are unit tested.
 
+Tapping ⚙ in the top bar opens My shop (`src/scenes/myShop.ts`, placed by `myShopLayout()`), the player's own settings; holding ⚙ still goes straight to the grown-ups area. Changing the shop name or shopkeeper reuses one step of the setup in edit mode, prefilled, with Done instead of Next:
+
+```ts
+this.setup = new NewPlayerSetup({
+  scene: this,
+  edit: { step, player }, // 'shop' or 'keeper', starting from the player's own choices
+  onShopName: (name) => setShopSign(this.room.sign, name),
+  onKeeper: (id) => this.previewKeeper(id),
+  onDone: ({ shop }) => {
+    updatePlayer(profile, { shopName: shop.name, keeper: shop.keeper });
+    this.saveNow();
+    this.scene.restart(); // rebuilt from the save, mid-order or not, as rotating does
+  },
+  onCancel: () => this.scene.restart(),
+});
+```
+
+Calm mode is the player's `settings.reduceMotion`. `setCalm()` in `src/ui/motion.ts` is set from the active player whenever the shop is built, and `CharacterView` (breathing, `cheer`, `hop`, `puzzled`) and `confetti()` check `isCalm()` before they move.
+
 ## 7. Characters: `src/characters/`
 
 The shop's cast (Momo behind the counter and 13 customers) lives in `friendArt.ts`. Each one is its standing frame as a 32×40 text grid, and every other frame is redrawn from it, so every character gets the same expressions and steps:

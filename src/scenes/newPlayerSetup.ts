@@ -22,11 +22,16 @@ export interface SetupHost {
   /** The chosen friend steps behind the counter. */
   onKeeper: (id: FriendId) => void;
   onDone: (player: NewPlayer) => void;
-  /** When adding a player from the start screen, ✕ goes back to it. */
+  /** When adding a player from the start screen, or changing one thing from My shop, ✕ goes back. */
   onCancel?: () => void;
+  /** Changing one thing for a player who has a shop: starts on that step with their choices, and Done finishes. */
+  edit?: { step: EditStep; player: NewPlayer };
 }
 
+export type EditStep = 'shop' | 'keeper';
+
 type Step = 'name' | 'shop' | 'typeShop' | 'keeper' | 'ready';
+const NEXT_STEP: Record<EditStep, Step> = { shop: 'keeper', keeper: 'ready' };
 const STEP_DOT: Record<Step, number> = { name: 0, shop: 1, typeShop: 1, keeper: 2, ready: 3 };
 
 const button = (scene: Phaser.Scene, r: Rect, label: string, fontSize: number, onTap: () => void) =>
@@ -48,8 +53,11 @@ export class NewPlayerSetup {
   constructor(private readonly host: SetupHost) {
     const { scene } = host;
     this.layout = setupLayout(LAYOUT.panel, LAYOUT.orientation === 'portrait');
-    const keeper = this.players.defaultShop.keeper;
+    const { edit } = host;
+    const keeper = edit?.player.shop.keeper ?? this.players.defaultShop.keeper;
     this.keeper = isFriendId(keeper) ? keeper : 'momo';
+    this.name = edit?.player.name ?? '';
+    this.shopName = edit?.player.shop.name ?? '';
     const { x, y, w, h } = LAYOUT.panel;
     const g = scene.add.graphics();
     g.fillStyle(0xffe9d6, 1).fillRoundedRect(x, y, w, h - 10, 26);
@@ -57,8 +65,9 @@ export class NewPlayerSetup {
     // Taps on the panel never reach the ticket or keypad underneath.
     const blocker = scene.add.zone(x, y, w, h).setOrigin(0).setInteractive();
     this.page = scene.add.container(0, 0);
-    this.root = scene.add.container(0, 0, [g, blocker, this.page]).setDepth(80);
-    this.show('name');
+    // Changing from My shop can happen over the results card, so it goes above it.
+    this.root = scene.add.container(0, 0, [g, blocker, this.page]).setDepth(edit ? 660 : 80);
+    this.show(edit?.step ?? 'name');
   }
 
   /** The step showing now (the e2e test reads it). */
@@ -104,7 +113,7 @@ export class NewPlayerSetup {
     const { scene } = this.host;
     const cx = LAYOUT.panel.x + LAYOUT.panel.w / 2;
     const dots = scene.add.graphics();
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < (this.host.edit ? 0 : 4); i++) {
       dots.fillStyle(i <= STEP_DOT[step] ? COLORS.lavenderDark : 0xe2d3c4, 1);
       dots.fillCircle(cx + (i - 1.5) * 30, this.layout.dotsY, 9);
     }
@@ -174,7 +183,14 @@ export class NewPlayerSetup {
     if (what === 'name' && !this.name.trim()) return;
     if (what === 'shop' && !this.shopName.trim()) return;
     if (what === 'name' && !this.shopName) this.pickShopName(this.rolled());
-    this.show(what === 'name' ? 'shop' : 'keeper');
+    if (what === 'name') this.show('shop');
+    else this.after('shop');
+  }
+
+  /** On to the next step, or finished when only this one thing was being changed. */
+  private after(step: EditStep): void {
+    if (!this.host.edit) return this.show(NEXT_STEP[step]);
+    this.complete({ name: this.name, shop: { name: this.shopName, keeper: this.keeper } });
   }
 
   private rolled(): string {
@@ -206,10 +222,10 @@ export class NewPlayerSetup {
       const owned = () => ownedShopName(this.name, idea, this.players.maxShopNameLength);
       this.page.add(button(scene, cell, idea, 21, () => this.pickShopName(owned())));
     });
-    this.addNext(() => this.show('keeper'));
+    this.addNext(() => this.after('shop'));
   }
 
-  private addNext(onTap: () => void, label = 'Next ▶'): void {
+  private addNext(onTap: () => void, label = this.host.edit ? 'Done ✓' : 'Next ▶'): void {
     const next = button(this.host.scene, this.layout.next, label, 30, onTap);
     this.page.add(next.setFill(COLORS.mint, COLORS.mintDark));
   }
@@ -229,7 +245,7 @@ export class NewPlayerSetup {
     });
     this.page.add(cards);
     this.chooseKeeper(this.keeper, cards, ids);
-    this.addNext(() => this.show('ready'));
+    this.addNext(() => this.after('keeper'));
   }
 
   private chooseKeeper(id: FriendId, cards: Button[], ids: FriendId[]): void {

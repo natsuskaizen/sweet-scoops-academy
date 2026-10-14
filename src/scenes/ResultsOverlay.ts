@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { CharacterView, type AnyLook } from '../characters/characterManager';
 import type { RoundSummary } from '../save/saveTypes';
 import { Button } from '../ui/Button';
+import { isCalm } from '../ui/motion';
 import { COLORS, CSS, LAYOUT, SHOP_W, text } from '../ui/theme';
 
 /** A served customer as the card shows them. */
@@ -116,6 +117,7 @@ export class ResultsOverlay extends Phaser.GameObjects.Container {
 
 /** Confetti falling over the whole screen; more for a perfect round. */
 export function confetti(scene: Phaser.Scene, perfect: boolean): void {
+  if (isCalm()) return;
   const { colors } = CONFETTI;
   const pieces = perfect ? CONFETTI.perfectPieces : CONFETTI.pieces;
   for (let i = 0; i < pieces; i++) {
