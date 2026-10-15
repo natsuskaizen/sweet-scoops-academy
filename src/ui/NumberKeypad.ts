@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { Button } from './Button';
+import { playSound } from './sound';
 import { COLORS } from './theme';
 
 export interface KeypadOptions {
@@ -155,11 +156,14 @@ export class NumberKeypad {
       if (this.value.length === 0) return;
       // Lock immediately: the scene re-enables when it is ready for input.
       this.setEnabled(false);
+      playSound('submit');
       this.opts.onSubmit(this.value);
       return;
     }
+    const before = this.value;
     if (key === 'back') this.value = this.value.slice(0, -1);
     else if (this.value.length < this.opts.maxDigits) this.value = (this.value + key).replace(/^0+(?=\d)/, '');
+    if (this.value !== before) playSound(key === 'back' ? 'keyBack' : 'keyTap');
     this.opts.onChange(this.value);
     this.refresh();
   }

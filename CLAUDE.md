@@ -37,7 +37,7 @@ Before pushing, run everything CI runs: `typecheck`, `test:coverage`, `lint`, `f
 - **All tunables live in `src/config/gameConfig.ts`.** No magic numbers for round size, rewards, pacing, ranges or timings elsewhere. Phaser-free modules read defaults from `GAME_CONFIG` and accept an override so tests can try other settings.
 - **Each math operation is one file** in `src/learning/math/` implementing `MathOperation`, listed in `registry.ts` and switched on in `math.enabledOperations`. Nothing outside the operation files names a specific operation: no `if (op === 'division')` in the shop, scene, saves or UI.
 - **New subjects** implement `LearningSubject` (`src/learning/types.ts`) and plug in via `src/game/services.ts`. The order flow, rewards and saves never look inside a subject's questions or progress.
-- **Game logic stays Phaser-free** (`config`, `core`, `learning`, `shop`, `save`) so it is unit tested directly. Scenes only animate what `OrderManager` decides.
+- **Game logic stays Phaser-free** (`config`, `core`, `audio`, `learning`, `shop`, `save`) so it is unit tested directly. Scenes only animate what `OrderManager` decides.
 - Randomness goes through the seeded RNG in `src/core/rng.ts`, so a given state and seed always reproduce the same round.
 - Sprinkles are computed and paid only in `src/shop/rewards.ts`; item prices live only in `src/shop/catalog.ts`.
 - Saves: every meaningful change is written immediately. When the save format changes, bump `SAVE_SCHEMA_VERSION` in `saveTypes.ts` and add a step to `MIGRATIONS` in `src/save/migrations.ts`. Never write data that fails validation.
@@ -46,7 +46,7 @@ Before pushing, run everything CI runs: `typecheck`, `test:coverage`, `lint`, `f
 
 - **The shop never goes away.** No separate quiz screen or scene. Ticket, keypad, hints and results are layered inside `ShopScene`.
 - **Feedback is gentle, never punishing.** A first miss gets kind words, a retry and a visual hint. A second miss shows the answer with a visual explanation and still completes the order.
-- Visual only: no speech or audio required. Touch first: large targets, custom keypad, repeat taps ignored.
+- Visual only: no speech or audio required. Sound effects (Milestone 6) are soft music-box tones made with Web Audio in `src/ui/sound.ts` from cue data in `GAME_CONFIG.sound`; each one goes with something already on screen, and none sounds like a wrong answer. Touch first: large targets, custom keypad, repeat taps ignored.
 - **Portrait and landscape both work.** Portrait (iPhone, iPad upright) puts the shop on the top half and the ticket and keypad on the bottom. Landscape puts the register on the right. All positions come from `layoutFor()` in `src/ui/theme.ts`; rotating restarts the scene from the save.
 - Art is original placeholder pixel art (text-grid sprites in `src/characters/sprites.ts`). No external assets or runtime services, and avoid new dependencies.
 
