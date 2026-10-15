@@ -57,6 +57,7 @@ src/
   main.ts                    Phaser config (Scale.FIT, pixelArt), picks the layout and switches it on rotation
   config/gameConfig.ts       every tunable: round size, rewards, adaptive pacing, number ranges, enabled operations
   core/rng.ts                seeded RNG (mulberry32) used by all game logic
+  audio/soundCues.ts         each sound effect as music-box tones (pitch, start, fade), from GAME_CONFIG.sound
   learning/
     types.ts                 subject-agnostic LearningSubject / FactRecord / VisualAid types
     math/
@@ -146,6 +147,7 @@ src/
                              ChoicePad is the answer buttons (letters, colours, pictures) in the keypad's place, placed by choiceLayout.ts;
                              startLayout.ts, myShopLayout.ts and pickerLayout.ts place the start screen, My shop and the picker (unit tested);
                              motion.ts holds calm mode for the character animations and confetti;
+                             sound.ts plays the sound effects with Web Audio (no audio files), starting on the first tap;
                              registerCard.ts draws the register panel's card the setup, start screen and My shop share;
                              theme.ts also has DEPTH, the order the bar, cards and screens draw over the shop
   tests/                     Vitest suites (rects.ts: shared helpers for the layout suites)

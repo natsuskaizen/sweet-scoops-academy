@@ -534,6 +534,29 @@ new TierCard(scene, rect, {
 
 The Closet (named after the player's shopkeeper, "Kiki's Closet") opens the same two ways and covers the whole screen (`closetLayout()` in `theme.ts`): the shopkeeper on a stage, three tabs (Clothing: hats, T-shirt, dress, skirt, shoes; Accessories: glasses, sunglasses, hearing aids, bow; Ice Cream Tools: the scooper), a tile per design and the same `TierCard`. A dress is worn instead of a T-shirt and skirt (`SLOT_CLASHES` in `catalog.ts`), and `wornWith(profile, item)` gives what the shopkeeper would have on while trying something. Whatever colour is picked is shown on them at once; buying keeps it on, and when the Closet closes the shop rebuilds them in what they now have on.
 
+## 10. Sound effects: `src/audio/soundCues.ts`, `src/ui/sound.ts`
+
+Every sound is made in the browser, so there are no audio files. A cue in `GAME_CONFIG.sound.cues` is a few notes on one scale (C major pentatonic, so overlapping sounds never clash), or a pitch slide for the scoop plop:
+
+```ts
+orderServed: {
+  notes: [
+    { step: 7, at: 0, length: 0.6, loudness: 0.7 },  // step 5 is C5, 7 is E5, 12 is E6
+    { step: 9, at: 0.1, length: 0.6, loudness: 0.7 },
+    { step: 12, at: 0.2, length: 1.2, loudness: 0.8 },
+  ],
+},
+```
+
+`cueTones` (Phaser-free, unit tested) turns a cue into sine tones through the music-box voice in `sound.voice` (a note plus two quieter partials), nudged a few cents by the seeded RNG so repeated taps don't sound mechanical. `src/ui/sound.ts` schedules them on one Web Audio graph (volume, soft lowpass, limiter). Scenes call one function next to the animation it goes with:
+
+```ts
+playSound('doorBell'); // ShopScene.customerArrives
+playSound('scoopPlop'); // serveAnimation, as each scoop lands
+```
+
+Sound starts on the first tap, uses the "ambient" audio session on iPhone and iPad (the silent switch mutes it), pauses while the game is hidden, and does nothing at all if Web Audio is missing. Phaser's own audio is switched off in `main.ts`.
+
 ## Tests
 
 `src/tests/` has one suite per module. `operations.test.ts` checks every operation's fact table against its own rules and shows how turning on more operations behaves. The most useful to read are `adaptiveEngine.test.ts` (mastery across rounds, misses coming back, mastered facts returning, seeded reproducibility) and `orderManager.test.ts` (full rounds, retry flow, double submits, reload mid-order). The layout suites (`layout`, `setupLayout`, `startLayout`, `myShopLayout`) share `inside`, `overlaps` and `PANEL_SCREENS` from `src/tests/rects.ts`, so every screen shape is checked the same way.

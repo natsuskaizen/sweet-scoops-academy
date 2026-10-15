@@ -8,6 +8,7 @@ import type Phaser from 'phaser';
 import type { CharacterView } from '../characters/characterManager';
 import { SCOOPER_BOWL, SCOOPER_LOOKS, scooperTexture, sparkleTexture, type ScooperId } from '../characters/scooperArt';
 import { GAME_CONFIG } from '../config/gameConfig';
+import { playSound } from '../ui/sound';
 import { tweenAsync } from '../ui/tweenAsync';
 import { tubSpot } from './shopRoom';
 
@@ -66,6 +67,7 @@ async function oneScoop(
   });
   sparkle(scene, scooper.getData('id') as ScooperId, target.x, target.y - 40);
   treat.add(scoop.setPosition(local.x, local.y));
+  playSound('scoopPlop');
   void tweenAsync(scene, { targets: scoop, scaleY: SCOOP_SCALE * 0.85, duration: 70, yoyo: true });
 }
 
