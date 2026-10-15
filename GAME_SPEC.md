@@ -346,7 +346,7 @@ Second incorrect answer:
 
 For example, multiplication can be explained through equal groups of ice cream scoops. Division can be shown by distributing scoops equally among cones or customers.
 
-The game is visual-only. Do not require speech or audio.
+The game is visual-only. Do not require speech or audio. Gentle sound effects (Milestone 6) are an optional extra: every sound accompanies something already shown on screen, and the game plays the same with sound off.
 
 ## 8. Customers and Storytelling
 
@@ -640,6 +640,19 @@ Deliver:
 - More cosmetic items and decorations.
 - Vocabulary learning module.
 - Additional educational subjects through the generic challenge interface.
+
+### Milestone 6 — Sound Effects
+
+Deliver:
+
+- Soft, pleasant sound effects made in the browser with Web Audio: no audio files, no new dependencies, nothing extra to cache offline.
+- Sounds for the keypad, customers arriving, scooping, serving and Sprinkles.
+- Gentle sounds for misses, hints and visual explanations. Never a buzzer or a "wrong" sound; a second miss ends with the same warm sound as a correct order.
+- Celebration sounds for round results, calendar hearts and the sprinkle shop.
+- A Sounds switch for each player, on by default; calm mode makes sounds quieter and skips flourishes.
+- Sound starts on the first tap, follows the iPhone and iPad silent switch where Safari allows it, and pauses when the game is hidden.
+
+Pleasant means: rounded tones from one major pentatonic scale, quick soft starts and fades, short sounds, and a quiet default volume. Pick the style from a listening sampler before building.
 
 ## 16. Milestone 1 Acceptance Checklist
 
