@@ -16,14 +16,14 @@ export const GAME_CONFIG: GameConfig = {
 };
 ```
 
-Each player's grade and the game they picked (`profile.settings.grade`, `mathMode`) pick which math subject they play. `src/learning/grades.ts` merges the grade's ranges into `math`, switches on the mode's operations, and builds that subject once:
+Each player's grade and the game they picked (`profile.settings.grade`, `game`) pick which subject they play. A game names its `subject` (`math` or `vocab`) and its `skills`. `src/learning/grades.ts` builds that subject once, through one factory per subject kind; for math it merges the grade's ranges into `math` and switches on the game's operations:
 
 ```ts
 export function mathConfigFor(choice: GradeChoice, config: GameConfig = GAME_CONFIG): MathConfig {
   return {
     ...config.math,
     ...gradeLevel(choice.grade, config.grades).math, // kindergarten: within 5
-    enabledOperations: mathModeOf(choice, config.grades).operations, // e.g. ['division']
+    enabledOperations: gameOf(choice, config.grades).skills, // e.g. ['division']
   };
 }
 
@@ -41,7 +41,7 @@ picture: (spec) => ({ order: { kind: 'piles', parts: [spec.left, spec.right] } }
 
 `src/ui/orderPicture.ts` draws them with the shop's scoops (`bubble.sayPicture`, `ticket.showOrder`), and `NumberKeypad.setDots` puts dots under each number key. Third grade has no `picture`, so its orders stay in words.
 
-Every grade's subject has the id `math` and each operation keeps its own record, so switching mode keeps what a child has mastered. A saved round is checked against the player's own grade on load. `chooseGrade` (`src/save/profileActions.ts`) drops the round in play, because it was planned for the old choice; the grown-ups area's grade screen (`src/scenes/gradeAction.ts`) saves each tap, and the shop restarts when the area closes on a new grade.
+Each subject keeps its progress under its own id (`learning.math`, `learning.vocab`) and each skill its own record, so switching game keeps what a child has mastered. The grown-ups' Progress lines come from `gradeSubjectList`: one subject per kind the grade plays, with every skill its games use. A saved round is checked against the player's own grade on load. `chooseGrade` (`src/save/profileActions.ts`) drops the round in play, because it was planned for the old choice; the grown-ups area's grade screen (`src/scenes/gradeAction.ts`) saves each tap, and the shop restarts when the area closes on a new grade.
 
 The child picks the game, not the grown-up. Before every round, `ShopScene.nextRound()` shows `GamePicker` (`src/ui/GamePicker.ts`) unless the grade has one game or a round is in progress. What it shows is Phaser-free, in `src/shop/gamePicker.ts`:
 
@@ -174,6 +174,22 @@ present(spec, ctx) {
   };
 }
 ```
+
+### Reading: `src/learning/vocab/`
+
+Vocabulary is the second subject. A `VocabSkill` (`src/learning/vocab/skill.ts`) owns its facts, how a question is built from a fact key and the seeded RNG, how a saved one is validated, and how it is presented, just as a math operation does. `createVocabSubject` wires skills into the `LearningSubject` contract with the same adaptive engine, so each word has its own learning record. The first skill, `firstLetter`, builds "_pple" with a picture of an apple and four letters to tap:
+
+```ts
+// src/learning/vocab/firstLetter.ts
+orderPicture: { kind: 'sprite', key: 'apple' },
+ticketPicture: { kind: 'sprite', key: 'apple', word: '_pple' },
+answerInput: { kind: 'choice', options: [{ id: 'a', label: 'A' }, { id: 'm', label: 'M' }, ...] },
+correctAnswer: 'a',
+hint: { kind: 'word', word: '_pple', picture: 'apple', lit: 0, caption: 'Say it slowly: apple...' },
+explanation: { kind: 'word', word: 'apple', picture: 'apple', lit: 1, caption: 'apple starts with A!' },
+```
+
+Two things in the contract grew for it. `AnswerInput` can be a `choice` (tap one of a few options, each with a label, a picture or a colour swatch) as well as a typed integer. In `ShopScene.showAnswerInput()` a choice shows `ChoicePad` (`src/ui/ChoicePad.ts`, placed by `choiceLayout()`) where the keypad would be, and a tap goes straight to `handleSubmit(id)`; a wrong option is dimmed for the retry. `OrderPicture` gained `sprite`, and `VisualAid` gained `word` (a picture and its word with the first `lit` letters lit up, drawn by `VisualAidView.drawWord`). The pictures are 14x14 text grids in `src/characters/wordArt.ts`. The options are fixed when the round is planned, so a round resumed from a save shows the same buttons.
 
 ## 4. One order: `src/shop/orderManager.ts`
 

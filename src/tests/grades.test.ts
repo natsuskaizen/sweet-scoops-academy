@@ -4,7 +4,9 @@ import { createRng } from '../core/rng';
 import {
   defaultGradeChoice,
   describeChoice,
+  gameCount,
   gradeLevel,
+  gradeSubjectList,
   gradeSubjects,
   mathConfigFor,
   settleChoice,
@@ -16,8 +18,8 @@ import { MemoryStorage, SaveManager, createSaveFile, parseSave } from '../save/s
 import { subjectProgress } from '../save/saveTypes';
 import { OrderManager } from '../shop/orderManager';
 
-const K = { grade: 'kindergarten', mathMode: 'mixed' };
-const plan = (choice: { grade: string; mathMode: string }) =>
+const K = { grade: 'kindergarten', game: 'mixed' };
+const plan = (choice: { grade: string; game: string }) =>
   subjectForGrade(choice).planRound(
     {},
     { roundNumber: 1, rng: createRng(7), count: 10, now: 0 },
@@ -25,20 +27,20 @@ const plan = (choice: { grade: string; mathMode: string }) =>
 
 describe('grade levels', () => {
   it('starts everyone in 3rd grade with multiplication and division mixed', () => {
-    expect(defaultGradeChoice()).toEqual({ grade: 'grade3', mathMode: 'mixed' });
+    expect(defaultGradeChoice()).toEqual({ grade: 'grade3', game: 'mixed' });
     expect(describeChoice(defaultGradeChoice())).toBe('3rd grade · Mix it up');
     expect(describeChoice(K)).toBe('Kindergarten · Mix it up');
   });
 
   it('plays an unknown grade or mode as the nearest one it has', () => {
     expect(gradeLevel('grade9').id).toBe('grade3');
-    expect(settleChoice({ grade: 'grade3', mathMode: 'fractions' })).toEqual({
+    expect(settleChoice({ grade: 'grade3', game: 'fractions' })).toEqual({
       grade: 'grade3',
-      mathMode: 'multiplication',
+      game: 'multiplication',
     });
-    expect(settleChoice({ grade: 'kindergarten', mathMode: 'division' })).toEqual({
+    expect(settleChoice({ grade: 'kindergarten', game: 'division' })).toEqual({
       grade: 'kindergarten',
-      mathMode: 'counting',
+      game: 'counting',
     });
   });
 
@@ -50,8 +52,8 @@ describe('grade levels', () => {
     ['mixed', ['division', 'multiplication']],
     ['multiplication', ['multiplication']],
     ['division', ['division']],
-  ])('3rd grade %s rounds only practise %j', (mathMode, ops) => {
-    const skills = new Set(plan({ grade: 'grade3', mathMode }).map((s) => s.skillId));
+  ])('3rd grade %s rounds only practise %j', (game, ops) => {
+    const skills = new Set(plan({ grade: 'grade3', game }).map((s) => s.skillId));
     expect([...skills].sort()).toEqual(ops);
   });
 
@@ -72,6 +74,39 @@ describe('grade levels', () => {
     const added = subject.present(add, { flavor: 'mint' });
     expect(added.orderPicture).toEqual({ kind: 'piles', parts: [add.left, add.right] });
     expect(added.ticketPicture).toBeUndefined();
+  });
+
+  it('kindergarten first letters play the vocab subject, with its own progress in the save', () => {
+    const letters = { grade: 'kindergarten', game: 'letters' };
+    const subject = subjectForGrade(letters);
+    expect(subject).toMatchObject({ id: 'vocab', gameType: 'kindergarten/letters' });
+    expect(gameCount(letters)).toBe(4);
+    const specs = subject.planRound(subject.createProgress(), { roundNumber: 1, rng: createRng(7), count: 10, now: 0 });
+    expect(specs.every((spec) => spec.skillId === 'firstLetter')).toBe(true);
+    const save = createSaveFile(1);
+    const p = save.profiles[save.activeProfileId]!;
+    chooseGrade(p, letters);
+    expect(subjectProgress(p, subjectForGrade(p.settings))).toBe(p.learning.vocab);
+    expect(p.learning.math).toBeDefined();
+  });
+
+  it('lists each subject a grade plays once, with every skill its games use', () => {
+    const kindergarten = gradeSubjectList('kindergarten');
+    expect(kindergarten.map((s) => s.id)).toEqual(['math', 'vocab']);
+    expect(kindergarten[0]!.progressReport({}).slice(0, 2)).toEqual([
+      expect.stringMatching(/^Counting/),
+      expect.stringMatching(/^Addition/),
+    ]);
+    expect(gradeSubjectList('grade3').map((s) => s.id)).toEqual(['math']);
+  });
+
+  it('refuses a game that names a subject the game does not have', () => {
+    const level = GAME_CONFIG.grades.levels[0]!;
+    const odd: GameConfig = {
+      ...GAME_CONFIG,
+      grades: { defaultGrade: level.id, levels: [{ ...level, games: [{ ...level.games[0]!, subject: 'art' }] }] },
+    };
+    expect(() => gradeSubjects(odd)(defaultGradeChoice(odd.grades))).toThrow(/subject the game does not have/);
   });
 
   it('3rd grade orders stay in words', () => {
@@ -97,19 +132,19 @@ describe('choosing a grade', () => {
     const save = createSaveFile(1);
     const p = save.profiles[save.activeProfileId]!;
     p.currentRound = {} as never;
-    expect(chooseGrade(p, { grade: 'grade3', mathMode: 'mixed' })).toBe(false);
+    expect(chooseGrade(p, { grade: 'grade3', game: 'mixed' })).toBe(false);
     expect(p.currentRound).not.toBeNull();
-    expect(chooseGrade(p, { grade: 'grade3', mathMode: 'division' })).toBe(true);
-    expect(p.settings).toMatchObject({ grade: 'grade3', mathMode: 'division' });
+    expect(chooseGrade(p, { grade: 'grade3', game: 'division' })).toBe(true);
+    expect(p.settings).toMatchObject({ grade: 'grade3', game: 'division' });
     expect(p.currentRound).toBeNull();
   });
 
   it('moving grade starts on its start mode; picking the same grade keeps the mode', () => {
     const save = createSaveFile(1);
     const p = save.profiles[save.activeProfileId]!;
-    chooseGrade(p, { grade: 'grade3', mathMode: 'division' });
+    chooseGrade(p, { grade: 'grade3', game: 'division' });
     expect(chooseGradeLevel(p, 'grade3')).toBe(false);
-    expect(p.settings.mathMode).toBe('division');
+    expect(p.settings.game).toBe('division');
     expect(chooseGradeLevel(p, 'kindergarten')).toBe(true);
     expect(p.settings).toMatchObject(K);
   });

@@ -26,8 +26,22 @@ export interface MathConfig {
   factorTiers: Readonly<Record<number, number>>;
 }
 
+/** A word a young reader practises, with the picture that stands for it. */
+export interface VocabWord {
+  word: string;
+  /** A key in src/characters/wordArt.ts. */
+  picture: string;
+}
+
+export interface VocabConfig {
+  /** Words with a picture; every vocab game is built from them. */
+  words: readonly VocabWord[];
+  /** Buttons on a first-letter question: the right letter and this many minus one wrong ones. */
+  letterChoices: number;
+}
+
 /** One game a child can pick for a round, e.g. "Grouping". */
-export interface MathMode {
+export interface GradeGame {
   id: string;
   /** Shown on the pick-a-game card. */
   label: string;
@@ -35,8 +49,10 @@ export interface MathMode {
   symbol: string;
   /** One short line under the label. */
   hint: string;
-  /** The operations this mode puts in rounds, split evenly (as `math.enabledOperations`). */
-  operations: readonly string[];
+  /** The subject this game practises: 'math' or 'vocab'. */
+  subject: string;
+  /** The skills it puts in rounds, split evenly: math operations (as `math.enabledOperations`), or vocab skills. */
+  skills: readonly string[];
 }
 
 export interface GradeLevel {
@@ -45,9 +61,9 @@ export interface GradeLevel {
   /** This grade's number ranges, in place of the ones in `math`. */
   math: Partial<Omit<MathConfig, 'enabledOperations'>>;
   /** The games to pick from, in the order shown. A grade with one game skips the picking. */
-  mathModes: readonly MathMode[];
+  games: readonly GradeGame[];
   /** The game a player has on moving to this grade, until they pick (the first when left out). */
-  startMode?: string;
+  startGame?: string;
   /** Players can't read yet: orders are drawn as pictures and number keys show dots. */
   preReaders?: boolean;
 }
@@ -99,6 +115,7 @@ export interface GameConfig {
   rewards: RewardConfig;
   adaptive: AdaptiveConfig;
   math: MathConfig;
+  vocab: VocabConfig;
   /** The grades a grown-up can choose for each player, in the order shown. */
   grades: {
     /** New players, and every player from before grades, start here. */
@@ -236,6 +253,24 @@ export const GAME_CONFIG: GameConfig = {
     // ×1, ×2, ×10 are easiest, then ×5 ×11, then ×3 ×4, then ×9, then ×6 ×7 ×8 ×12.
     factorTiers: { 1: 0, 2: 1, 10: 1, 5: 2, 11: 2, 3: 3, 4: 3, 9: 4, 6: 5, 7: 5, 8: 5, 12: 5 },
   },
+  vocab: {
+    // Three-letter words are easiest. Every picture is drawn in src/characters/wordArt.ts.
+    words: [
+      { word: 'sun', picture: 'sun' },
+      { word: 'hat', picture: 'hat' },
+      { word: 'cup', picture: 'cup' },
+      { word: 'cat', picture: 'cat' },
+      { word: 'dog', picture: 'dog' },
+      { word: 'bus', picture: 'bus' },
+      { word: 'egg', picture: 'egg' },
+      { word: 'ball', picture: 'ball' },
+      { word: 'fish', picture: 'fish' },
+      { word: 'moon', picture: 'moon' },
+      { word: 'star', picture: 'star' },
+      { word: 'apple', picture: 'apple' },
+    ],
+    letterChoices: 4,
+  },
   grades: {
     defaultGrade: 'grade3',
     levels: [
@@ -247,42 +282,74 @@ export const GAME_CONFIG: GameConfig = {
           addition: { addend: { min: 1, max: 4 }, maxSum: 5 },
           counting: { count: { min: 1, max: 5 } },
         },
-        mathModes: [
-          { id: 'counting', label: 'How many?', symbol: '123', hint: 'Count the scoops', operations: ['counting'] },
-          { id: 'adding', label: 'Adding', symbol: '+', hint: 'Put scoops together', operations: ['addition'] },
+        games: [
+          {
+            id: 'counting',
+            label: 'How many?',
+            symbol: '123',
+            hint: 'Count the scoops',
+            subject: 'math',
+            skills: ['counting'],
+          },
+          {
+            id: 'adding',
+            label: 'Adding',
+            symbol: '+',
+            hint: 'Put scoops together',
+            subject: 'math',
+            skills: ['addition'],
+          },
           {
             id: 'mixed',
             label: 'Mix it up',
             symbol: '1+',
             hint: 'A bit of both',
-            operations: ['counting', 'addition'],
+            subject: 'math',
+            skills: ['counting', 'addition'],
+          },
+          {
+            id: 'letters',
+            label: 'First letter',
+            symbol: 'Aa',
+            hint: 'Which letter does it start with?',
+            subject: 'vocab',
+            skills: ['firstLetter'],
           },
         ],
-        startMode: 'mixed',
+        startGame: 'mixed',
         preReaders: true,
       },
       {
         id: 'grade3',
         label: '3rd grade',
         math: {},
-        mathModes: [
+        games: [
           {
             id: 'multiplication',
             label: 'Grouping',
             symbol: '×',
             hint: 'Groups of scoops',
-            operations: ['multiplication'],
+            subject: 'math',
+            skills: ['multiplication'],
           },
-          { id: 'division', label: 'Sharing', symbol: '÷', hint: 'Share scoops fairly', operations: ['division'] },
+          {
+            id: 'division',
+            label: 'Sharing',
+            symbol: '÷',
+            hint: 'Share scoops fairly',
+            subject: 'math',
+            skills: ['division'],
+          },
           {
             id: 'mixed',
             label: 'Mix it up',
             symbol: '×÷',
             hint: 'A bit of both',
-            operations: ['multiplication', 'division'],
+            subject: 'math',
+            skills: ['multiplication', 'division'],
           },
         ],
-        startMode: 'mixed',
+        startGame: 'mixed',
       },
     ],
   },
