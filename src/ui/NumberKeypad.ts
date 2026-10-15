@@ -16,6 +16,12 @@ export interface KeypadOptions {
   onSubmit: (value: string) => void;
 }
 
+const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'back', '0', 'ok'];
+/** Dots sit in rows of this many. */
+const DOT_ROW = 5;
+/** How far a number moves up (as a share of the key's height) to make room for its dots. */
+const DOT_LIFT = 0.12;
+
 /**
  * On-screen 0-9 keypad with backspace and submit.
  *
@@ -32,14 +38,15 @@ export class NumberKeypad {
   private enabled = false;
   private buttons: Button[] = [];
   private submitButton!: Button;
+  /** Each number key's dots, made the first time dots are switched on. */
+  private dots: Phaser.GameObjects.Graphics[] = [];
   private keyHandler?: (e: KeyboardEvent) => void;
 
   constructor(
     private scene: Phaser.Scene,
     private opts: KeypadOptions,
   ) {
-    const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'back', '0', 'ok'];
-    keys.forEach((key, i) => {
+    KEYS.forEach((key, i) => {
       const col = i % 3;
       const row = Math.floor(i / 3);
       const x = opts.x + col * (opts.cellW + opts.gap) + opts.cellW / 2;
@@ -87,6 +94,36 @@ export class NumberKeypad {
 
   setMaxDigits(maxDigits: number): void {
     this.opts.maxDigits = maxDigits;
+  }
+
+  /**
+   * Dots under each number, in rows of 5 like a ten frame, so a child who
+   * can count but not yet read numbers can match a count to its key.
+   */
+  setDots(on: boolean): void {
+    if (on && this.dots.length === 0) this.dots = this.buttons.map((b, i) => this.drawDots(b, KEYS[i]!));
+    this.buttons.forEach((b, i) => {
+      const label = b.list.find((o): o is Phaser.GameObjects.Text => o instanceof Phaser.GameObjects.Text);
+      if (/^[1-9]$/.test(KEYS[i]!)) label?.setY(on ? -this.opts.cellH * DOT_LIFT : 0);
+      this.dots[i]?.setVisible(on);
+    });
+  }
+
+  private drawDots(button: Button, key: string): Phaser.GameObjects.Graphics {
+    const g = this.scene.add.graphics();
+    const count = /^[1-9]$/.test(key) ? Number(key) : 0;
+    const r = Math.max(2.5, this.opts.cellH * 0.035);
+    const gap = r * 2.8;
+    const rows = Math.ceil(count / DOT_ROW);
+    const bottom = this.opts.cellH * 0.34;
+    g.fillStyle(COLORS.ink, 0.7);
+    for (let i = 0; i < count; i++) {
+      const row = Math.floor(i / DOT_ROW);
+      const inRow = Math.min(DOT_ROW, count - row * DOT_ROW);
+      g.fillCircle(((i % DOT_ROW) - (inRow - 1) / 2) * gap, bottom - (rows - 1 - row) * gap, r);
+    }
+    button.add(g);
+    return g.setVisible(false);
   }
 
   setEnabled(enabled: boolean): void {

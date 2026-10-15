@@ -206,7 +206,7 @@ describe('SaveManager', () => {
     const profile = parsed.save.profiles[parsed.save.activeProfileId]!;
     expect(profile.settings.dailyGoal).toBe(GAME_CONFIG.calendar.defaultDailyGoal);
     expect(profile.dailyLog).toEqual({
-      '2026-10-12': { rounds: 3, playMs: 180_000, subjects: { math: 3 }, heart: true },
+      '2026-10-12': { rounds: 3, playMs: 180_000, subjects: { math: 3 }, types: [], heart: true },
     });
   });
 
@@ -221,6 +221,7 @@ describe('SaveManager', () => {
       'dailyLog[yesterday].playMs invalid',
       'dailyLog[yesterday].heart invalid',
       'dailyLog[yesterday].subjects invalid',
+      'dailyLog[yesterday].types invalid',
       'dailyLog[2026-10-12] not an object',
     ]);
     p.dailyLog = [] as never;
@@ -244,6 +245,42 @@ describe('SaveManager', () => {
     const profile = parsed.save.profiles[parsed.save.activeProfileId]!;
     expect(profile.shop).toEqual({ name: 'Sweet Scoops', keeper: 'momo' });
     expect(profile.lastPlayedAt).toBe(9000);
+  });
+
+  it('upgrades a version 4 save: every player practises 3rd grade multiplication and division', () => {
+    const v4 = createSaveFile(1000);
+    v4.schemaVersion = 4;
+    const settings = v4.profiles[v4.activeProfileId]!.settings as unknown as Record<string, unknown>;
+    delete settings.grade;
+    delete settings.mathMode;
+
+    const parsed = parseSave(JSON.stringify(v4));
+    if (!parsed.ok) throw new Error(parsed.problems.join());
+    expect(parsed.save.profiles[v4.activeProfileId]!.settings).toMatchObject({ grade: 'grade3', mathMode: 'mixed' });
+  });
+
+  it('upgrades a version 5 save: each day of the calendar gets an empty list of games played', () => {
+    const v5 = createSaveFile(1000);
+    v5.schemaVersion = 5;
+    const p = v5.profiles[v5.activeProfileId]!;
+    p.dailyLog = { '2026-10-12': { rounds: 2, playMs: 1, subjects: { math: 2 }, heart: true } as never };
+
+    const parsed = parseSave(JSON.stringify(v5));
+    if (!parsed.ok) throw new Error(parsed.problems.join());
+    expect(parsed.save.profiles[v5.activeProfileId]!.dailyLog['2026-10-12']).toMatchObject({ types: [], heart: true });
+  });
+
+  it('rejects a player with no grade, but loads a grade this game does not know', () => {
+    const save = createSaveFile(1);
+    const settings = save.profiles[save.activeProfileId]!.settings;
+    settings.grade = 'grade7';
+    expect(validateSaveFile(save)).toEqual([]);
+    settings.grade = '';
+    settings.mathMode = 3 as never;
+    expect(validateSaveFile(save).map((problem) => problem.replace(/^profiles\[[^\]]+\]\./, ''))).toEqual([
+      'settings.grade invalid',
+      'settings.mathMode invalid',
+    ]);
   });
 
   it('rejects a player whose shop has no name', () => {

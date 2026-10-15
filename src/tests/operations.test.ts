@@ -10,7 +10,7 @@ const withOps = (enabledOperations: string[], extra: Partial<MathConfig> = {}) =
   createOperations({ ...GAME_CONFIG.math, ...extra, enabledOperations });
 
 describe('operation registry', () => {
-  const ops = withOps(['multiplication', 'division', 'addition', 'subtraction']);
+  const ops = withOps(['multiplication', 'division', 'addition', 'subtraction', 'counting']);
 
   it.each(ops.all.map((op) => [op.id, op] as const))('%s: every fact validates and has a unique key', (_id, op) => {
     const facts = op.facts();
@@ -108,5 +108,30 @@ describe('turning on more operations', () => {
   it('reports every enabled operation to grown-ups', () => {
     const report = subject.progressReport(subject.createProgress()).join('\n');
     for (const label of ['Multiplication', 'Division', 'Addition', 'Subtraction']) expect(report).toContain(label);
+  });
+});
+
+describe('counting', () => {
+  const counting = withOps(['counting'], { counting: { count: { min: 1, max: 5 } } }).enabled[0]!;
+
+  it('asks one count per fact, and only counts in range', () => {
+    expect(counting.facts().map((f) => f.answer)).toEqual([1, 2, 3, 4, 5]);
+    expect(counting.validate(3, 0, 3)).toEqual({ ok: true });
+    const bad: [unknown, unknown, unknown?][] = [
+      [0, 0],
+      [6, 0],
+      [3, 1],
+      [3, 0, 4],
+      [1.5, 0],
+    ];
+    for (const [left, right, answer] of bad) expect(counting.validate(left, right, answer).ok).toBe(false);
+  });
+
+  it('shows "count 3" and draws a cone of 3 scoops that it explains by numbering them', () => {
+    const spec = { subjectId: 'math', skillId: 'counting', factKey: 'count:3', left: 3, right: 0, answer: 3 } as const;
+    expect(counting.expression?.(spec)).toBe('count 3');
+    expect(counting.formatKey('count:3')).toBe('count 3');
+    expect(counting.picture?.(spec)).toEqual({ order: { kind: 'cone', scoops: 3 }, onTicket: true });
+    expect(counting.word(spec, 'mint').explanation).toMatchObject({ kind: 'count', total: 3, showNumbers: true });
   });
 });

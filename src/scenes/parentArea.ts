@@ -12,6 +12,7 @@ import type { ParentAction, ParentGate, ParentGateOptions } from '../ui/ParentGa
 import { showProgress } from '../ui/ProgressScreen';
 import { backupActions } from './backupActions';
 import { characterAction, restartWithCharacters } from './characterActions';
+import { gradeAction } from './gradeAction';
 import { playersAction } from './playerActions';
 
 export interface ParentAreaHost {
@@ -27,12 +28,13 @@ export function parentArea(host: ParentAreaHost): Pick<ParentGateOptions, 'info'
 
 function parentInfo({ services, profile }: ParentAreaHost): string[] {
   const p = profile();
+  const subject = services.subjectFor(p);
   const last = p.roundHistory[p.roundHistory.length - 1];
   const lastRound = last ? `   ·   Last round: ${last.firstTryCorrect}/${last.ordersCompleted} first try` : '';
   return [
     `Player: ${p.displayName}   ·   Sprinkles: ${p.sprinkles} (earned in total: ${p.lifetimeSprinkles})`,
     `Rounds finished: ${p.roundHistory.length}${lastRound}`,
-    ...services.subject.progressReport(subjectProgress(p, services.subject)),
+    ...subject.progressReport(subjectProgress(p, subject)),
     services.persistent
       ? 'Progress is saved in this browser on this device.'
       : 'This browser is not allowing saves; progress will be lost on reload.',
@@ -43,6 +45,7 @@ function parentActions(host: ParentAreaHost): ParentAction[] {
   const { scene, services, profile } = host;
   return [
     { label: 'Progress', enabled: true, run: (gate) => showProgress(gate, scene, profile().roundHistory) },
+    gradeAction(scene, services, profile),
     dailyGoalAction(host),
     playersAction(scene, services),
     characterAction(scene, services),
@@ -56,7 +59,7 @@ function parentActions(host: ParentAreaHost): ParentAction[] {
 function dailyGoalAction({ services, profile }: ParentAreaHost): ParentAction {
   const goal = profile().settings.dailyGoal;
   return {
-    label: `Heart goal: ${goal} ${goal === 1 ? 'game' : 'games'} a day`,
+    label: `Heart goal: ${goal} different ${goal === 1 ? 'game' : 'games'}`,
     enabled: true,
     run: (gate) => {
       const settings = profile().settings;
@@ -97,7 +100,7 @@ function resetActions(host: ParentAreaHost): ParentAction[] {
       confirm: 'Clears all practice progress. Sprinkles and items are kept.',
       enabled: true,
       run: (gate) => {
-        resetLearning(profile(), services.subject);
+        resetLearning(profile(), services.subjectFor(profile()));
         saveAndRestart(host, gate);
       },
     },

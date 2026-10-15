@@ -1,6 +1,15 @@
 import type Phaser from 'phaser';
 import type { Profile } from '../save/saveTypes';
-import { dayKey, dayView, monthOf, monthView, shiftMonth, type DayView, type MonthRef } from '../shop/progressCalendar';
+import {
+  dayKey,
+  dayView,
+  gamesForHeart,
+  monthOf,
+  monthView,
+  shiftMonth,
+  type DayView,
+  type MonthRef,
+} from '../shop/progressCalendar';
 import { Button } from './Button';
 import { COLORS, CSS, DEPTH, LAYOUT, text, type Rect } from './theme';
 
@@ -131,7 +140,7 @@ export class CalendarScreen {
     };
     const { profile, now } = this.opts;
     const p = profile();
-    this.drawDay(add, dayView(p.dailyLog, this.selected, p.settings.dailyGoal, now()));
+    this.drawDay(add, dayView(p.dailyLog, this.selected, gamesForHeart(p), now()));
     this.drawMonth(add);
   }
 
@@ -182,7 +191,7 @@ export class CalendarScreen {
   /** A pale heart that fills from the bottom, one slice per game; solid once earned. */
   private bigHeart(add: Add, day: DayView, x: number, y: number, scale: number): void {
     add(this.scene.add.image(x, y, 'heart-empty').setScale(scale));
-    const rows = day.heart ? HEART_ROWS : Math.round((HEART_ROWS * Math.min(day.rounds, day.goal)) / day.goal);
+    const rows = day.heart ? HEART_ROWS : Math.round((HEART_ROWS * day.progress) / day.goal);
     if (rows === 0) return;
     const fill = add(this.scene.add.image(x, y, 'heart').setScale(scale));
     if (!day.heart) fill.setCrop(0, HEART_ROWS - rows, 11, rows);
@@ -195,7 +204,7 @@ export class CalendarScreen {
     const start = x - align * (day.goal * step - 10) + r;
     const g = add(this.scene.add.graphics());
     for (let i = 0; i < day.goal; i++) {
-      const on = i < day.rounds;
+      const on = i < day.progress;
       g.fillStyle(on ? COLORS.strawberry : COLORS.white, 1).fillCircle(start + i * step, y, r);
       g.lineStyle(3, on ? COLORS.strawberryDark : COLORS.strawberry, 1).strokeCircle(start + i * step, y, r);
     }
@@ -243,7 +252,7 @@ export class CalendarScreen {
   private drawMonth(add: Add): void {
     const { profile, now } = this.opts;
     const p = profile();
-    const view = monthView(p.dailyLog, this.month, p.settings.dailyGoal, now());
+    const view = monthView(p.dailyLog, this.month, gamesForHeart(p), now());
     this.monthHeader(add, view.title, view.canGoBack, view.canGoForward);
     const { grid } = this.geo;
     const cellW = (grid.w - 6 * GAP) / 7;
@@ -320,7 +329,7 @@ export class CalendarScreen {
     const step = 18;
     const start = r.x + r.w / 2 - ((day.goal - 1) * step) / 2;
     for (let i = 0; i < day.goal; i++) {
-      const on = i < day.rounds;
+      const on = i < day.progress;
       g.fillStyle(on ? COLORS.strawberry : COLORS.white, 1).fillCircle(start + i * step, r.y + r.h * 0.55, 7);
       g.lineStyle(2, on ? COLORS.strawberryDark : COLORS.strawberry, 1).strokeCircle(
         start + i * step,

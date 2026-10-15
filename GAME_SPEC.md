@@ -153,6 +153,21 @@ Multiplication and division must both be available from the beginning.
 
 The two operations must maintain independent adaptive learning records for every child.
 
+### Grade levels
+
+Each child has a grade level, chosen by a grown-up in the parent area (new players start in 3rd grade). The grade decides what the shop's questions practise:
+
+- **3rd grade**: three games: Grouping (multiplication only), Sharing (division only) and Mix it up (both).
+- **Kindergarten**: three games: How many? (counting up to 5), Adding (within 5) and Mix it up (both). Players can't read yet, so orders are drawn as pictures (a cone of scoops, or piles of scoops with a plus between) and the number keys show dots, so a child can match a count to its key. Every scoop is drawn whole and clear of its neighbours so none can be mistaken for hidden. More kindergarten question types (take away, make 10, which is more) and kindergarten reading follow; see the Milestone 5 tracker.
+
+Changing grade starts a fresh round. Each operation's learning record is kept, so a child who switches back carries on where they left off.
+
+### Picking the next game
+
+Children, not grown-ups, choose which game to play. Before every round, including the first after opening the shop, a "What shall we play?" screen covers the ticket and keypad with one big card per game of the child's grade (a symbol, a name and a few words, such as "÷ Sharing"). Tapping a card starts a round of that game. A grade with a single game would skip the screen, and a round already in progress is resumed without asking.
+
+A heart needs different games, not the same one three times. The heart on the screen has one slice per game the heart needs (the daily goal, but never more than the grade offers); each different game played today fills a slice. Cards already played today show "✓ played" and can still be played, but add no slice; unplayed ones say "new!". "Mix it up" is its own game, so it fills its own slice. After the round that earns the heart, the screen says "You earned a heart!".
+
 ### Multiplication rules
 
 - Both factors must be integers from 1 through 11, inclusive.
@@ -294,7 +309,7 @@ Show:
 - Sprinkles earned
 - New items unlocked
 - Encouraging visual celebrations
-- A progress calendar, opened from a calendar on the shop wall: a heart stamp on each day the child finishes the daily goal of games (3 by default; a grown-up can change it in the parent area), with the time played that day. Every subject's games count toward the same heart, and a small badge shows which subjects were played. Days short of the goal show the games played, never a cross, and a heart once earned stays.
+- A progress calendar, opened from a calendar on the shop wall: a heart stamp on each day the child plays the daily goal of different games (3 by default; a grown-up can change it in the parent area, and it never asks for more different games than the child's grade offers), with the time played that day. Every subject's games count toward the same heart, and a small badge shows which subjects were played. Days short of the goal show the games played, never a cross, and a heart once earned stays.
 
 Do not display negative labels such as "bad at multiplication" or compare siblings.
 

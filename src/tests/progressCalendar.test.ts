@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
+import { GAME_CONFIG } from '../config/gameConfig';
 import { createProfile } from '../save/saveManager';
 import type { RoundSummary } from '../save/saveTypes';
 import {
   addRound,
   dayKey,
   dayView,
+  gamesForHeart,
   logFromHistory,
   minutesLabel,
   monthView,
@@ -13,6 +15,7 @@ import {
   recordRound,
   shiftMonth,
   todayProgress,
+  typesToday,
   wallPage,
 } from '../shop/progressCalendar';
 
@@ -27,15 +30,47 @@ describe('progress calendar', () => {
     expect(dayKey(at(10, 3, 23))).toBe('2026-10-03');
   });
 
-  it('counts games and time per day, and stamps a heart when the goal is reached', () => {
+  it('counts games and time per day, and stamps a heart when the goal is reached in different games', () => {
     const log = {};
-    expect(addRound(log, round(at(10, 13)), 'math', 3)).toBe(false);
-    expect(addRound(log, round(at(10, 13, 16)), 'vocab', 3)).toBe(false);
-    expect(addRound(log, round(at(10, 13, 17), null), 'math', 3)).toBe(true);
-    expect(addRound(log, round(at(10, 13, 18)), 'math', 3)).toBe(false); // already earned
+    expect(addRound(log, round(at(10, 13)), 'math', 3, 'a')).toBe(false);
+    expect(addRound(log, round(at(10, 13, 16)), 'math', 3, 'a')).toBe(false); // the same game again adds no slice
+    expect(addRound(log, round(at(10, 13, 17), null), 'vocab', 3, 'b')).toBe(false);
+    expect(addRound(log, round(at(10, 13, 18)), 'math', 3, 'c')).toBe(true);
+    expect(addRound(log, round(at(10, 13, 19)), 'math', 3, 'd')).toBe(false); // already earned
     expect(log).toEqual({
-      '2026-10-13': { rounds: 4, playMs: 15 * MIN, subjects: { math: 3, vocab: 1 }, heart: true },
+      '2026-10-13': {
+        rounds: 5,
+        playMs: 20 * MIN,
+        subjects: { math: 4, vocab: 1 },
+        types: ['a', 'b', 'c', 'd'],
+        heart: true,
+      },
     });
+  });
+
+  it('counts every round as a game for a save from before game types', () => {
+    const log = {};
+    expect(addRound(log, round(at(10, 13)), 'math', 2)).toBe(false);
+    expect(addRound(log, round(at(10, 13, 16)), 'math', 2)).toBe(true);
+  });
+
+  it('asks for as many different games as the grade offers, at most', () => {
+    const profile = createProfile('Mo', at(10, 1), 1);
+    profile.settings.dailyGoal = 5;
+    expect(gamesForHeart(profile)).toBe(3);
+    profile.settings.dailyGoal = 2;
+    expect(gamesForHeart(profile)).toBe(2);
+  });
+
+  it('files a recorded round under its game and says when the heart is earned', () => {
+    const profile = createProfile('Mo', at(10, 1), 1);
+    profile.settings.dailyGoal = 2;
+    const summary = { finishedAt: at(10, 13), playMs: MIN } as RoundSummary;
+    expect(recordRound(profile, summary, 'math', 'grade3/division')).toBe(false);
+    expect(recordRound(profile, summary, 'math', 'grade3/division')).toBe(false);
+    expect(recordRound(profile, summary, 'math', 'grade3/mixed')).toBe(true);
+    expect(typesToday(profile, at(10, 13))).toEqual(['grade3/division', 'grade3/mixed']);
+    expect(todayProgress(profile, at(10, 13))).toEqual({ filled: 2, goal: 2, heart: true });
   });
 
   it('never takes a past heart away when the goal is raised', () => {
@@ -61,9 +96,9 @@ describe('progress calendar', () => {
       rounds: 1,
       minutes: '1 min',
       subjects: ['math'],
-      message: '2 more games for a heart!',
+      message: '2 new games for a heart!',
     });
-    expect(dayView(log, '2026-10-13', 2, now).message).toBe('One more game for a heart!');
+    expect(dayView(log, '2026-10-13', 2, now).message).toBe('One new game for a heart!');
     expect(dayView(log, '2026-10-12', 3, now)).toMatchObject({ title: 'Mon 12', message: '1 game played' });
     expect(dayView(log, '2026-10-11', 3, now)).toMatchObject({ message: 'A rest day', minutes: '' });
     expect(dayView(log, '2026-10-14', 3, now).isFuture).toBe(true);
@@ -105,7 +140,9 @@ describe('progress calendar', () => {
   it('records a finished round on the profile with its goal', () => {
     const profile = createProfile('Kid', at(10, 1), 1);
     profile.settings.dailyGoal = 1;
-    expect(recordRound(profile, round(at(10, 13)) as RoundSummary, 'math', { keepDays: 30 } as never)).toBe(true);
+    expect(
+      recordRound(profile, round(at(10, 13)) as RoundSummary, 'math', 'g', { ...GAME_CONFIG.calendar, keepDays: 30 }),
+    ).toBe(true);
     expect(todayProgress(profile, at(10, 13, 20))).toEqual({ filled: 1, goal: 1, heart: true });
     expect(todayProgress(profile, at(10, 14))).toEqual({ filled: 0, goal: 1, heart: false });
   });

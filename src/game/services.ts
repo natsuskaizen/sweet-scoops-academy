@@ -4,13 +4,16 @@
  */
 import { GAME_CONFIG } from '../config/gameConfig';
 import { createOperations } from '../learning/math/registry';
-import { createMathSubject, mathSubject } from '../learning/mathSubject';
+import { subjectForGrade } from '../learning/grades';
+import { createMathSubject } from '../learning/mathSubject';
 import type { ChallengeSpec, LearningSubject } from '../learning/types';
 import { CharacterLibrary } from '../save/characterLibrary';
 import { MemoryStorage, SaveManager, type LoadResult, type LoadStatus, type StorageLike } from '../save/saveManager';
-import type { SaveFile } from '../save/saveTypes';
+import type { Profile, SaveFile } from '../save/saveTypes';
 
 export const SERVICES_KEY = 'services';
+
+type Subject = LearningSubject<ChallengeSpec, unknown>;
 
 export type GameStage = 'setup' | 'start' | 'play';
 
@@ -22,8 +25,12 @@ export interface GameServices {
   loadNotice: LoadStatus | null;
   /** False when the browser blocks localStorage (e.g. some private modes). */
   persistent: boolean;
-  /** The subject the shop is practising. Swap here to play a different subject. */
-  subject: LearningSubject<ChallengeSpec, unknown>;
+  /** The subject a player practises, from their grade and math mode. Swap here to play a different subject. */
+  subjectFor: (profile: Profile) => Subject;
+  /** False when a developer's `?ops=` plays fixed operations, so there is no game to pick. */
+  picksGame: boolean;
+  /** Set when a child has just picked a game, so the restarted shop starts that round without asking again. */
+  justPicked?: boolean;
   /** Characters a grown-up added on this device. */
   characters: CharacterLibrary;
   /**
@@ -48,15 +55,20 @@ function browserStorage(): StorageLike | null {
 }
 
 /**
- * The subject to play. In development, `?ops=addition,subtraction` tries other
- * operations without editing GAME_CONFIG.
+ * Each player's subject comes from their grade. In development,
+ * `?ops=addition,subtraction` plays those operations for everyone instead,
+ * without editing GAME_CONFIG.
  */
-function chooseSubject(): LearningSubject<ChallengeSpec, unknown> {
-  const ops = import.meta.env.DEV ? new URLSearchParams(window.location.search).get('ops') : null;
-  if (!ops) return mathSubject;
-  return createMathSubject({
+const devOps = (): string | null =>
+  import.meta.env.DEV ? new URLSearchParams(window.location.search).get('ops') : null;
+
+function chooseSubject(): (profile: Profile) => Subject {
+  const ops = devOps();
+  if (!ops) return (profile) => subjectForGrade(profile.settings);
+  const subject = createMathSubject({
     operations: createOperations({ ...GAME_CONFIG.math, enabledOperations: ops.split(',') }),
   });
+  return () => subject;
 }
 
 const fromLoad = (load: LoadResult) => ({
@@ -77,8 +89,22 @@ export function createServices(): GameServices {
     const memory = new MemoryStorage();
     const saves = new SaveManager(memory);
     const characters = new CharacterLibrary(memory);
-    return { ...fromLoad(saves.load()), saves, persistent: false, subject: chooseSubject(), characters };
+    return {
+      ...fromLoad(saves.load()),
+      saves,
+      persistent: false,
+      picksGame: !devOps(),
+      subjectFor: chooseSubject(),
+      characters,
+    };
   }
   const characters = new CharacterLibrary(storage ?? new MemoryStorage());
-  return { ...fromLoad(load), saves, persistent: storage !== null, subject: chooseSubject(), characters };
+  return {
+    ...fromLoad(load),
+    saves,
+    persistent: storage !== null,
+    picksGame: !devOps(),
+    subjectFor: chooseSubject(),
+    characters,
+  };
 }

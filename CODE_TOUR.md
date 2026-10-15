@@ -16,6 +16,43 @@ export const GAME_CONFIG: GameConfig = {
 };
 ```
 
+Each player's grade and the game they picked (`profile.settings.grade`, `mathMode`) pick which math subject they play. `src/learning/grades.ts` merges the grade's ranges into `math`, switches on the mode's operations, and builds that subject once:
+
+```ts
+export function mathConfigFor(choice: GradeChoice, config: GameConfig = GAME_CONFIG): MathConfig {
+  return {
+    ...config.math,
+    ...gradeLevel(choice.grade, config.grades).math, // kindergarten: within 5
+    enabledOperations: mathModeOf(choice, config.grades).operations, // e.g. ['division']
+  };
+}
+
+services.subjectFor(profile); // subjectForGrade(profile.settings): what OrderManager is given
+```
+
+A grade with `preReaders: true` (kindergarten) gets orders as pictures. An operation can offer `picture(spec)`, and the subject then puts it on the `ChallengePresentation` as plain data (`orderPicture` for the speech bubble, `ticketPicture` where the ticket shows it in place of the expression) together with `answerInput.dots`:
+
+```ts
+// src/learning/math/counting.ts: "how many scoops?"
+picture: (spec) => ({ order: { kind: 'cone', scoops: spec.left }, onTicket: true }),
+// src/learning/math/addition.ts
+picture: (spec) => ({ order: { kind: 'piles', parts: [spec.left, spec.right] } }),
+```
+
+`src/ui/orderPicture.ts` draws them with the shop's scoops (`bubble.sayPicture`, `ticket.showOrder`), and `NumberKeypad.setDots` puts dots under each number key. Third grade has no `picture`, so its orders stay in words.
+
+Every grade's subject has the id `math` and each operation keeps its own record, so switching mode keeps what a child has mastered. A saved round is checked against the player's own grade on load. `chooseGrade` (`src/save/profileActions.ts`) drops the round in play, because it was planned for the old choice; the grown-ups area's grade screen (`src/scenes/gradeAction.ts`) saves each tap, and the shop restarts when the area closes on a new grade.
+
+The child picks the game, not the grown-up. Before every round, `ShopScene.nextRound()` shows `GamePicker` (`src/ui/GamePicker.ts`) unless the grade has one game or a round is in progress. What it shows is Phaser-free, in `src/shop/gamePicker.ts`:
+
+```ts
+const view = pickerView(profile, Date.now(), heartJustEarned);
+view.cards; // [{ id: 'division', label: 'Sharing', symbol: '÷', hint: '...', played: true }, ...]
+view.filled; // heart slices filled today, out of view.goal
+```
+
+Tapping a card calls `chooseGrade` with that game's mode. A different game restarts the shop with `services.justPicked`, so the round starts without asking again. Each game has a type (`gameTypeOf`, such as `grade3/division`) which the subject exposes as `gameType`, and which the calendar files the round under.
+
 ## 1. Operations: `src/learning/math/`
 
 Each operation is one file implementing `MathOperation`. It owns its fact table, rules, wording and visuals, so adding addition touched nothing else:
@@ -185,21 +222,22 @@ export function payOrder(wallet: Wallet, order: PayableOrder): number {
 
 ### The kids' progress calendar: `src/shop/progressCalendar.ts`
 
-A finished round is one "game". `finishOrder()` also adds it to the day it finished on (`profile.dailyLog`, keyed by local date), with its play time and subject. Reaching the day's goal (`settings.dailyGoal`, 3 by default and changed from the grown-ups area within `GAME_CONFIG.calendar.dailyGoal`) stamps a heart on that day. The heart is stored, so raising the goal later never takes one away, and `finishOrder` reports `heartEarned` so the wall calendar can bounce its hearts:
+A finished round is one "game". `finishOrder()` also adds it to the day it finished on (`profile.dailyLog`, keyed by local date), with its play time, subject and game type. Playing the day's goal of different game types (`settings.dailyGoal`, 3 by default and changed from the grown-ups area within `GAME_CONFIG.calendar.dailyGoal`, but never more than the grade offers: `gamesForHeart`) stamps a heart on that day. The heart is stored, so raising the goal later never takes one away, and `finishOrder` reports `heartEarned` so the wall calendar can bounce its hearts:
 
 ```ts
-export function addRound(log, round, subjectId, goal): boolean {
+export function addRound(log, round, subjectId, goal, gameType?): boolean {
   const day = (log[dayKey(round.finishedAt)] ??= emptyDay());
   day.rounds += 1;
   day.playMs += round.playMs ?? 0;
   day.subjects[subjectId] = (day.subjects[subjectId] ?? 0) + 1;
-  const earned = !day.heart && day.rounds >= goal;
+  if (gameType !== undefined && !day.types.includes(gameType)) day.types.push(gameType);
+  const earned = !day.heart && gamesPlayed(day) >= goal; // the same game again adds no slice
   if (earned) day.heart = true;
   return earned;
 }
 ```
 
-The log keeps `GAME_CONFIG.calendar.keepDays` days, separate from the 100-round history, so old months stay on the calendar. `dayView` and `monthView` turn it into what is drawn (gentle words such as "One more game for a heart!" or "A rest day", never a cross). In the shop, `src/ui/WallCalendar.ts` hangs between the window and the display case with one heart per game today; tapping it opens `src/ui/CalendarScreen.ts` over the shop: the chosen day with a heart that fills a slice per game, and the month of heart stamps. Each subject played shows its `badge` as a chip, so math and later subjects share one calendar.
+The log keeps `GAME_CONFIG.calendar.keepDays` days, separate from the 100-round history, so old months stay on the calendar. `dayView` and `monthView` turn it into what is drawn (gentle words such as "One new game for a heart!" or "A rest day", never a cross). In the shop, `src/ui/WallCalendar.ts` hangs between the window and the display case with one heart slice per different game today; tapping it opens `src/ui/CalendarScreen.ts` over the shop: the chosen day with a heart that fills a slice per game, and the month of heart stamps. Each subject played shows its `badge` as a chip, so math and later subjects share one calendar.
 
 ## 5. Saving: `src/save/saveManager.ts`
 
@@ -295,7 +333,7 @@ The grown-ups area's content lives in `src/scenes/parentArea.ts`, so the scene o
 
 ```ts
 // services.save is the live save; services.loadNotice is how it was found at startup, shown once
-resetLearning(profile, services.subject); // src/save/profileActions.ts
+resetLearning(profile, services.subjectFor(profile)); // src/save/profileActions.ts
 resetProfile(services.save, Date.now()); // replaces only the active player, keeping their shop
 const result = services.saves.write(services.save);
 if (!result.ok) return gate.notice('Not saved', `The change could not be saved: ${result.error}`);

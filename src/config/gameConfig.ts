@@ -3,7 +3,8 @@
  * the Phaser-free ones also accept an override so tests (or a future grown-ups
  * screen) can change behaviour without editing code.
  *
- * To turn on addition and subtraction, add them to `math.enabledOperations`.
+ * Which operations a player practises comes from their grade (`grades`);
+ * `math.enabledOperations` is the default for code and tests that pass no grade.
  */
 import type { AttemptOutcome } from '../learning/types';
 
@@ -19,8 +20,36 @@ export interface MathConfig {
   division: { dividend: RangeRule; quotient: RangeRule; divisor: RangeRule };
   addition: { addend: RangeRule; maxSum: number };
   subtraction: { minuend: RangeRule; subtrahend: RangeRule; minDifference: number };
+  /** How many scoops a "how many?" cone can have. */
+  counting: { count: RangeRule };
   /** How hard each times-table factor feels to a young learner (lower is easier). */
   factorTiers: Readonly<Record<number, number>>;
+}
+
+/** One game a child can pick for a round, e.g. "Grouping". */
+export interface MathMode {
+  id: string;
+  /** Shown on the pick-a-game card. */
+  label: string;
+  /** A few characters that stand for the game on its card: "×", "123". */
+  symbol: string;
+  /** One short line under the label. */
+  hint: string;
+  /** The operations this mode puts in rounds, split evenly (as `math.enabledOperations`). */
+  operations: readonly string[];
+}
+
+export interface GradeLevel {
+  id: string;
+  label: string;
+  /** This grade's number ranges, in place of the ones in `math`. */
+  math: Partial<Omit<MathConfig, 'enabledOperations'>>;
+  /** The games to pick from, in the order shown. A grade with one game skips the picking. */
+  mathModes: readonly MathMode[];
+  /** The game a player has on moving to this grade, until they pick (the first when left out). */
+  startMode?: string;
+  /** Players can't read yet: orders are drawn as pictures and number keys show dots. */
+  preReaders?: boolean;
 }
 
 export interface AdaptiveConfig {
@@ -70,6 +99,12 @@ export interface GameConfig {
   rewards: RewardConfig;
   adaptive: AdaptiveConfig;
   math: MathConfig;
+  /** The grades a grown-up can choose for each player, in the order shown. */
+  grades: {
+    /** New players, and every player from before grades, start here. */
+    defaultGrade: string;
+    levels: readonly GradeLevel[];
+  };
   backup: {
     /** Larger files are refused before reading; a real backup is a few KB (more with added characters). */
     maxImportBytes: number;
@@ -117,7 +152,10 @@ export interface GameConfig {
   };
   /** The kids' progress calendar: a heart stamp on each day the goal is reached. */
   calendar: {
-    /** Games (finished rounds, any subject) in a day for a heart, until a grown-up picks another goal. */
+    /**
+     * Different games (finished rounds of different kinds, e.g. grouping then sharing) in a day for a
+     * heart, until a grown-up picks another goal. Never more than the games the player's grade has.
+     */
     defaultDailyGoal: number;
     /** The goals a grown-up can choose from. */
     dailyGoal: { min: number; max: number };
@@ -194,8 +232,59 @@ export const GAME_CONFIG: GameConfig = {
     },
     addition: { addend: { min: 1, max: 10 }, maxSum: 20 },
     subtraction: { minuend: { min: 2, max: 20 }, subtrahend: { min: 1, max: 10 }, minDifference: 0 },
+    counting: { count: { min: 1, max: 10 } },
     // ×1, ×2, ×10 are easiest, then ×5 ×11, then ×3 ×4, then ×9, then ×6 ×7 ×8 ×12.
     factorTiers: { 1: 0, 2: 1, 10: 1, 5: 2, 11: 2, 3: 3, 4: 3, 9: 4, 6: 5, 7: 5, 8: 5, 12: 5 },
+  },
+  grades: {
+    defaultGrade: 'grade3',
+    levels: [
+      {
+        id: 'kindergarten',
+        label: 'Kindergarten',
+        // Counting and adding within 5 first (Common Core K fluency); within 10 comes later.
+        math: {
+          addition: { addend: { min: 1, max: 4 }, maxSum: 5 },
+          counting: { count: { min: 1, max: 5 } },
+        },
+        mathModes: [
+          { id: 'counting', label: 'How many?', symbol: '123', hint: 'Count the scoops', operations: ['counting'] },
+          { id: 'adding', label: 'Adding', symbol: '+', hint: 'Put scoops together', operations: ['addition'] },
+          {
+            id: 'mixed',
+            label: 'Mix it up',
+            symbol: '1+',
+            hint: 'A bit of both',
+            operations: ['counting', 'addition'],
+          },
+        ],
+        startMode: 'mixed',
+        preReaders: true,
+      },
+      {
+        id: 'grade3',
+        label: '3rd grade',
+        math: {},
+        mathModes: [
+          {
+            id: 'multiplication',
+            label: 'Grouping',
+            symbol: '×',
+            hint: 'Groups of scoops',
+            operations: ['multiplication'],
+          },
+          { id: 'division', label: 'Sharing', symbol: '÷', hint: 'Share scoops fairly', operations: ['division'] },
+          {
+            id: 'mixed',
+            label: 'Mix it up',
+            symbol: '×÷',
+            hint: 'A bit of both',
+            operations: ['multiplication', 'division'],
+          },
+        ],
+        startMode: 'mixed',
+      },
+    ],
   },
   backup: { maxImportBytes: 2_000_000 },
   addedCharacters: {

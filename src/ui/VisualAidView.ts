@@ -13,7 +13,7 @@ import { COLORS, CSS, text, type Rect } from './theme';
  * come from learning/aidBeats.ts): multiplication fills one cup at a time
  * while the skip-count total grows under each cup; division deals the pile
  * into the cups one round at a time until it is gone. Addition and
- * subtraction are drawn at once.
+ * subtraction are drawn at once. Counting numbers the scoops one at a time.
  */
 type Area = Rect;
 
@@ -22,7 +22,8 @@ const revealsAnswer = (aid: VisualAid): boolean =>
   (aid.kind === 'groups' && aid.showTotal) ||
   (aid.kind === 'share' && aid.perGroup !== null) ||
   (aid.kind === 'combine' && aid.showTotal) ||
-  (aid.kind === 'takeAway' && aid.showResult);
+  (aid.kind === 'takeAway' && aid.showResult) ||
+  (aid.kind === 'count' && aid.showNumbers);
 
 export class VisualAidView extends Phaser.GameObjects.Container {
   private board: Phaser.GameObjects.Graphics;
@@ -86,6 +87,8 @@ export class VisualAidView extends Phaser.GameObjects.Container {
         return this.drawCombine(aid.parts, aid.showTotal, area);
       case 'takeAway':
         return this.drawTakeAway(aid.total, aid.remove, aid.showResult, area);
+      case 'count':
+        return this.drawCount(aid.total, beats, area);
       case 'text':
         return;
     }
@@ -269,6 +272,27 @@ export class VisualAidView extends Phaser.GameObjects.Container {
     });
     const label = showResult ? `${total - remove} left` : `${total} scoops, take away ${remove}`;
     this.label(area.x + area.w / 2, area.y + area.h - 24, label, 20, showResult ? CSS.strawberry : CSS.inkSoft);
+  }
+
+  /** Counting: scoops in rows of 5. The explanation numbers them one at a time, the last number being the answer. */
+  private drawCount(total: number, beats: AidBeat[], area: Area): void {
+    const { cols, scale: s } = fitAid(1, total, { ...area, h: area.h - LABEL_H }, false);
+    const bottom = area.y + area.h - 2 * LABEL_H;
+    const positions = gridPositions(area.x + area.w / 2, bottom, total, cols, s);
+    for (const p of positions) this.scoop(p, s);
+    if (beats.length === 0) {
+      this.label(area.x + area.w / 2, area.y + area.h - LABEL_H, '?', 22, CSS.sky);
+      return;
+    }
+    const step = GAME_CONFIG.timing.aidFillMs;
+    beats.forEach((beat) => {
+      if (beat.kind !== 'count') return;
+      const p = positions[beat.index]!;
+      // The number sits on its scoop, so rows stacked above each other stay readable.
+      const label = this.label(p.x, p.y, beat.label, 22, beat.final ? CSS.strawberry : CSS.ink).setOrigin(0.5);
+      this.popIn([label], beat.index * step);
+      if (beat.final) this.cheer(label, beat.index * step + 260);
+    });
   }
 
   private crossOut(x: number, y: number, r: number): void {

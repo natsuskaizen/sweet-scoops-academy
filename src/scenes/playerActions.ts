@@ -7,6 +7,7 @@
 import type Phaser from 'phaser';
 import { GAME_CONFIG } from '../config/gameConfig';
 import type { GameServices } from '../game/services';
+import { gradeLevel } from '../learning/grades';
 import { playersInOrder, playerStats, removePlayer, renamePlayer } from '../save/profileActions';
 import type { SaveFile } from '../save/saveTypes';
 import type { ParentAction } from '../ui/ParentGate';
@@ -16,7 +17,7 @@ export function playerRows(save: SaveFile): PlayerRow[] {
   return playersInOrder(save).map((p) => ({
     id: p.id,
     name: p.displayName,
-    detail: `${p.shop.name} · ${playerStats(p)}`,
+    detail: `${p.shop.name} · ${gradeLevel(p.settings.grade).label} · ${playerStats(p)}`,
     playing: p.id === save.activeProfileId,
   }));
 }

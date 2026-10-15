@@ -91,5 +91,6 @@ export function createAddition(math: MathConfig): MathOperation {
 
     word: wordCombine,
     formatKey: (key) => key.replace('add:', ''),
+    picture: (spec) => ({ order: { kind: 'piles', parts: [spec.left, spec.right] } }),
   };
 }

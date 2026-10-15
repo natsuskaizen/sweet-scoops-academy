@@ -20,12 +20,19 @@ export type MathSubject = LearningSubject<MathChallengeSpec, MathProgress>;
 export interface MathSubjectOptions {
   adaptive?: AdaptiveConfig;
   operations?: OperationRegistry;
+  /** What the progress calendar files this subject's rounds under (see LearningSubject.gameType). */
+  gameType?: string;
+  /** Players can't read yet: draw orders as pictures (where the operation has one) and dot the number keys. */
+  preReaders?: boolean;
 }
 
 /** The record for one operation, created on first use. */
 function skillProgress(progress: MathProgress, operationId: string): SkillProgress {
   return (progress[operationId] ??= { facts: {} });
 }
+
+const skillLine = (label: string, s: SkillSummary): string =>
+  `${label}: ${s.mastered} mastered · ${s.practicing} practicing · ${s.learning} learning · ${s.unseen} not seen yet`;
 
 export function createMathSubject(options: MathSubjectOptions = {}): MathSubject {
   const adaptive = options.adaptive ?? GAME_CONFIG.adaptive;
@@ -43,6 +50,7 @@ export function createMathSubject(options: MathSubjectOptions = {}): MathSubject
   return {
     id: 'math',
     badge: '123',
+    gameType: options.gameType,
 
     createProgress: () => Object.fromEntries(operations.enabled.map((op) => [op.id, { facts: {} }])),
 
@@ -59,7 +67,8 @@ export function createMathSubject(options: MathSubjectOptions = {}): MathSubject
 
     isValidSpec: (spec: unknown): spec is MathChallengeSpec => validateMathSpec(spec, operations).ok,
 
-    present: (spec: MathChallengeSpec, ctx: OrderContext) => present(operation(spec.skillId), spec, ctx),
+    present: (spec: MathChallengeSpec, ctx: OrderContext) =>
+      present(operation(spec.skillId), spec, ctx, options.preReaders ?? false),
 
     checkAnswer(spec: MathChallengeSpec, input: string): boolean {
       const trimmed = input.trim();
@@ -71,9 +80,7 @@ export function createMathSubject(options: MathSubjectOptions = {}): MathSubject
     },
 
     progressReport(progress: MathProgress): string[] {
-      const summary = (id: string, s: SkillSummary) =>
-        `${operation(id).label}: ${s.mastered} mastered · ${s.practicing} practicing · ${s.learning} learning · ${s.unseen} not seen yet`;
-      const lines = pools(progress).map((pool) => summary(pool.skillId, summarizeSkill(pool)));
+      const lines = pools(progress).map((pool) => skillLine(operation(pool.skillId).label, summarizeSkill(pool)));
       const tricky = trickyFacts(progress).map((key) => {
         const fact = factByKey(key, operations);
         return fact ? operation(fact.operation).formatKey(key) : key;
@@ -83,13 +90,24 @@ export function createMathSubject(options: MathSubjectOptions = {}): MathSubject
   };
 }
 
-function present(op: MathOperation, spec: MathChallengeSpec, ctx: OrderContext): ChallengePresentation {
-  return {
-    expression: `${spec.left} ${op.symbol} ${spec.right}`,
-    answerInput: { kind: 'integer', maxDigits: op.maxDigits },
+function present(
+  op: MathOperation,
+  spec: MathChallengeSpec,
+  ctx: OrderContext,
+  preReaders: boolean,
+): ChallengePresentation {
+  const presentation: ChallengePresentation = {
+    expression: op.expression?.(spec) ?? `${spec.left} ${op.symbol} ${spec.right}`,
+    answerInput: { kind: 'integer', maxDigits: op.maxDigits, ...(preReaders && { dots: true }) },
     correctAnswer: String(spec.answer),
     ...op.word(spec, ctx.flavor),
   };
+  const picture = preReaders ? op.picture?.(spec) : undefined;
+  if (picture) {
+    presentation.orderPicture = picture.order;
+    if (picture.onTicket) presentation.ticketPicture = picture.order;
+  }
+  return presentation;
 }
 
 /** Facts that needed help and are not yet mastered, most troublesome first. */

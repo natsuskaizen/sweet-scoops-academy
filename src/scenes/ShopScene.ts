@@ -26,9 +26,13 @@ import { chosenShopkeeper, customerRoster } from '../shop/addedCharacters';
 import { equippedIn, equippedItems } from '../shop/purchases';
 import { lineFor, type CustomerDef } from '../shop/customerManager';
 import { OrderManager, type ActiveOrder, type RoundSticker } from '../shop/orderManager';
+import { describeChoice } from '../learning/grades';
+import { chooseGrade } from '../save/profileActions';
+import { offersChoice, pickerView, roundStarted } from '../shop/gamePicker';
 import type { AttemptOutcome, ChallengePresentation } from '../learning/types';
 import { Button } from '../ui/Button';
 import { CalendarScreen } from '../ui/CalendarScreen';
+import { GamePicker } from '../ui/GamePicker';
 import { NumberKeypad } from '../ui/NumberKeypad';
 import { OrderPanel, SpeechBubble } from '../ui/OrderPanel';
 import { ParentGate, type ParentGateOptions } from '../ui/ParentGate';
@@ -98,6 +102,10 @@ export class ShopScene extends Phaser.Scene {
   private room!: ShopRoom;
   /** A new player's setup, shown on the first visit before any customer (the e2e test skips it through `__ssa`). */
   private setup: NewPlayerSetup | null = null;
+  /** The pick-your-next-game screen, while a child chooses what to play (the e2e test taps it through `__ssa`). */
+  private picker: GamePicker | null = null;
+  /** Set when the round just finished earned the day's heart, so the picker can celebrate it. */
+  private heartJustEarned = false;
   /** The start screen, while children choose who plays (the e2e test taps it through `__ssa`). */
   private start: StartScreen | null = null;
   /** The results card and any parade, hidden while Decorate is open over them. */
@@ -119,7 +127,7 @@ export class ShopScene extends Phaser.Scene {
     this.manager = new OrderManager({
       save: this.services.save,
       persister: this.services.saves,
-      subject: this.services.subject,
+      subject: this.services.subjectFor(this.activeProfile()),
       onSaveError: () => this.toast('Progress could not be saved just now.'),
       roster: customerRoster(this.services.characters.list(), this.activeProfile().shop.keeper),
     });
@@ -160,12 +168,52 @@ export class ShopScene extends Phaser.Scene {
   private openAt(stage: GameStage): void {
     if (stage === 'setup') return this.setUpNewGame();
     if (stage === 'start') return this.showStart();
-    this.manager.ensureRound();
-    void this.runOrder();
+    const justPicked = this.services.justPicked;
+    this.services.justPicked = false;
+    if (justPicked) this.startRound();
+    else this.nextRound();
     if (this.services.reopenMyShop) {
       this.services.reopenMyShop = false;
       this.openMyShop();
     }
+  }
+
+  /** Asks which game to play next, or carries on with the round in hand. */
+  private nextRound(): void {
+    if (this.wantsPick()) return this.showPicker();
+    this.startRound();
+  }
+
+  private startRound(): void {
+    this.manager.ensureRound();
+    void this.runOrder();
+  }
+
+  /** Children pick a game before every round, unless their grade has just one or they are mid-round. */
+  private wantsPick(): boolean {
+    const { profile } = this.manager;
+    const pick = !testHooksEnabled() || new URLSearchParams(window.location.search).has('picker');
+    return pick && this.services.picksGame && offersChoice(profile) && !roundStarted(profile.currentRound);
+  }
+
+  private showPicker(): void {
+    const celebrate = this.heartJustEarned;
+    this.heartJustEarned = false;
+    this.busy = true;
+    this.syncInput();
+    const view = pickerView(this.manager.profile, Date.now(), celebrate);
+    this.picker = new GamePicker({ scene: this, view, celebrate, onPick: (id) => this.pickGame(id) });
+  }
+
+  /** Plays the chosen game: another mode starts a fresh round, so the shop restarts with it. */
+  private pickGame(mathMode: string): void {
+    const { profile } = this.manager;
+    this.picker?.destroy();
+    this.picker = null;
+    if (!chooseGrade(profile, { grade: profile.settings.grade, mathMode })) return this.startRound();
+    this.saveNow();
+    this.services.justPicked = true;
+    this.scene.restart();
   }
 
   private activeProfile() {
@@ -326,9 +374,13 @@ export class ShopScene extends Phaser.Scene {
     const { customer: def, presentation } = active;
     this.bubble.say(lineFor(def.greetings, active.index), customer.x);
     await delay(this, GAME_CONFIG.timing.greetingMs);
-    this.bubble.say(presentation.orderLine, customer.x);
-    this.ticket.showOrder(`${def.name}'s order`, presentation.expression);
+    const flavor = def.favoriteFlavor;
+    if (presentation.orderPicture) this.bubble.sayPicture(presentation.orderPicture, customer.x, flavor);
+    else this.bubble.say(presentation.orderLine, customer.x);
+    const ticketPicture = presentation.ticketPicture && { order: presentation.ticketPicture, flavor };
+    this.ticket.showOrder(`${def.name}'s order`, presentation.expression, ticketPicture);
     this.keypad.setMaxDigits(presentation.answerInput.maxDigits);
+    this.keypad.setDots(presentation.answerInput.dots ?? false);
     this.keypad.clear();
   }
 
@@ -351,6 +403,8 @@ export class ShopScene extends Phaser.Scene {
     this.closet = null;
     this.setup = null;
     this.start = null;
+    this.picker = null;
+    this.heartJustEarned = false;
     this.myShop = null;
     setCalm(this.activeProfile().settings.reduceMotion);
   }
@@ -369,7 +423,14 @@ export class ShopScene extends Phaser.Scene {
   /** True while a screen or card covers the shop and takes the taps. */
   private coveredOver(): boolean {
     return Boolean(
-      this.gate || this.decorate || this.closet || this.shopMenu || this.calendar || this.myShop || this.setup,
+      this.gate ||
+      this.decorate ||
+      this.closet ||
+      this.shopMenu ||
+      this.calendar ||
+      this.myShop ||
+      this.setup ||
+      this.picker,
     );
   }
 
@@ -505,6 +566,7 @@ export class ShopScene extends Phaser.Scene {
     const outcomes = this.roundOutcomes(); // the round is cleared once it finishes
     const finish = this.manager.finishOrder();
     if (finish.kind !== 'round-complete') return void this.runOrder();
+    this.heartJustEarned = finish.heartEarned;
     this.wallCalendar.refresh(this.manager.profile, Date.now(), finish.heartEarned);
     void this.showResults(finish.summary, finish.stickers, outcomes);
   }
@@ -533,8 +595,7 @@ export class ShopScene extends Phaser.Scene {
         this.resultsCover = [];
         parade.forEach((c) => c.destroy());
         this.shopkeeper.setExpression('neutral');
-        this.manager.ensureRound();
-        void this.runOrder();
+        this.nextRound();
       },
     });
     this.results = overlay;
@@ -574,7 +635,7 @@ export class ShopScene extends Phaser.Scene {
     if (this.busy && !this.results) return;
     this.calendar = new CalendarScreen(this, {
       profile: () => this.manager.profile,
-      subjects: [this.services.subject],
+      subjects: [this.services.subjectFor(this.manager.profile)],
       now: () => Date.now(),
       onClose: () => {
         this.calendar = null;
@@ -722,10 +783,13 @@ export class ShopScene extends Phaser.Scene {
 
   private openParentGate(): void {
     if (this.gate) return;
+    const gradeBefore = describeChoice(this.manager.profile.settings);
     this.gate = new ParentGate(this, {
       ...this.parentArea,
       onClose: () => {
         this.gate = null;
+        // A new grade or math mode dropped the round in play; the next one follows the new choice.
+        if (describeChoice(this.manager.profile.settings) !== gradeBefore) return this.scene.restart();
         // The daily goal may have changed.
         this.wallCalendar.refresh(this.manager.profile, Date.now());
         this.syncInput();

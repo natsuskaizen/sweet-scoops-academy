@@ -19,7 +19,14 @@ describe('aidBeats', () => {
   it('has no beats for hints and other aids, which are drawn at once', () => {
     expect(aidBeats({ kind: 'groups', groups: 3, perGroup: 4, showTotal: false, caption: '' })).toEqual([]);
     expect(aidBeats({ kind: 'share', total: 12, groups: 4, perGroup: null, caption: '' })).toEqual([]);
+    expect(aidBeats({ kind: 'count', total: 3, showNumbers: false, caption: '' })).toEqual([]);
     expect(aidBeats({ kind: 'combine', parts: [2, 3], showTotal: true, caption: '' })).toEqual([]);
     expect(aidBeats({ kind: 'text', caption: 'hi' })).toEqual([]);
+  });
+
+  it('numbers each scoop of a count one at a time, the last being the answer', () => {
+    const beats = aidBeats({ kind: 'count', total: 3, showNumbers: true, caption: '' });
+    expect(beats.map((b) => (b.kind === 'count' ? b.label : null))).toEqual(['1', '2', '3']);
+    expect(beats.map((b) => b.final)).toEqual([false, false, true]);
   });
 });
