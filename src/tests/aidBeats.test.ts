@@ -29,4 +29,11 @@ describe('aidBeats', () => {
     expect(beats.map((b) => (b.kind === 'count' ? b.label : null))).toEqual(['1', '2', '3']);
     expect(beats.map((b) => b.final)).toEqual([false, false, true]);
   });
+
+  it('lights a word’s letters one beat at a time when sounding it out', () => {
+    const beats = aidBeats({ kind: 'word', word: 'sun', lit: 0, sound: true, caption: '' });
+    expect(beats.map((b) => b.label)).toEqual(['s', 'u', 'n']);
+    expect(beats.map((b) => b.final)).toEqual([false, false, true]);
+    expect(aidBeats({ kind: 'word', word: 'sun', lit: 1, caption: '' })).toEqual([]);
+  });
 });

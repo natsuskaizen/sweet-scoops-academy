@@ -2,6 +2,7 @@
 import { GAME_CONFIG, type VocabConfig } from '../../config/gameConfig';
 import { createFirstLetter } from './firstLetter';
 import { createReadOrder } from './readOrder';
+import { createWordToPicture } from './wordToPicture';
 import type { VocabSkill } from './skill';
 
 export interface SkillRegistry {
@@ -15,7 +16,7 @@ export function createVocabSkills(
   enabledIds: readonly string[],
   vocab: VocabConfig = GAME_CONFIG.vocab,
 ): SkillRegistry {
-  const all = [createFirstLetter(vocab), createReadOrder(vocab)];
+  const all = [createFirstLetter(vocab), createReadOrder(vocab), createWordToPicture(vocab)];
   const byId = new Map(all.map((skill) => [skill.id, skill]));
   const enabled = enabledIds.map((id) => {
     const skill = byId.get(id);

@@ -12,7 +12,9 @@ export type AidBeat =
   /** Deal one scoop from the pile into every cup; `round` scoops are now in each. */
   | { kind: 'deal'; round: number; pileLeft: number; label: string; final: boolean }
   /** Count scoop `index` (from 0), labelling it with its number. */
-  | { kind: 'count'; index: number; label: string; final: boolean };
+  | { kind: 'count'; index: number; label: string; final: boolean }
+  /** Light letter `index` (from 0) of a word being sounded out. */
+  | { kind: 'letter'; index: number; label: string; final: boolean };
 
 const range = (n: number): number[] => Array.from({ length: Math.max(0, n) }, (_, i) => i);
 
@@ -42,6 +44,9 @@ export function aidBeats(aid: VisualAid): AidBeat[] {
       label: String(i + 1),
       final: i === aid.total - 1,
     }));
+  }
+  if (aid.kind === 'word' && aid.sound) {
+    return [...aid.word].map((ch, i) => ({ kind: 'letter', index: i, label: ch, final: i === aid.word.length - 1 }));
   }
   return [];
 }

@@ -3,6 +3,7 @@ import { GAME_CONFIG, type VocabConfig } from '../config/gameConfig';
 import { createRng } from '../core/rng';
 import { WORD_ART, WORD_ART_SIZE } from '../characters/wordArt';
 import { createFirstLetter } from '../learning/vocab/firstLetter';
+import { createWordToPicture } from '../learning/vocab/wordToPicture';
 import { createReadOrder } from '../learning/vocab/readOrder';
 import { createVocabSkills } from '../learning/vocab/registry';
 import type { VocabChallengeSpec } from '../learning/vocab/skill';
@@ -166,5 +167,53 @@ describe('read the order', () => {
     expect(skill.validate({ ...spec, options: ['pink', 'pink', 'red'] })).toBe(false);
     expect(skill.validate({ ...spec, answer: 'red' })).toBe(false);
     expect(() => skill.build('color:plaid', createRng(1))).toThrow(/Unknown vocab fact/);
+  });
+});
+
+describe('word to picture', () => {
+  const skill = createWordToPicture();
+  const build = (word: string, seed = 1) => skill.build(`pic:${word}`, createRng(seed));
+
+  it('only asks short words, and offers the right picture among other words’ pictures', () => {
+    const asked = skill.facts().map((f) => f.key.slice(4));
+    expect(asked.length).toBeGreaterThan(0);
+    expect(asked.every((w) => w.length <= GAME_CONFIG.vocab.pictureWordLength)).toBe(true);
+    for (let seed = 1; seed <= 20; seed++) {
+      const spec = build('sun', seed);
+      expect(spec.options).toHaveLength(GAME_CONFIG.vocab.pictureChoices);
+      expect(new Set(spec.options).size).toBe(spec.options.length);
+      expect(spec.options).toContain('sun');
+      expect(skill.validate(spec)).toBe(true);
+    }
+    expect(build('sun', 4)).toEqual(build('sun', 4));
+  });
+
+  it('shows the word alone, answers with pictures, and sounds the word out on a hint', () => {
+    const shown = skill.present(build('sun'));
+    expect(shown).toMatchObject({
+      orderLine: 'sun',
+      correctAnswer: 'sun',
+      ticketPicture: { kind: 'words', text: 'sun' },
+      hint: { kind: 'word', word: 'sun', lit: 0, sound: true },
+      explanation: { kind: 'word', word: 'sun', picture: 'sun', lit: 3 },
+    });
+    const input = shown.answerInput;
+    expect(input.kind === 'choice' && input.options.every((o) => o.picture && !o.label)).toBe(true);
+  });
+
+  it('rejects specs it could not have built', () => {
+    const spec = build('sun');
+    expect(skill.validate({ ...spec, factKey: 'pic:hat' })).toBe(false);
+    expect(skill.validate({ ...spec, options: ['sun', 'sun', 'hat'] })).toBe(false);
+    expect(
+      skill.validate({
+        ...spec,
+        factKey: 'pic:apple',
+        word: 'apple',
+        answer: 'apple',
+        options: ['apple', 'sun', 'hat'],
+      }),
+    ).toBe(false);
+    expect(() => skill.build('pic:apple', createRng(1))).toThrow(/Unknown vocab fact/);
   });
 });

@@ -177,7 +177,7 @@ present(spec, ctx) {
 
 ### Reading: `src/learning/vocab/`
 
-Vocabulary is the second subject. A `VocabSkill` (`src/learning/vocab/skill.ts`) owns its facts, how a question is built from a fact key and the seeded RNG, how a saved one is validated, and how it is presented, just as a math operation does. `createVocabSubject` wires skills into the `LearningSubject` contract with the same adaptive engine, so each word has its own learning record. Two skills ship: `readOrder` (the order is "2 pink" in words, answered by tapping a colour tub: a `words` ticket picture and `swatch` choice options) and `firstLetter`, which builds "_pple" with a picture of an apple and four letters to tap:
+Vocabulary is the second subject. A `VocabSkill` (`src/learning/vocab/skill.ts`) owns its facts, how a question is built from a fact key and the seeded RNG, how a saved one is validated, and how it is presented, just as a math operation does. `createVocabSubject` wires skills into the `LearningSubject` contract with the same adaptive engine, so each word has its own learning record. Three skills ship: `wordToPicture` (a short word answered by tapping its picture; its hint is a `word` aid with `sound`, which `aidBeats` turns into one beat per letter so they light in turn), `readOrder` (the order is "2 pink" in words, answered by tapping a colour tub: a `words` ticket picture and `swatch` choice options) and `firstLetter`, which builds "_pple" with a picture of an apple and four letters to tap:
 
 ```ts
 // src/learning/vocab/firstLetter.ts

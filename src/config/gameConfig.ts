@@ -51,6 +51,10 @@ export interface VocabConfig {
   colorChoices: number;
   /** An order asks for between these many tubs ("2 pink"). */
   orderCount: RangeRule;
+  /** "Word to picture" uses words with at most this many letters. */
+  pictureWordLength: number;
+  /** Pictures on a word-to-picture question: the right one and this many minus one wrong ones. */
+  pictureChoices: number;
 }
 
 /** One game a child can pick for a round, e.g. "Grouping". */
@@ -354,6 +358,8 @@ export const GAME_CONFIG: GameConfig = {
     ],
     colorChoices: 3,
     orderCount: { min: 1, max: 3 },
+    pictureWordLength: 3,
+    pictureChoices: 3,
   },
   grades: {
     defaultGrade: 'grade3',
@@ -397,7 +403,7 @@ export const GAME_CONFIG: GameConfig = {
             symbol: 'Aa',
             hint: 'Letters and words',
             subject: 'vocab',
-            skills: ['firstLetter', 'readOrder'],
+            skills: ['firstLetter', 'readOrder', 'wordToPicture'],
           },
         ],
         startGame: 'mixed',

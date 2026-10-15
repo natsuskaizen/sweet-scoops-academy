@@ -82,7 +82,7 @@ describe('grade levels', () => {
     expect(subject).toMatchObject({ id: 'vocab', gameType: 'kindergarten/reading' });
     expect(gameCount(letters)).toBe(4);
     const specs = subject.planRound(subject.createProgress(), { roundNumber: 1, rng: createRng(7), count: 10, now: 0 });
-    expect(specs.every((spec) => ['firstLetter', 'readOrder'].includes(spec.skillId))).toBe(true);
+    expect(specs.every((spec) => ['firstLetter', 'readOrder', 'wordToPicture'].includes(spec.skillId))).toBe(true);
     const save = createSaveFile(1);
     const p = save.profiles[save.activeProfileId]!;
     chooseGrade(p, letters);
