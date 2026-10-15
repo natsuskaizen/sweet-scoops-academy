@@ -86,6 +86,8 @@ export function canAddPlayer(save: SaveFile, config: PlayersConfig = GAME_CONFIG
 export interface NewPlayer {
   name: string;
   shop: ShopDetails;
+  /** The grade they are in, so their first round fits them. The default grade when left out. */
+  grade?: string;
 }
 
 /** Adds a player and makes them the one playing. Null when the device is full or a name is blank. */
@@ -101,6 +103,7 @@ export function addPlayer(
   let profile = createProfile(name, now, randomSeed(), { name: shopName, keeper: player.shop.keeper });
   // Two players added in the same millisecond would otherwise be able to share an id.
   while (save.profiles[profile.id]) profile = createProfile(name, now, randomSeed(), profile.shop);
+  if (player.grade) Object.assign(profile.settings, startOfGrade(player.grade));
   save.profiles[profile.id] = profile;
   save.activeProfileId = profile.id;
   return profile;
@@ -131,6 +134,8 @@ export interface PlayerChanges {
   name?: string;
   shopName?: string;
   keeper?: string;
+  /** A grade id; the player moves to it and starts on its first game. */
+  grade?: string;
 }
 
 /** Applies the changes a child or grown-up made; blank names are ignored so nothing invalid is saved. */
@@ -144,4 +149,5 @@ export function updatePlayer(
   if (name) profile.displayName = name;
   if (shopName) profile.shop.name = shopName;
   if (changes.keeper) profile.shop.keeper = changes.keeper;
+  if (changes.grade) chooseGradeLevel(profile, changes.grade);
 }

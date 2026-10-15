@@ -15,7 +15,9 @@ interface Hook {
     room: { sign: { text: string }; doorSign: { text: string } };
     shopkeeper: { list: { texture: { key: string } }[] };
   };
-  manager: () => { profile: { displayName: string; shop: { name: string; keeper: string } } };
+  manager: () => {
+    profile: { displayName: string; shop: { name: string; keeper: string }; settings: { grade: string } };
+  };
 }
 type HookWindow = Window & { __ssa?: Hook };
 
@@ -98,12 +100,20 @@ test('a new game sets up the player, and the start screen greets whoever played 
   await tapLabel(page, 'Bonbon');
   expect((await shown(page)).keeper).toBe('friend-bonbon');
   await tapLabel(page, 'Next ▶');
+  await onStep(page, 'grade');
+  await tapLabel(page, 'Kindergarten');
+  await page.screenshot({ path: testInfo.outputPath('grade-step.png') });
+  await tapLabel(page, 'Next ▶');
   await onStep(page, 'ready');
   await tapLabel(page, 'Open the shop!');
 
   await page.waitForFunction(() => (window as HookWindow).__ssa!.scene.keypad.isEnabled, null, { timeout: 30_000 });
   const { displayName, shop } = await page.evaluate(() => (window as HookWindow).__ssa!.manager().profile);
   expect({ displayName, shop }).toEqual({ displayName: 'Ava', shop: { name: "Ava's Sugar Cloud", keeper: 'bonbon' } });
+  // The grade picked in the setup is the one she plays.
+  expect(await page.evaluate(() => (window as HookWindow).__ssa!.manager().profile.settings.grade)).toBe(
+    'kindergarten',
+  );
 
   // Coming back opens on the start screen: Ava's shop, door shut until she opens it.
   await page.reload();
@@ -122,6 +132,8 @@ test('a new game sets up the player, and the start screen greets whoever played 
   await tapLabel(page, 'Next ▶');
   await onStep(page, 'keeper');
   await tapLabel(page, 'Kiki');
+  await tapLabel(page, 'Next ▶');
+  await onStep(page, 'grade');
   await tapLabel(page, 'Next ▶');
   await onStep(page, 'ready');
   await tapLabel(page, 'Open the shop!');

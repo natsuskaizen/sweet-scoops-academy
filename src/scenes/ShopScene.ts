@@ -333,8 +333,8 @@ export class ShopScene extends Phaser.Scene {
    */
   private setUpNewGame(): void {
     const { profile } = this.manager;
-    this.startSetup(({ name, shop }) =>
-      this.play(() => updatePlayer(profile, { name, shopName: shop.name, keeper: shop.keeper })),
+    this.startSetup(({ name, shop, grade }) =>
+      this.play(() => updatePlayer(profile, { name, shopName: shop.name, keeper: shop.keeper, grade })),
     );
     this.status.setVisible(true);
   }
