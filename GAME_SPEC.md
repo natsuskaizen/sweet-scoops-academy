@@ -652,7 +652,7 @@ Deliver:
 - A Sounds switch for each player, on by default; calm mode makes sounds quieter and skips flourishes.
 - Sound starts on the first tap, follows the iPhone and iPad silent switch where Safari allows it, and pauses when the game is hidden.
 
-Pleasant means: rounded tones from one major pentatonic scale, quick soft starts and fades, short sounds, and a quiet default volume. Pick the style from a listening sampler before building.
+Pleasant means: rounded tones from one major pentatonic scale, quick soft starts and fades, short sounds, and a quiet default volume. The style is a music box (soft tines with a gentle ring), picked by Stan from a listening sampler.
 
 ## 16. Milestone 1 Acceptance Checklist
 
