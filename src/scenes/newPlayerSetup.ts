@@ -29,10 +29,10 @@ export interface SetupHost {
   edit?: { step: EditStep; player: NewPlayer };
 }
 
-export type EditStep = 'shop' | 'keeper';
+export type EditStep = 'name' | 'shop' | 'keeper';
 
 type Step = 'name' | 'shop' | 'typeShop' | 'keeper' | 'ready';
-const NEXT_STEP: Record<EditStep, Step> = { shop: 'keeper', keeper: 'ready' };
+const NEXT_STEP: Record<EditStep, Step> = { name: 'shop', shop: 'keeper', keeper: 'ready' };
 /** Where ◀ goes from each step; the first step has none. */
 const PREVIOUS_STEP: Partial<Record<Step, Step>> = { shop: 'name', typeShop: 'shop', keeper: 'shop', ready: 'keeper' };
 const STEP_DOT: Record<Step, number> = { name: 0, shop: 1, typeShop: 1, keeper: 2, ready: 3 };
@@ -225,7 +225,7 @@ export class NewPlayerSetup {
     if (!this.typed(what).read().trim()) return;
     if (what === 'shop') return this.after('shop');
     if (!this.shopName) this.pickShopName(this.rolled());
-    this.show('shop');
+    this.after('name');
   }
 
   /** On to the next step, or finished when only this one thing was being changed. */

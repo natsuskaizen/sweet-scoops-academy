@@ -743,7 +743,7 @@ export class ShopScene extends Phaser.Scene {
   }
 
   /**
-   * The setup's shop-name or shopkeeper step; the sign and counter follow.
+   * The setup's name, shop-name or shopkeeper step; the sign and counter follow.
    * Done saves, ✕ keeps what was there; either way the shop is rebuilt and
    * My shop opens again.
    */
@@ -755,8 +755,8 @@ export class ShopScene extends Phaser.Scene {
       edit: { step, player },
       onShopName: (name) => setShopSign(this.room.sign, name),
       onKeeper: (id) => this.previewKeeper(id),
-      onDone: ({ shop }) => {
-        updatePlayer(profile, { shopName: shop.name, keeper: shop.keeper });
+      onDone: ({ name, shop }) => {
+        updatePlayer(profile, { name, shopName: shop.name, keeper: shop.keeper });
         this.saveNow();
         this.backToMyShop();
       },

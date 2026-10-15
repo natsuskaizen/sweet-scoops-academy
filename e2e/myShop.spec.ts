@@ -26,8 +26,8 @@ const myShopOpen = (page: Page) =>
 const savedPlayer = (page: Page) =>
   page.evaluate((key) => {
     const save = JSON.parse(localStorage.getItem(key)!);
-    const { shop, settings } = save.profiles[save.activeProfileId];
-    return { shop, hints: settings.showHints, calm: settings.reduceMotion };
+    const { displayName, shop, settings } = save.profiles[save.activeProfileId];
+    return { name: displayName, shop, hints: settings.showHints, calm: settings.reduceMotion };
   }, SAVE_KEY);
 
 /** Opens My shop with a tap on ⚙ (where the top bar puts it). */
@@ -109,6 +109,16 @@ test('My shop: a child turns hints off, calm mode on, renames the shop, changes 
   expect(await page.evaluate(() => (window as HookWindow).__ssa!.scene.shopkeeper.list[0]!.texture.key)).toBe(
     'friend-kiki',
   );
+
+  // A new name, typed over the old one; ✓ keeps it and comes back to My shop.
+  await tapMyShop(page, 'name');
+  await page.waitForFunction(() => (window as HookWindow).__ssa!.scene.setup?.current === 'name');
+  for (let i = 0; i < 'Player 1'.length; i++) await tapSetupLabel(page, '⌫');
+  for (const letter of ['L', 'e', 'o']) await tapSetupLabel(page, letter);
+  await tapSetupLabel(page, '✓');
+  await myShopOpen(page);
+  expect(await savedPlayer(page)).toMatchObject({ name: 'Leo', shop: { name: "Player 1's Sugar Cloud" } });
+  await page.screenshot({ path: testInfo.outputPath('my-shop-renamed.png') });
   await tapMyShop(page, 'back');
   await keypadReady(page);
 

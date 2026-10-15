@@ -12,6 +12,10 @@ describe.each(Object.entries(PANEL_SCREENS))('myShopLayout on %s', (_, layout) =
     expect(my.rows[0]!.y).toBeGreaterThan(my.titleY + 20);
   });
 
+  it('has a row for each of the five settings', () => {
+    expect(my.rows).toHaveLength(5);
+  });
+
   it('keeps every target big enough for a small finger', () => {
     boxes.forEach((box) => expect(box.h).toBeGreaterThanOrEqual(44));
     my.rows.forEach((row) => expect(row.h).toBeGreaterThanOrEqual(56));

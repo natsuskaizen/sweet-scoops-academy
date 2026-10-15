@@ -380,16 +380,16 @@ this.setup = new NewPlayerSetup({
 
 Typing goes through `typeKey` in `src/shop/playerNames.ts` (capitals start each word, spaces never double; `letterAs` makes the letter keys show the case they will type), ◀ goes back a step (`PREVIOUS_STEP`), and the keys (QWERTY rows, `letterKeyCells`) and cards are placed by `setupLayout()` in `src/ui/setupLayout.ts`, so both are unit tested.
 
-Tapping ⚙ in the top bar opens My shop (`src/scenes/myShop.ts`, placed by `myShopLayout()`), the player's own settings; holding ⚙ still goes straight to the grown-ups area. Changing the shop name or shopkeeper reuses one step of the setup in edit mode, prefilled, with Done instead of Next:
+Tapping ⚙ in the top bar opens My shop (`src/scenes/myShop.ts`, placed by `myShopLayout()`), the player's own settings; holding ⚙ still goes straight to the grown-ups area. Changing the player's name, the shop name or the shopkeeper reuses one step of the setup in edit mode, prefilled, with Done instead of Next (the five rows are one column in landscape and two in portrait):
 
 ```ts
 this.setup = new NewPlayerSetup({
   scene: this,
-  edit: { step, player }, // 'shop' or 'keeper', starting from the player's own choices
+  edit: { step, player }, // 'name', 'shop' or 'keeper', starting from the player's own choices
   onShopName: (name) => setShopSign(this.room.sign, name),
   onKeeper: (id) => this.previewKeeper(id),
-  onDone: ({ shop }) => {
-    updatePlayer(profile, { shopName: shop.name, keeper: shop.keeper });
+  onDone: ({ name, shop }) => {
+    updatePlayer(profile, { name, shopName: shop.name, keeper: shop.keeper });
     this.saveNow();
     this.backToMyShop(); // rebuilt from the save, mid-order or not, as rotating does
   },
