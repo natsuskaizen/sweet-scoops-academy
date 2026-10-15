@@ -4,11 +4,12 @@
  */
 import type { GradeChoice } from '../learning/grades';
 import type { MathProgress } from '../learning/mathSubject';
+import type { VocabProgress } from '../learning/vocab/vocabSubject';
 import type { AttemptOutcome, ChallengeSpec, LearningSubject } from '../learning/types';
 import type { EquipSlot, ShopSpot } from '../shop/catalog';
 import type { RoundBonus } from '../shop/rewards';
 
-export const SAVE_SCHEMA_VERSION = 6;
+export const SAVE_SCHEMA_VERSION = 7;
 
 export interface OrderState {
   /** Checked by the owning subject's isValidSpec on load. */
@@ -63,7 +64,7 @@ export interface PlacedDecoration {
   spot: ShopSpot;
 }
 
-/** `grade` and `mathMode` (GradeChoice) are set by a grown-up and pick what the shop's questions practise. */
+/** `grade` and `game` (GradeChoice) are set by a grown-up and pick what the shop's questions practise. */
 export interface ProfileSettings extends GradeChoice {
   showHints: boolean;
   reduceMotion: boolean;
@@ -108,8 +109,9 @@ export interface Profile {
     /** Seed for this child's question sequence; each round derives its own. */
     seed: number;
     roundsStarted: number;
-    /** Progress per subject, keyed by subject id. */
+    /** Progress per subject, keyed by subject id; a subject's record is created the first time it is played. */
     math: MathProgress;
+    vocab?: VocabProgress;
   };
   currentRound: RoundState | null;
   roundHistory: RoundSummary[];

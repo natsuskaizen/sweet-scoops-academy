@@ -57,7 +57,7 @@ type SpecCheck = (spec: unknown) => boolean;
 
 function specCheckFor(settings: unknown): SpecCheck {
   const s = isObj(settings) ? settings : {};
-  const choice: GradeChoice = { grade: isStr(s.grade) ? s.grade : '', mathMode: isStr(s.mathMode) ? s.mathMode : '' };
+  const choice: GradeChoice = { grade: isStr(s.grade) ? s.grade : '', game: isStr(s.game) ? s.game : '' };
   const subject = subjectForGrade(choice);
   return (spec) => subject.isValidSpec(spec);
 }
@@ -155,7 +155,7 @@ function checkSettings(v: unknown, path: string, out: string[]): void {
   if (!isDailyGoal(v.dailyGoal)) out.push(`${path}.dailyGoal invalid`);
   // Any text: a grade this game doesn't have plays the default grade.
   if (!isText(v.grade)) out.push(`${path}.grade invalid`);
-  if (!isText(v.mathMode)) out.push(`${path}.mathMode invalid`);
+  if (!isText(v.game)) out.push(`${path}.game invalid`);
 }
 
 /** Simple per-field shape checks for a profile. */
@@ -202,8 +202,13 @@ function checkLearning(learning: unknown, path: string, out: string[]): void {
     out.push(`${path}.math missing`);
     return;
   }
-  // One record per operation; operations switched on later simply have none yet.
-  for (const [skillId, skill] of Object.entries(learning.math)) checkSkill(skill, `${path}.math.${skillId}`, out);
+  // One record per subject (math, vocab...), each with one record per skill; skills switched on later have none yet.
+  for (const [subjectId, record] of Object.entries(learning)) {
+    if (subjectId === 'seed' || subjectId === 'roundsStarted') continue;
+    if (!isObj(record)) out.push(`${path}.${subjectId} invalid`);
+    else
+      for (const [skillId, skill] of Object.entries(record)) checkSkill(skill, `${path}.${subjectId}.${skillId}`, out);
+  }
 }
 
 /**

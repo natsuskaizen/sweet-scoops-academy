@@ -13,9 +13,9 @@ import { resetSubjectProgress, type Profile, type SaveFile, type ShopDetails } f
 type Subject = Pick<LearningSubject<ChallengeSpec, unknown>, 'id' | 'createProgress'>;
 type PlayersConfig = typeof GAME_CONFIG.players;
 
-/** Clears the subject's practice progress and the round in play. Sprinkles, items and history stay. */
-export function resetLearning(profile: Profile, subject: Subject): void {
-  resetSubjectProgress(profile, subject);
+/** Clears the practice progress of every subject given, and the round in play. Sprinkles, items and history stay. */
+export function resetLearning(profile: Profile, subjects: readonly Subject[]): void {
+  for (const subject of subjects) resetSubjectProgress(profile, subject);
   profile.learning.roundsStarted = 0;
   profile.currentRound = null;
 }
@@ -39,9 +39,9 @@ export function resetProfile(save: SaveFile, now: number): Profile {
 export function chooseGrade(profile: Profile, choice: GradeChoice): boolean {
   const next = settleChoice(choice);
   const now = settleChoice(profile.settings);
-  if (next.grade === now.grade && next.mathMode === now.mathMode) return false;
+  if (next.grade === now.grade && next.game === now.game) return false;
   profile.settings.grade = next.grade;
-  profile.settings.mathMode = next.mathMode;
+  profile.settings.game = next.game;
   profile.currentRound = null;
   return true;
 }

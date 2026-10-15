@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GAME_CONFIG } from '../config/gameConfig';
+import { wordTexture, WORD_ART_SIZE } from '../characters/wordArt';
 import { aidBeats, type AidBeat } from '../learning/aidBeats';
 import type { VisualAid } from '../learning/types';
 import { CUP_H, LABEL_H, SCOOP_W, fitAid, gridPositions, layoutCells, type Point } from './aidLayout';
@@ -17,13 +18,20 @@ import { COLORS, CSS, text, type Rect } from './theme';
  */
 type Area = Rect;
 
+const WORD_PICTURE_MAX_SCALE = 6;
+const WORD_FONT_MAX = 84;
+const WORD_GAP = 24;
+/** A letter's width as a share of its font size, to fit a word to its board before it is drawn. */
+const LETTER_WIDTH = 0.62;
+
 /** True when the aid reveals the answer (drawn with the "explanation" border). */
 const revealsAnswer = (aid: VisualAid): boolean =>
   (aid.kind === 'groups' && aid.showTotal) ||
   (aid.kind === 'share' && aid.perGroup !== null) ||
   (aid.kind === 'combine' && aid.showTotal) ||
   (aid.kind === 'takeAway' && aid.showResult) ||
-  (aid.kind === 'count' && aid.showNumbers);
+  (aid.kind === 'count' && aid.showNumbers) ||
+  (aid.kind === 'word' && aid.lit > 0);
 
 export class VisualAidView extends Phaser.GameObjects.Container {
   private board: Phaser.GameObjects.Graphics;
@@ -89,6 +97,8 @@ export class VisualAidView extends Phaser.GameObjects.Container {
         return this.drawTakeAway(aid.total, aid.remove, aid.showResult, area);
       case 'count':
         return this.drawCount(aid.total, beats, area);
+      case 'word':
+        return this.drawWord(aid, area);
       case 'text':
         return;
     }
@@ -293,6 +303,35 @@ export class VisualAidView extends Phaser.GameObjects.Container {
       this.popIn([label], beat.index * step);
       if (beat.final) this.cheer(label, beat.index * step + 260);
     });
+  }
+
+  // -------------------------------------------------------------------------
+  // Words: a picture and its word, with the first letters lit
+  // -------------------------------------------------------------------------
+
+  private drawWord(aid: Extract<VisualAid, { kind: 'word' }>, area: Area): void {
+    const s = Math.max(1, Math.min(WORD_PICTURE_MAX_SCALE, Math.floor(area.h / WORD_ART_SIZE)));
+    const size = aid.picture ? WORD_ART_SIZE * s : 0;
+    const gap = aid.picture ? WORD_GAP : 0;
+    const fit = (area.w - size - gap) / (aid.word.length * LETTER_WIDTH);
+    const fontSize = Math.floor(Math.min(WORD_FONT_MAX, area.h * 0.7, fit));
+    const letters = [...aid.word].map((ch, i) =>
+      this.keep(
+        this.scene.add.text(0, 0, ch, text(fontSize, i < aid.lit ? CSS.strawberry : CSS.ink)).setOrigin(0, 0.5),
+      ),
+    );
+    const wordW = letters.reduce((sum, l) => sum + l.width, 0);
+    const cy = area.y + area.h / 2;
+    let x = area.x + (area.w - size - gap - wordW) / 2;
+    if (aid.picture) {
+      this.keep(this.scene.add.image(x + size / 2, cy, wordTexture(this.scene, aid.picture)).setScale(s));
+      x += size + gap;
+    }
+    for (const letter of letters) {
+      letter.setPosition(x, cy);
+      x += letter.width;
+    }
+    this.popIn(letters.slice(0, aid.lit), 0);
   }
 
   private crossOut(x: number, y: number, r: number): void {

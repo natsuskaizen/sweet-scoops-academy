@@ -61,12 +61,24 @@ export interface ChallengeSpec {
   factKey: string;
 }
 
+/** One tappable answer of a `choice` input. `id` is what `correctAnswer` and `checkAnswer` see. */
+export interface ChoiceOption {
+  id: string;
+  /** Words or a letter on the button: "A", "pink". */
+  label?: string;
+  /** A little picture on the button: a key from src/characters/wordArt.ts. */
+  picture?: string;
+  /** A coloured disc on the button: a CSS colour. */
+  swatch?: string;
+}
+
 /**
- * What the player types. Only integers for now; text input can come later.
- * `dots` puts dots under each number key, so a child who can count but not
- * yet read numbers can match a count to its key.
+ * How the player answers. Either they type a number, or they tap one of a few
+ * choices. `dots` puts dots under each number key, so a child who can count
+ * but not yet read numbers can match a count to its key.
  */
-export type AnswerInput = { kind: 'integer'; maxDigits: number; dots?: boolean };
+export type AnswerInput =
+  { kind: 'integer'; maxDigits: number; dots?: boolean } | { kind: 'choice'; options: readonly ChoiceOption[] };
 
 /**
  * An order drawn as a picture, for players who can't read yet. Data only;
@@ -76,7 +88,9 @@ export type OrderPicture =
   /** A cone stacked with `scoops` whole scoops: "how many?" */
   | { kind: 'cone'; scoops: number }
   /** Piles of scoops joined by plus signs: "put them together". */
-  | { kind: 'piles'; parts: number[] };
+  | { kind: 'piles'; parts: number[] }
+  /** A little picture (a key from src/characters/wordArt.ts), with `word` beside it on the ticket. */
+  | { kind: 'sprite'; key: string; word?: string };
 
 /**
  * Data-only description of a visual hint or explanation. The shop renders
@@ -93,6 +107,8 @@ export type VisualAid =
   | { kind: 'takeAway'; total: number; remove: number; showResult: boolean; caption: string }
   /** `total` scoops in rows of 5 to count; showNumbers counts them out one by one (explanation). */
   | { kind: 'count'; total: number; showNumbers: boolean; caption: string }
+  /** A word to read, with its picture; the first `lit` letters are lit up. */
+  | { kind: 'word'; word: string; picture?: string; lit: number; caption: string }
   | { kind: 'text'; caption: string };
 
 /** Customer-flavoured context the shop passes in so order text can be themed. */

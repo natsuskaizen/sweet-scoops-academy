@@ -73,7 +73,13 @@ src/
     adaptiveEngine.ts        learning -> practicing -> mastered, round planning
     aidBeats.ts              the steps an explanation plays out (fill a cup, deal a round)
     mathSubject.ts           math as a LearningSubject, built from the enabled operations
-    grades.ts                grade levels and games (math modes): which math subject each player plays
+    skillReport.ts           the lines every subject's progress report is made of
+    vocab/
+      skill.ts               the VocabSkill contract (like MathOperation, for reading)
+      firstLetter.ts         "what letter does it start with?" (kindergarten)
+      registry.ts            the list of vocab skills
+      vocabSubject.ts        vocabulary as a LearningSubject, built from a game's skills
+    grades.ts                grade levels and games: which subject (math or vocab) each player plays
   shop/
     orderManager.ts          round/order state machine; persists every step
     rewards.ts               the only place Sprinkles are calculated and paid
@@ -137,6 +143,7 @@ src/
                              aidLayout.ts sizes the hint board's scoops and cups (unit tested);
                              setupLayout.ts places the new-player setup's keys and cards (unit tested);
                              GamePicker is the pick-your-next-game screen shown before every round;
+                             ChoicePad is the answer buttons (letters, colours, pictures) in the keypad's place, placed by choiceLayout.ts;
                              startLayout.ts, myShopLayout.ts and pickerLayout.ts place the start screen, My shop and the picker (unit tested);
                              motion.ts holds calm mode for the character animations and confetti;
                              sound.ts plays the sound effects with Web Audio (no audio files), starting on the first tap;
@@ -161,20 +168,23 @@ math: {
 }
 ```
 
-Which operations a player practises comes from their grade, chosen in the grown-ups area, and the game the child picks before each round. Each grade in `grades.levels` has its own number ranges (on top of `math`) and its games (`mathModes`), each with a label, symbol and hint for its card on the pick-a-game screen:
+Which operations a player practises comes from their grade, chosen in the grown-ups area, and the game the child picks before each round. Each grade in `grades.levels` has its own number ranges (on top of `math`) and its games (`games`), each naming its subject and skills, with a label, symbol and hint for its card on the pick-a-game screen:
 
 ```ts
 grades: {
   defaultGrade: 'grade3',
   levels: [
     { id: 'kindergarten', label: 'Kindergarten', math: { addition: { addend: { min: 1, max: 4 }, maxSum: 5 }, ... },
-      mathModes: [{ id: 'counting', label: 'How many?', symbol: '123', hint: 'Count the scoops', operations: ['counting'] }, ...],
+      games: [{ id: 'counting', label: 'How many?', symbol: '123', hint: 'Count the scoops', subject: 'math', skills: ['counting'] },
+             { id: 'letters', label: 'First letter', symbol: 'Aa', hint: '...', subject: 'vocab', skills: ['firstLetter'] }, ...],
       startMode: 'mixed', preReaders: true },
     { id: 'grade3', label: '3rd grade', math: {},
-      mathModes: [{ id: 'multiplication', ... }, { id: 'division', ... }, { id: 'mixed', ... }] },
+      games: [{ id: 'multiplication', ... }, { id: 'division', ... }, { id: 'mixed', ... }] },
   ],
 }
 ```
+
+Words for the reading games are `vocab.words` (a word and the key of its pixel picture in `src/characters/wordArt.ts`) and `vocab.letterChoices` (how many letter buttons a first-letter question has). To add a reading skill, write a `VocabSkill` file in `src/learning/vocab/`, list it in `registry.ts` and name it in a game's `skills`.
 
 `math.enabledOperations` is the default for code and tests that don't pass a grade. To try other operations for every player without editing the config, run `npm run dev` and open `http://localhost:5173/?ops=addition,subtraction`.
 

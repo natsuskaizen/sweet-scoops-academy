@@ -5,11 +5,12 @@
  * (src/learning/math/); this file only wires them into the subject contract.
  */
 import { GAME_CONFIG, type AdaptiveConfig } from '../config/gameConfig';
-import { planRound, recordOutcome, summarizeSkill, type SkillPool, type SkillSummary } from './adaptiveEngine';
+import { planRound, recordOutcome, summarizeSkill, type SkillPool } from './adaptiveEngine';
 import type { MathChallengeSpec, MathOperation } from './math/operation';
 import { OPERATIONS, type OperationRegistry } from './math/registry';
 import { validateMathSpec } from './mathValidator';
 import { buildQuestion, factByKey } from './questionGenerator';
+import { skillLine, trickyFacts } from './skillReport';
 import type { ChallengePresentation, LearningSubject, OrderContext, PlanContext, SkillProgress } from './types';
 
 /** One adaptive record per operation id. Operations turned on later start empty. */
@@ -30,9 +31,6 @@ export interface MathSubjectOptions {
 function skillProgress(progress: MathProgress, operationId: string): SkillProgress {
   return (progress[operationId] ??= { facts: {} });
 }
-
-const skillLine = (label: string, s: SkillSummary): string =>
-  `${label}: ${s.mastered} mastered · ${s.practicing} practicing · ${s.learning} learning · ${s.unseen} not seen yet`;
 
 export function createMathSubject(options: MathSubjectOptions = {}): MathSubject {
   const adaptive = options.adaptive ?? GAME_CONFIG.adaptive;
@@ -81,7 +79,7 @@ export function createMathSubject(options: MathSubjectOptions = {}): MathSubject
 
     progressReport(progress: MathProgress): string[] {
       const lines = pools(progress).map((pool) => skillLine(operation(pool.skillId).label, summarizeSkill(pool)));
-      const tricky = trickyFacts(progress).map((key) => {
+      const tricky = trickyFacts(progress, (_, key) => {
         const fact = factByKey(key, operations);
         return fact ? operation(fact.operation).formatKey(key) : key;
       });
@@ -108,17 +106,6 @@ function present(
     if (picture.onTicket) presentation.ticketPicture = picture.order;
   }
   return presentation;
-}
-
-/** Facts that needed help and are not yet mastered, most troublesome first. */
-function trickyFacts(progress: MathProgress, limit = 6): string[] {
-  const trouble = (r: { missed: number; retryCorrect: number }) => r.missed * 2 + r.retryCorrect;
-  return Object.values(progress)
-    .flatMap((skill) => Object.values(skill.facts))
-    .filter((r) => trouble(r) > 0 && r.state !== 'mastered')
-    .sort((a, b) => trouble(b) - trouble(a))
-    .slice(0, limit)
-    .map((r) => r.key);
 }
 
 export const mathSubject = createMathSubject();

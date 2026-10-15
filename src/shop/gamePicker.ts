@@ -47,12 +47,12 @@ export function pickerView(profile: Profile, now: number, justEarned = false): P
   const playedToday = new Set(typesToday(profile, now));
   const { filled, goal, heart } = todayProgress(profile, now);
   return {
-    cards: grade.mathModes.map((m) => ({
+    cards: grade.games.map((m) => ({
       id: m.id,
       label: m.label,
       symbol: m.symbol,
       hint: m.hint,
-      played: playedToday.has(gameTypeOf({ grade: grade.id, mathMode: m.id })),
+      played: playedToday.has(gameTypeOf({ grade: grade.id, game: m.id })),
     })),
     filled,
     goal: Math.max(goal, gamesForHeart(profile, GAME_CONFIG.calendar)),

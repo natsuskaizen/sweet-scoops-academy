@@ -26,6 +26,9 @@ const LOOKS = [
 ];
 const PLAYED = { fill: COLORS.cream, shade: COLORS.creamDark };
 const HEART_ART_W = 11;
+/** Space between a portrait card's lines, and how far the stack sits below the middle (clear of the corner badge). */
+const STACK_GAP = 6;
+const STACK_LIFT = 12;
 
 export class GamePicker {
   private readonly root: Phaser.GameObjects.Container;
@@ -83,40 +86,38 @@ export class GamePicker {
     const left = -r.w / 2;
     const portrait = LAYOUT.orientation === 'portrait';
     const ink = card.played ? CSS.inkSoft : CSS.ink;
-    const parts = portrait ? portraitParts(card, r, ink) : landscapeParts(card, ink, left);
+    const words = portrait ? this.stacked(card, r, ink) : this.beside(card, ink, left);
     const badge = card.played ? '✓ played' : view.filled < view.goal ? 'new!' : '';
     const tag = scene.add.text(r.w / 2 - 14, -r.h / 2 + 22, badge, text(20, card.played ? CSS.mint : CSS.strawberry));
-    button.add([
-      ...parts.map((p) => scene.add.text(p.x, p.y, p.label, p.style).setOrigin(p.ox, 0.5)),
-      tag.setOrigin(1, 0.5),
-    ]);
+    button.add([...words, tag.setOrigin(1, 0.5)]);
     this.root.add(button);
   }
-}
 
-interface Part {
-  x: number;
-  y: number;
-  ox: number;
-  label: string;
-  style: Phaser.Types.GameObjects.Text.TextStyle;
-}
+  /** Landscape: a wide card with the symbol on the left and the words beside it. */
+  private beside(card: PickCard, ink: string, left: number): Phaser.GameObjects.Text[] {
+    const { scene } = this.host;
+    return [
+      scene.add.text(left + 80, 0, card.symbol, text(54, ink)).setOrigin(0.5),
+      scene.add.text(left + 150, -16, card.label, text(34, ink)).setOrigin(0, 0.5),
+      scene.add.text(left + 150, 24, card.hint, text(20, CSS.inkSoft)).setOrigin(0, 0.5),
+    ];
+  }
 
-/** Landscape: a wide card with the symbol on the left and the words beside it. */
-function landscapeParts(card: PickCard, ink: string, left: number): Part[] {
-  return [
-    { x: left + 80, y: 0, ox: 0.5, label: card.symbol, style: text(54, ink) },
-    { x: left + 150, y: -16, ox: 0, label: card.label, style: text(34, ink) },
-    { x: left + 150, y: 24, ox: 0, label: card.hint, style: text(20, CSS.inkSoft) },
-  ];
-}
-
-/** Portrait: a tall card with the symbol above the words. */
-function portraitParts(card: PickCard, r: Rect, ink: string): Part[] {
-  const wrap = { align: 'center', wordWrap: { width: r.w - 20 } };
-  return [
-    { x: 0, y: -r.h * 0.18, ox: 0.5, label: card.symbol, style: text(54, ink) },
-    { x: 0, y: r.h * 0.12, ox: 0.5, label: card.label, style: text(28, ink, wrap) },
-    { x: 0, y: r.h * 0.3, ox: 0.5, label: card.hint, style: text(18, CSS.inkSoft, wrap) },
-  ];
+  /** Portrait: a tall card with the symbol, name and hint stacked and centred, whatever lines they wrap to. */
+  private stacked(card: PickCard, r: Rect, ink: string): Phaser.GameObjects.Text[] {
+    const { scene } = this.host;
+    const wrap = { align: 'center', wordWrap: { width: r.w - 16 } };
+    const lines = [
+      scene.add.text(0, 0, card.symbol, text(48, ink)),
+      scene.add.text(0, 0, card.label, text(26, ink, wrap)),
+      scene.add.text(0, 0, card.hint, text(17, CSS.inkSoft, wrap)),
+    ];
+    const total = lines.reduce((sum, l) => sum + l.height, 0) + STACK_GAP * (lines.length - 1);
+    let y = -total / 2 + STACK_LIFT;
+    for (const line of lines) {
+      line.setOrigin(0.5, 0).setY(y);
+      y += line.height + STACK_GAP;
+    }
+    return lines;
+  }
 }

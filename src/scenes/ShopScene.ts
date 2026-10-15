@@ -29,9 +29,10 @@ import { OrderManager, type ActiveOrder, type RoundSticker } from '../shop/order
 import { describeChoice } from '../learning/grades';
 import { chooseGrade } from '../save/profileActions';
 import { offersChoice, pickerView, roundStarted } from '../shop/gamePicker';
-import type { AttemptOutcome, ChallengePresentation } from '../learning/types';
+import type { AnswerInput, AttemptOutcome, ChallengePresentation } from '../learning/types';
 import { Button } from '../ui/Button';
 import { CalendarScreen } from '../ui/CalendarScreen';
+import { ChoicePad } from '../ui/ChoicePad';
 import { GamePicker } from '../ui/GamePicker';
 import { NumberKeypad } from '../ui/NumberKeypad';
 import { OrderPanel, SpeechBubble } from '../ui/OrderPanel';
@@ -63,6 +64,24 @@ const testHooksEnabled = (): boolean => import.meta.env.DEV || new URLSearchPara
 /** Who greets a new player and stands at the counter until they choose their own. */
 const newPlayerKeeper = (): FriendId => keeperOrMomo(GAME_CONFIG.players.defaultShop.keeper);
 
+/** What an answer reads as on the ticket: a tapped choice shows its label ("A"), a typed number itself. */
+function answerLabel(presentation: ChallengePresentation, answer: string): string {
+  const { answerInput } = presentation;
+  return (answerInput.kind === 'choice' && answerInput.options.find((o) => o.id === answer)?.label) || answer;
+}
+
+/** A number to vary the praise and thanks by, so a resumed order says the same words. */
+function answerSalt({ correctAnswer }: ChallengePresentation): number {
+  const n = Number(correctAnswer);
+  return Number.isFinite(n) ? n : [...correctAnswer].reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
+}
+
+/** How many scoops the served treat has: the answer for a counting order, otherwise two. */
+function servings({ correctAnswer }: ChallengePresentation): number {
+  const n = Number(correctAnswer);
+  return Number.isFinite(n) ? n : 2;
+}
+
 const PRAISE = ["Yum! That's right!", 'Sweet! You got it!', 'Scoop-tastic!', 'Perfect order!'];
 const RETRY_PRAISE = ['You got it! Great thinking!', 'Yes! Nice try-again!'];
 
@@ -74,6 +93,10 @@ export class ShopScene extends Phaser.Scene {
   private bubble!: SpeechBubble;
   private aid!: VisualAidView;
   private keypad!: NumberKeypad;
+  /** The answer buttons for a question answered by tapping, in the keypad's place (the e2e test taps them through `__ssa`). */
+  private choices!: ChoicePad;
+  /** True while the question in hand is answered by tapping a choice, not typing. */
+  private choiceMode = false;
   private shopkeeper!: CharacterView;
   private customer: CharacterView | null = null;
   private treat: Phaser.GameObjects.Container | null = null;
@@ -157,6 +180,10 @@ export class ShopScene extends Phaser.Scene {
       onSubmit: (v) => void this.handleSubmit(v),
     });
     this.keypad.setDepth(70);
+    const { x, y, cellW, cellH, gap } = LAYOUT.keypad;
+    const padArea = { x, y, w: 3 * cellW + 2 * gap, h: 4 * cellH + 3 * gap };
+    this.choices = new ChoicePad(this, { area: padArea, onPick: (id) => void this.handleSubmit(id) });
+    this.choices.setDepth(70);
 
     this.showLoadNotices();
     if (testHooksEnabled())
@@ -207,11 +234,11 @@ export class ShopScene extends Phaser.Scene {
   }
 
   /** Plays the chosen game: another mode starts a fresh round, so the shop restarts with it. */
-  private pickGame(mathMode: string): void {
+  private pickGame(game: string): void {
     const { profile } = this.manager;
     this.picker?.destroy();
     this.picker = null;
-    if (!chooseGrade(profile, { grade: profile.settings.grade, mathMode })) return this.startRound();
+    if (!chooseGrade(profile, { grade: profile.settings.grade, game })) return this.startRound();
     this.saveNow();
     this.services.justPicked = true;
     this.scene.restart();
@@ -381,9 +408,26 @@ export class ShopScene extends Phaser.Scene {
     else this.bubble.say(presentation.orderLine, customer.x);
     const ticketPicture = presentation.ticketPicture && { order: presentation.ticketPicture, flavor };
     this.ticket.showOrder(`${def.name}'s order`, presentation.expression, ticketPicture);
-    this.keypad.setMaxDigits(presentation.answerInput.maxDigits);
-    this.keypad.setDots(presentation.answerInput.dots ?? false);
-    this.keypad.clear();
+    this.showAnswerInput(presentation.answerInput);
+  }
+
+  /** The keypad for a typed answer, or buttons for a tapped one. */
+  private showAnswerInput(input: AnswerInput): void {
+    this.choiceMode = input.kind === 'choice';
+    if (input.kind === 'choice') {
+      this.choices.show(input.options);
+    } else {
+      this.choices.hide();
+      this.keypad.setMaxDigits(input.maxDigits);
+      this.keypad.setDots(input.dots ?? false);
+      this.keypad.clear();
+    }
+    this.setPadVisible(true);
+  }
+
+  private setPadVisible(visible: boolean): void {
+    this.keypad.setVisible(visible && !this.choiceMode);
+    this.choices.setVisible(visible && this.choiceMode);
   }
 
   /**
@@ -408,6 +452,7 @@ export class ShopScene extends Phaser.Scene {
     this.picker = null;
     this.heartJustEarned = false;
     this.myShop = null;
+    this.choiceMode = false;
     setCalm(this.activeProfile().settings.reduceMotion);
   }
 
@@ -419,7 +464,9 @@ export class ShopScene extends Phaser.Scene {
 
   /** The keypad takes answers only while the shop waits for one and the grown-ups area is closed. */
   private syncInput(): void {
-    this.keypad.setEnabled(!this.busy && !this.coveredOver());
+    const ready = !this.busy && !this.coveredOver();
+    this.keypad.setEnabled(ready && !this.choiceMode);
+    this.choices.setEnabled(ready && this.choiceMode);
   }
 
   /** True while a screen or card covers the shop and takes the taps. */
@@ -451,7 +498,8 @@ export class ShopScene extends Phaser.Scene {
       this.customer?.puzzled();
       this.showHint(result.presentation);
       await delay(this, GAME_CONFIG.timing.retryPauseMs);
-      this.keypad.clear();
+      if (this.choiceMode) this.choices.dim(value);
+      else this.keypad.clear();
       this.readyForAnswer();
       return;
     }
@@ -460,7 +508,7 @@ export class ShopScene extends Phaser.Scene {
   }
 
   private showHint(presentation: ChallengePresentation): void {
-    this.ticket.setFeedback('So close! Look at the scoops and try once more.', 'gentle');
+    this.ticket.setFeedback('So close! Take another look and try once more.', 'gentle');
     if (this.manager.profile.settings.showHints) {
       this.aid.show(presentation.hint, this.manager.current()?.customer.favoriteFlavor);
     }
@@ -478,15 +526,16 @@ export class ShopScene extends Phaser.Scene {
 
     if (outcome === 'miss') {
       // Show the answer and why, then let the child continue when ready.
-      this.ticket.setAnswer(presentation.correctAnswer, CSS.strawberry);
-      this.ticket.setFeedback(`It's ${presentation.correctAnswer}! Let's see why.`, 'explain');
+      const shown = answerLabel(presentation, presentation.correctAnswer);
+      this.showTypedAnswer(shown, CSS.strawberry);
+      this.ticket.setFeedback(`It's ${shown}! Let's see why.`, 'explain');
       this.aid.show(presentation.explanation, flavor);
       await this.waitForGotIt();
       this.aid.hide();
     } else {
       const lines = outcome === 'first' ? PRAISE : RETRY_PRAISE;
-      this.ticket.setAnswer(typed || presentation.correctAnswer, CSS.mint);
-      this.ticket.setFeedback(lineFor(lines, Number(presentation.correctAnswer)), 'happy');
+      this.showTypedAnswer(answerLabel(presentation, typed || presentation.correctAnswer), CSS.mint);
+      this.ticket.setFeedback(lineFor(lines, answerSalt(presentation)), 'happy');
       this.aid.hide();
       this.customer?.setExpression('happy');
       void this.customer?.cheer();
@@ -495,8 +544,13 @@ export class ShopScene extends Phaser.Scene {
     await this.serve(presentation, sprinkles, flavor);
   }
 
+  /** The answer in the ticket's box. A tapped choice stays on its button, so the ticket keeps its picture clear. */
+  private showTypedAnswer(answer: string, color: string): void {
+    if (!this.choiceMode) this.ticket.setAnswer(answer, color);
+  }
+
   private waitForGotIt(): Promise<void> {
-    this.keypad.setVisible(false);
+    this.setPadVisible(false);
     return new Promise((resolve) => {
       const { x, y, cellW, cellH, gap } = LAYOUT.keypad;
       this.gotIt = new Button(this, x + (3 * cellW + 2 * gap) / 2, y + 2 * cellH, {
@@ -509,7 +563,7 @@ export class ShopScene extends Phaser.Scene {
         onTap: () => {
           this.gotIt?.destroy();
           this.gotIt = null;
-          this.keypad.setVisible(true);
+          this.setPadVisible(true);
           resolve();
         },
       }).setDepth(80);
@@ -519,7 +573,7 @@ export class ShopScene extends Phaser.Scene {
   private async serve(presentation: ChallengePresentation, sprinkles: number, flavor: string): Promise<void> {
     const customer = this.customer!;
     customer.setExpression('happy');
-    const treat = await this.scoopTreat(Number(presentation.correctAnswer), flavor);
+    const treat = await this.scoopTreat(servings(presentation), flavor);
     await tweenAsync(this, {
       targets: treat,
       x: customer.x + 52,
@@ -528,7 +582,7 @@ export class ShopScene extends Phaser.Scene {
       ease: 'Quad.easeInOut',
     });
     treat.setData('follow', true);
-    await this.thankAndPay(customer, Number(presentation.correctAnswer), sprinkles);
+    await this.thankAndPay(customer, answerSalt(presentation), sprinkles);
     await this.customerLeaves(customer, treat);
     this.nextOrder();
   }
@@ -639,7 +693,7 @@ export class ShopScene extends Phaser.Scene {
     if (this.busy && !this.results) return;
     this.calendar = new CalendarScreen(this, {
       profile: () => this.manager.profile,
-      subjects: [this.services.subjectFor(this.manager.profile)],
+      subjects: this.services.subjectsFor(this.manager.profile),
       now: () => Date.now(),
       onClose: () => {
         this.calendar = null;

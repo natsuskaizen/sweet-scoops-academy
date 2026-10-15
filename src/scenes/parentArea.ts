@@ -28,13 +28,12 @@ export function parentArea(host: ParentAreaHost): Pick<ParentGateOptions, 'info'
 
 function parentInfo({ services, profile }: ParentAreaHost): string[] {
   const p = profile();
-  const subject = services.subjectFor(p);
   const last = p.roundHistory[p.roundHistory.length - 1];
   const lastRound = last ? `   ·   Last round: ${last.firstTryCorrect}/${last.ordersCompleted} first try` : '';
   return [
     `Player: ${p.displayName}   ·   Sprinkles: ${p.sprinkles} (earned in total: ${p.lifetimeSprinkles})`,
     `Rounds finished: ${p.roundHistory.length}${lastRound}`,
-    ...subject.progressReport(subjectProgress(p, subject)),
+    ...services.subjectsFor(p).flatMap((subject) => subject.progressReport(subjectProgress(p, subject))),
     services.persistent
       ? 'Progress is saved in this browser on this device.'
       : 'This browser is not allowing saves; progress will be lost on reload.',
@@ -100,7 +99,7 @@ function resetActions(host: ParentAreaHost): ParentAction[] {
       confirm: 'Clears all practice progress. Sprinkles and items are kept.',
       enabled: true,
       run: (gate) => {
-        resetLearning(profile(), services.subjectFor(profile()));
+        resetLearning(profile(), services.subjectsFor(profile()));
         saveAndRestart(host, gate);
       },
     },

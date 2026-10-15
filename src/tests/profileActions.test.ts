@@ -32,7 +32,7 @@ function playedSave() {
 describe('resetLearning', () => {
   it('clears practice progress and the round in play, and keeps Sprinkles and items', () => {
     const { save, p } = playedSave();
-    resetLearning(p, mathSubject);
+    resetLearning(p, [mathSubject]);
     expect(p.learning.roundsStarted).toBe(0);
     expect(p.currentRound).toBeNull();
     expect(p.learning.math).toEqual(mathSubject.createProgress());

@@ -4,7 +4,7 @@
  */
 import { GAME_CONFIG } from '../config/gameConfig';
 import { createOperations } from '../learning/math/registry';
-import { subjectForGrade } from '../learning/grades';
+import { gradeSubjectList, subjectForGrade } from '../learning/grades';
 import { createMathSubject } from '../learning/mathSubject';
 import type { ChallengeSpec, LearningSubject } from '../learning/types';
 import { CharacterLibrary } from '../save/characterLibrary';
@@ -27,6 +27,8 @@ export interface GameServices {
   persistent: boolean;
   /** The subject a player practises, from their grade and math mode. Swap here to play a different subject. */
   subjectFor: (profile: Profile) => Subject;
+  /** Every subject a player's grade practises, for the grown-ups' progress. */
+  subjectsFor: (profile: Profile) => Subject[];
   /** False when a developer's `?ops=` plays fixed operations, so there is no game to pick. */
   picksGame: boolean;
   /** Set when a child has just picked a game, so the restarted shop starts that round without asking again. */
@@ -62,13 +64,21 @@ function browserStorage(): StorageLike | null {
 const devOps = (): string | null =>
   import.meta.env.DEV ? new URLSearchParams(window.location.search).get('ops') : null;
 
-function chooseSubject(): (profile: Profile) => Subject {
+type SubjectChoice = Pick<GameServices, 'subjectFor' | 'subjectsFor' | 'picksGame'>;
+
+function chooseSubjects(): SubjectChoice {
   const ops = devOps();
-  if (!ops) return (profile) => subjectForGrade(profile.settings);
+  if (!ops) {
+    return {
+      picksGame: true,
+      subjectFor: (profile) => subjectForGrade(profile.settings),
+      subjectsFor: (profile) => gradeSubjectList(profile.settings.grade),
+    };
+  }
   const subject = createMathSubject({
     operations: createOperations({ ...GAME_CONFIG.math, enabledOperations: ops.split(',') }),
   });
-  return () => subject;
+  return { picksGame: false, subjectFor: () => subject, subjectsFor: () => [subject] };
 }
 
 const fromLoad = (load: LoadResult) => ({
@@ -93,8 +103,7 @@ export function createServices(): GameServices {
       ...fromLoad(saves.load()),
       saves,
       persistent: false,
-      picksGame: !devOps(),
-      subjectFor: chooseSubject(),
+      ...chooseSubjects(),
       characters,
     };
   }
@@ -103,8 +112,7 @@ export function createServices(): GameServices {
     ...fromLoad(load),
     saves,
     persistent: storage !== null,
-    picksGame: !devOps(),
-    subjectFor: chooseSubject(),
+    ...chooseSubjects(),
     characters,
   };
 }
