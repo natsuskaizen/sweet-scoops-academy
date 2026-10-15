@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { registerServiceWorker } from './pwa/registerServiceWorker';
 import { BootScene } from './scenes/BootScene';
 import { ShopScene } from './scenes/ShopScene';
+import { initSound } from './ui/sound';
 import { LAYOUT, layoutFor, setLayout } from './ui/theme';
 
 // Landscape screens get the side-by-side shop; portrait screens (iPhone, iPad
@@ -21,6 +22,8 @@ const game = new Phaser.Game({
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
   input: { activePointers: 2 },
+  // Sound effects use their own small Web Audio graph (src/ui/sound.ts), not Phaser's.
+  audio: { noAudio: true },
   scene: [BootScene, ShopScene],
 });
 
@@ -48,4 +51,5 @@ window.visualViewport?.addEventListener('resize', onScreenChange);
 window.addEventListener('pageshow', onScreenChange);
 game.events.once(Phaser.Core.Events.READY, onScreenChange);
 
+initSound();
 registerServiceWorker();

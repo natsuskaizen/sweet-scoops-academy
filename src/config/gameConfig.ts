@@ -79,6 +79,63 @@ export interface AdaptiveConfig {
   stretch: { minSamples: number; accuracy: number; step: number; lookbackRounds: number };
 }
 
+/** One music-box note: a step on the shop's scale, when it starts and how long it rings (seconds). */
+export interface SoundNote {
+  /** Steps up the pentatonic scale from `sound.scaleRootHz` (5 steps make an octave). */
+  step: number;
+  at: number;
+  length: number;
+  /** 0 to 1, before the master volume. */
+  loudness: number;
+}
+
+/** A soft pitch slide with no scale note, like a scoop plopping onto a cone. */
+export interface SoundGlide {
+  at: number;
+  fromHz: number;
+  toHz: number;
+  /** Time to slide from one pitch to the other. */
+  slide: number;
+  length: number;
+  loudness: number;
+}
+
+export interface SoundCue {
+  notes?: readonly SoundNote[];
+  glides?: readonly SoundGlide[];
+}
+
+export type SoundCueId = 'keyTap' | 'keyBack' | 'submit' | 'doorBell' | 'scoopPlop' | 'orderServed' | 'sprinkles';
+
+/** One sine partial of the music-box voice: its pitch as a multiple of the note's, and how it fades. */
+export interface SoundPartial {
+  ratio: number;
+  gain: number;
+  /** Fade time is `decay` plus `decayPerLength` times the note's length. */
+  decay: number;
+  decayPerLength: number;
+}
+
+export interface SoundConfig {
+  /** Master volume, 0 to 1. Kept low so sounds stay well under a device's normal media volume. */
+  volume: number;
+  /** A gentle lowpass on everything, so nothing sounds sharp. */
+  lowpassHz: number;
+  /** A soft limiter after the lowpass, so sounds that overlap never get loud. */
+  limiter: { thresholdDb: number; kneeDb: number; ratio: number };
+  /** Step 0 of the scale (middle C). */
+  scaleRootHz: number;
+  /** Semitones of the one scale every note comes from (C major pentatonic), so overlapping sounds never clash. */
+  scale: readonly number[];
+  /** Every note fades in over this long, which keeps starts soft. */
+  attack: number;
+  /** The music-box voice Stan picked from the sampler. */
+  voice: readonly SoundPartial[];
+  /** Each play is nudged up or down by up to this many cents, so repeated taps don't sound mechanical. */
+  jitterCents: number;
+  cues: Readonly<Record<SoundCueId, SoundCue>>;
+}
+
 export interface RewardConfig {
   perOrder: Record<AttemptOutcome, number>;
   completionBonus: number;
@@ -199,6 +256,8 @@ export interface GameConfig {
     /** ...then carries the scoop over to the cone. */
     scoopCarryMs: number;
   };
+  /** Sound effects, made in the browser (no audio files). Sounds always go with something shown on screen. */
+  sound: SoundConfig;
 }
 
 export const GAME_CONFIG: GameConfig = {
@@ -333,5 +392,51 @@ export const GAME_CONFIG: GameConfig = {
     blinkGapMs: { min: 2400, max: 5200 },
     scoopReachMs: 150,
     scoopCarryMs: 230,
+  },
+  sound: {
+    volume: 0.45,
+    lowpassHz: 5200,
+    limiter: { thresholdDb: -14, kneeDb: 12, ratio: 4 },
+    scaleRootHz: 261.63,
+    scale: [0, 2, 4, 7, 9],
+    attack: 0.004,
+    voice: [
+      { ratio: 1, gain: 0.34, decay: 0.25, decayPerLength: 0.9 },
+      { ratio: 2, gain: 0.06, decay: 0.08, decayPerLength: 0.35 },
+      { ratio: 5.04, gain: 0.03, decay: 0.06, decayPerLength: 0 },
+    ],
+    jitterCents: 12,
+    cues: {
+      keyTap: { notes: [{ step: 9, at: 0, length: 0.25, loudness: 0.55 }] },
+      keyBack: { notes: [{ step: 6, at: 0, length: 0.25, loudness: 0.45 }] },
+      submit: {
+        notes: [
+          { step: 7, at: 0, length: 0.4, loudness: 0.6 },
+          { step: 9, at: 0.06, length: 0.5, loudness: 0.6 },
+        ],
+      },
+      doorBell: {
+        notes: [
+          { step: 12, at: 0, length: 1.4, loudness: 0.7 },
+          { step: 9, at: 0.16, length: 1.6, loudness: 0.6 },
+        ],
+      },
+      scoopPlop: { glides: [{ at: 0, fromHz: 260, toHz: 620, slide: 0.07, length: 0.16, loudness: 0.38 }] },
+      orderServed: {
+        notes: [
+          { step: 7, at: 0, length: 0.6, loudness: 0.7 },
+          { step: 9, at: 0.1, length: 0.6, loudness: 0.7 },
+          { step: 12, at: 0.2, length: 1.2, loudness: 0.8 },
+        ],
+      },
+      sprinkles: {
+        notes: [
+          { step: 12, at: 0, length: 0.4, loudness: 0.45 },
+          { step: 14, at: 0.05, length: 0.4, loudness: 0.4 },
+          { step: 13, at: 0.1, length: 0.4, loudness: 0.4 },
+          { step: 15, at: 0.15, length: 0.6, loudness: 0.45 },
+        ],
+      },
+    },
   },
 };

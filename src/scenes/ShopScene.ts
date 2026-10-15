@@ -40,6 +40,7 @@ import { setCalm } from '../ui/motion';
 import { ShopMenu } from '../ui/ShopMenu';
 import { StatusBar } from '../ui/StatusBar';
 import { drawPanelCard } from '../ui/registerCard';
+import { playSound } from '../ui/sound';
 import { COLORS, CSS, DEPTH, LAYOUT, text } from '../ui/theme';
 import { delay, tweenAsync } from '../ui/tweenAsync';
 import { VisualAidView } from '../ui/VisualAidView';
@@ -350,6 +351,7 @@ export class ShopScene extends Phaser.Scene {
       .setAlpha(0);
     this.customer = customer;
     this.tweens.add({ targets: customer, alpha: 1, duration: 250 });
+    playSound('doorBell');
     await customer.walkTo(LAYOUT.customerSpot.x);
     customer.idle(true);
     return customer;
@@ -488,6 +490,7 @@ export class ShopScene extends Phaser.Scene {
       this.aid.hide();
       this.customer?.setExpression('happy');
       void this.customer?.cheer();
+      playSound('orderServed');
     }
     await this.serve(presentation, sprinkles, flavor);
   }
@@ -546,6 +549,7 @@ export class ShopScene extends Phaser.Scene {
     this.bubble.say(lineFor(def?.thanks ?? ['Thank you!'], answer), customer.x);
     void customer.hop();
     this.sprinklePopup(customer.x, customer.y - 170, sprinkles);
+    if (sprinkles > 0) playSound('sprinkles');
     this.status.setSprinkles(this.manager.profile.sprinkles, true);
     await delay(this, GAME_CONFIG.timing.payMs);
   }
