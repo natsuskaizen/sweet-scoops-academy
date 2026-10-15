@@ -78,6 +78,7 @@ src/
       skill.ts               the VocabSkill contract (like MathOperation, for reading)
       firstLetter.ts         "what letter does it start with?" (kindergarten)
       readOrder.ts           "2 pink" in words: tap the pink tub (kindergarten)
+      wordToPicture.ts       a short word: tap its picture (kindergarten)
       registry.ts            the list of vocab skills
       vocabSubject.ts        vocabulary as a LearningSubject, built from a game's skills
     grades.ts                grade levels and games: which subject (math or vocab) each player plays
@@ -177,7 +178,7 @@ grades: {
   levels: [
     { id: 'kindergarten', label: 'Kindergarten', math: { addition: { addend: { min: 1, max: 4 }, maxSum: 5 }, ... },
       games: [{ id: 'counting', label: 'How many?', symbol: '123', hint: 'Count the scoops', subject: 'math', skills: ['counting'] },
-             { id: 'reading', label: 'Reading', symbol: 'Aa', hint: '...', subject: 'vocab', skills: ['firstLetter', 'readOrder'] }, ...],
+             { id: 'reading', label: 'Reading', symbol: 'Aa', hint: '...', subject: 'vocab', skills: ['firstLetter', 'readOrder', 'wordToPicture'] }, ...],
       startMode: 'mixed', preReaders: true },
     { id: 'grade3', label: '3rd grade', math: {},
       games: [{ id: 'multiplication', ... }, { id: 'division', ... }, { id: 'mixed', ... }] },
@@ -185,7 +186,7 @@ grades: {
 }
 ```
 
-Words for the reading games are `vocab.words` (a word and the key of its pixel picture in `src/characters/wordArt.ts`) and `vocab.letterChoices` (how many letter buttons a first-letter question has). `vocab.colors` (a colour word and its tub's hex), `vocab.colorChoices` and `vocab.orderCount` set read-the-order questions. To add a reading skill, write a `VocabSkill` file in `src/learning/vocab/`, list it in `registry.ts` and name it in a game's `skills`.
+Words for the reading games are `vocab.words` (a word and the key of its pixel picture in `src/characters/wordArt.ts`) and `vocab.letterChoices` (how many letter buttons a first-letter question has). `vocab.colors` (a colour word and its tub's hex), `vocab.colorChoices` and `vocab.orderCount` set read-the-order questions, and `vocab.pictureWordLength` and `vocab.pictureChoices` set word-to-picture questions. To add a reading skill, write a `VocabSkill` file in `src/learning/vocab/`, list it in `registry.ts` and name it in a game's `skills`.
 
 `math.enabledOperations` is the default for code and tests that don't pass a grade. To try other operations for every player without editing the config, run `npm run dev` and open `http://localhost:5173/?ops=addition,subtraction`.
 

@@ -109,8 +109,8 @@ export type VisualAid =
   | { kind: 'takeAway'; total: number; remove: number; showResult: boolean; caption: string }
   /** `total` scoops in rows of 5 to count; showNumbers counts them out one by one (explanation). */
   | { kind: 'count'; total: number; showNumbers: boolean; caption: string }
-  /** A word to read, with its picture or colour disc; the first `lit` letters are lit up. */
-  | { kind: 'word'; word: string; picture?: string; swatch?: string; lit: number; caption: string }
+  /** A word to read, with its picture or colour disc; the first `lit` letters are lit up, or with `sound` they light one at a time (sounding it out). */
+  | { kind: 'word'; word: string; picture?: string; swatch?: string; lit: number; sound?: boolean; caption: string }
   | { kind: 'text'; caption: string };
 
 /** Customer-flavoured context the shop passes in so order text can be themed. */

@@ -98,7 +98,7 @@ export class VisualAidView extends Phaser.GameObjects.Container {
       case 'count':
         return this.drawCount(aid.total, beats, area);
       case 'word':
-        return this.drawWord(aid, area);
+        return this.drawWord(aid, beats, area);
       case 'text':
         return;
     }
@@ -309,7 +309,7 @@ export class VisualAidView extends Phaser.GameObjects.Container {
   // Words: a picture and its word, with the first letters lit
   // -------------------------------------------------------------------------
 
-  private drawWord(aid: Extract<VisualAid, { kind: 'word' }>, area: Area): void {
+  private drawWord(aid: Extract<VisualAid, { kind: 'word' }>, beats: AidBeat[], area: Area): void {
     const s = Math.max(1, Math.min(WORD_PICTURE_MAX_SCALE, Math.floor(area.h / WORD_ART_SIZE)));
     const disc = Math.round(area.h * 0.7);
     const size = aid.picture ? WORD_ART_SIZE * s : aid.swatch ? disc : 0;
@@ -333,6 +333,25 @@ export class VisualAidView extends Phaser.GameObjects.Container {
       x += letter.width;
     }
     this.popIn(letters.slice(0, aid.lit), 0);
+    this.soundOut(letters, beats);
+  }
+
+  /** Sounding a word out: each letter lights up in turn, and stays lit. */
+  private soundOut(letters: Phaser.GameObjects.Text[], beats: AidBeat[]): void {
+    const step = GAME_CONFIG.timing.aidFillMs;
+    for (const beat of beats) {
+      if (beat.kind !== 'letter') continue;
+      const letter = letters[beat.index]!;
+      this.scene.tweens.add({
+        targets: letter,
+        scale: 1.35,
+        delay: beat.index * step,
+        duration: 180,
+        yoyo: true,
+        ease: 'Quad.easeOut',
+        onStart: () => letter.setColor(CSS.strawberry),
+      });
+    }
   }
 
   private drawDisc(x: number, y: number, r: number, hex: string): void {

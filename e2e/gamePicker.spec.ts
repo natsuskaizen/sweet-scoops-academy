@@ -96,7 +96,9 @@ test('a kindergarten child picks reading, then answers by tapping a button', asy
   expect(errors).toEqual([]);
 });
 
-test('reading mixes first letters with reading the order, both answered by tapping', async ({ page }, testInfo) => {
+test('reading mixes first letters, reading the order and words to pictures, all answered by tapping', async ({
+  page,
+}, testInfo) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(String(e)));
   await page.goto('/?e2e&fast&picker');
@@ -118,7 +120,7 @@ test('reading mixes first letters with reading the order, both answered by tappi
   await tapAt(page, reading.x, reading.y);
 
   const seen = new Set<string>();
-  for (let index = 0; index < 8 && seen.size < 2; index++) {
+  for (let index = 0; index < 10 && seen.size < 3; index++) {
     await page.waitForFunction(() => (window as PickerWindow).__ssa?.scene.choices.isEnabled, null, {
       timeout: 30_000,
     });
@@ -139,6 +141,6 @@ test('reading mixes first letters with reading the order, both answered by tappi
       timeout: 30_000,
     });
   }
-  expect([...seen].sort()).toEqual(['firstLetter', 'readOrder']);
+  expect([...seen].sort()).toEqual(['firstLetter', 'readOrder', 'wordToPicture']);
   expect(errors).toEqual([]);
 });
