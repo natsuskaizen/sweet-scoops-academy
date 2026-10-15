@@ -1,6 +1,6 @@
 /**
  * My shop: the player's own settings, opened by tapping ⚙ in the top bar.
- * No lock, as it only changes this player's things: their shop's name and
+ * No lock, as it only changes this player's things: their name, their shop's name and
  * shopkeeper, hints and calm mode, or handing over to another player. The
  * grown-ups area stays behind its gate. The panel only reports choices; the
  * scene saves them.
@@ -21,7 +21,7 @@ export type KidToggle = keyof Pick<ProfileSettings, 'showHints' | 'reduceMotion'
 export interface MyShopHost {
   scene: Phaser.Scene;
   profile: Profile;
-  /** Change the shop's name or who works there (the new-player step for it). */
+  /** Change the player's name, the shop's name or who works there (the new-player step for it). */
   onChange: (step: EditStep) => void;
   /** Flip a setting and save it; the panel then shows its new state. */
   onToggle: (setting: KidToggle) => void;
@@ -43,6 +43,10 @@ const TOGGLES: ToggleRow[] = [
 ];
 
 const SWITCH_W = 96;
+/** The Change pill: smaller in the narrow two-column rows of portrait. */
+const pillSize = (r: Rect) => (r.w < 500 ? { w: 104, font: 19 } : { w: 132, font: 22 });
+/** Room kept clear at a row's right for its pill or switch. */
+const RIGHT_SPACE = 20 + 132 + 14;
 const SWITCH_H = 48;
 
 export class MyShopPanel {
@@ -60,7 +64,7 @@ export class MyShopPanel {
     const title = scene.add.text(x + w / 2, this.layout.titleY, 'My shop', text(38)).setOrigin(0.5);
     this.root = scene.add.container(0, 0, [...registerCover(scene), title]).setDepth(DEPTH.myShop);
     this.addChangeRows();
-    TOGGLES.forEach((row, i) => this.addToggle(this.layout.rows[i + 2]!, row));
+    TOGGLES.forEach((row, i) => this.addToggle(this.layout.rows[i + 3]!, row));
     this.addButtons();
   }
 
@@ -92,44 +96,46 @@ export class MyShopPanel {
   private label(row: Button, r: Rect, label: string, note: string, left = 20): void {
     const { scene } = this.host;
     const roomy = r.h >= 72 && note !== '';
-    const name = scene.add.text(-r.w / 2 + left, roomy ? -10 : 2, label, text(26)).setOrigin(0, 0.5);
-    row.add(name);
+    const room = r.w - left - Math.min(RIGHT_SPACE, 20 + pillSize(r).w + 14);
+    const fit = (t: Phaser.GameObjects.Text) => t.setScale(Math.min(1, room / Math.max(1, t.width)));
+    row.add(fit(scene.add.text(-r.w / 2 + left, roomy ? -10 : 2, label, text(26)).setOrigin(0, 0.5)));
     if (!roomy) return;
-    const small = scene.add.text(-r.w / 2 + left, 18, note, text(17, CSS.inkSoft)).setOrigin(0, 0.5);
-    row.add(small.setScale(Math.min(1, (r.w - left - SWITCH_W - 50) / small.width)));
+    row.add(fit(scene.add.text(-r.w / 2 + left, 18, note, text(17, CSS.inkSoft)).setOrigin(0, 0.5)));
   }
 
-  /** Shop name and Shopkeeper: the row opens that step of the setup. */
+  /** My name, Shop name and Shopkeeper: each row opens that step of the setup. */
   private addChangeRows(): void {
     const { scene, profile } = this.host;
-    const [nameRow, keeperRow] = this.layout.rows as [Rect, Rect];
-    const shop = this.button(
-      'shopName',
-      nameRow,
-      this.leave(() => this.host.onChange('shop')),
-    );
-    this.label(shop, nameRow, 'Shop name', profile.shop.name);
-    shop.add(this.changePill(nameRow));
-    const keeper = this.button(
-      'keeper',
-      keeperRow,
-      this.leave(() => this.host.onChange('keeper')),
-    );
+    const [nameRow, shopRow, keeperRow] = this.layout.rows as [Rect, Rect, Rect];
+    this.label(this.changeRow('name', nameRow, 'name'), nameRow, 'My name', profile.displayName);
+    this.label(this.changeRow('shopName', shopRow, 'shop'), shopRow, 'Shop name', profile.shop.name);
+    const keeper = this.changeRow('keeper', keeperRow, 'keeper');
     const face = scene.add.sprite(-keeperRow.w / 2 + 44, 0, friendLook(keeperOrMomo(profile.shop.keeper)).sheet.key, 0);
     face.setScale((keeperRow.h - 18) / face.height);
     keeper.add(face);
     this.label(keeper, keeperRow, 'Shopkeeper', '', 84);
-    keeper.add(this.changePill(keeperRow));
+  }
+
+  /** A row that leaves My shop for one step of the setup, with the Change pill on its right. */
+  private changeRow(id: string, r: Rect, step: EditStep): Button {
+    const row = this.button(
+      id,
+      r,
+      this.leave(() => this.host.onChange(step)),
+    );
+    row.add(this.changePill(r));
+    return row;
   }
 
   /** The "Change" pill at the right of a row (the whole row is the button). */
   private changePill(r: Rect): Phaser.GameObjects.GameObject[] {
     const { scene } = this.host;
-    const cx = r.w / 2 - 20 - 66;
+    const { w, font } = pillSize(r);
+    const cx = r.w / 2 - 20 - w / 2;
     const pill = scene.add.graphics();
-    pill.fillStyle(COLORS.white, 1).fillRoundedRect(cx - 66, -22, 132, 44, 22);
-    pill.lineStyle(3, COLORS.ink, 0.85).strokeRoundedRect(cx - 66, -22, 132, 44, 22);
-    return [pill, scene.add.text(cx, 0, 'Change', text(22)).setOrigin(0.5)];
+    pill.fillStyle(COLORS.white, 1).fillRoundedRect(cx - w / 2, -22, w, 44, 22);
+    pill.lineStyle(3, COLORS.ink, 0.85).strokeRoundedRect(cx - w / 2, -22, w, 44, 22);
+    return [pill, scene.add.text(cx, 0, 'Change', text(font)).setOrigin(0.5)];
   }
 
   private addToggle(r: Rect, { label, note, setting }: ToggleRow): void {

@@ -1,14 +1,16 @@
 /**
- * Where My shop's pieces go in the register panel: four setting rows under
- * the title, then Switch player, Back to the shop and the grown-ups link:
+ * Where My shop's pieces go in the register panel: five setting rows under
+ * the title (one column in landscape, two in the wider, shorter portrait
+ * panel), then Switch player, Back to the shop and the grown-ups link:
  * stacked in landscape, one row along the bottom in portrait. Plain
  * rectangles, so tests can check everything fits.
  */
+import { gridCells } from './setupLayout';
 import type { Rect } from './theme';
 
 export interface MyShopLayout {
   titleY: number;
-  /** Shop name, Shopkeeper, Hints and Calm mode, top to bottom. */
+  /** My name, Shop name, Shopkeeper, Hints and Calm mode, in reading order. */
   rows: Rect[];
   switchPlayer: Rect;
   back: Rect;
@@ -17,7 +19,7 @@ export interface MyShopLayout {
 
 const PAD = 20;
 const GAP = 12;
-const ROWS = 4;
+const ROWS = 5;
 const LINK_H = 48;
 
 export function myShopLayout(panel: Rect, portrait: boolean): MyShopLayout {
@@ -27,8 +29,10 @@ export function myShopLayout(panel: Rect, portrait: boolean): MyShopLayout {
   const buttons = portrait ? oneRow(x, w, bottom - 8) : stacked(panel, bottom);
   const top = panel.y + (portrait ? 62 : 86);
   const rowsBottom = buttons.top - (portrait ? 12 : 24);
-  const rowH = Math.min(portrait ? 80 : 84, (rowsBottom - top - (ROWS - 1) * GAP) / ROWS);
-  const rows = Array.from({ length: ROWS }, (_, i) => ({ x, y: top + i * (rowH + GAP), w, h: rowH }));
+  const cols = portrait ? 2 : 1;
+  const lines = Math.ceil(ROWS / cols);
+  const rowH = Math.min(portrait ? 80 : 84, (rowsBottom - top - (lines - 1) * GAP) / lines);
+  const rows = gridCells({ x, y: top, w, h: lines * rowH + (lines - 1) * GAP }, ROWS, cols, GAP);
   return {
     titleY: panel.y + (portrait ? 32 : 46),
     rows,
