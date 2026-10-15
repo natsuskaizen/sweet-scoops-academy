@@ -85,6 +85,7 @@ function isVocabSpec(spec: unknown): spec is VocabChallengeSpec {
     typeof s.word === 'string' &&
     typeof s.answer === 'string' &&
     Array.isArray(s.options) &&
-    s.options.every((o) => typeof o === 'string')
+    s.options.every((o) => typeof o === 'string') &&
+    (s.count === undefined || typeof s.count === 'number')
   );
 }

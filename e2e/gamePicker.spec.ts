@@ -50,9 +50,7 @@ test('a child picks the game before the first round, and the round plays just th
   expect(errors).toEqual([]);
 });
 
-test('a kindergarten child picks first letters, then answers by tapping a letter button', async ({
-  page,
-}, testInfo) => {
+test('a kindergarten child picks reading, then answers by tapping a button', async ({ page }, testInfo) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(String(e)));
   await page.goto('/?e2e&fast&picker');
@@ -70,17 +68,17 @@ test('a kindergarten child picks first letters, then answers by tapping a letter
     profile.currentRound = null;
     ssa.scene.scene.restart();
   });
-  await page.waitForFunction(() => (window as PickerWindow).__ssa?.scene.picker?.spots.letters, null, {
+  await page.waitForFunction(() => (window as PickerWindow).__ssa?.scene.picker?.spots.reading, null, {
     timeout: 30_000,
   });
   await page.waitForTimeout(400);
   await page.screenshot({ path: testInfo.outputPath('picker-kindergarten.png') });
-  const letters = await page.evaluate(() => (window as PickerWindow).__ssa!.scene.picker!.spots.letters!);
-  await tapAt(page, letters.x, letters.y);
+  const reading = await page.evaluate(() => (window as PickerWindow).__ssa!.scene.picker!.spots.reading!);
+  await tapAt(page, reading.x, reading.y);
 
   await page.waitForFunction(() => (window as PickerWindow).__ssa?.scene.choices.isEnabled, null, { timeout: 30_000 });
   expect(await page.evaluate(() => (window as PickerWindow).__ssa!.scene.keypad.isEnabled)).toBe(false);
-  await page.screenshot({ path: testInfo.outputPath('first-letter.png') });
+  await page.screenshot({ path: testInfo.outputPath('reading.png') });
   const right = await page.evaluate(() => {
     const ssa = (window as PickerWindow).__ssa!;
     const { correctAnswer } = ssa.manager().current()!.presentation;
@@ -90,10 +88,57 @@ test('a kindergarten child picks first letters, then answers by tapping a letter
       game: ssa.manager().profile.settings.game,
     };
   });
-  expect(right.game).toBe('letters');
+  expect(right.game).toBe('reading');
   await tapAt(page, right.spot.x, right.spot.y);
   await page.waitForFunction(() => (window as PickerWindow).__ssa!.manager().current()?.index === 1, null, {
     timeout: 30_000,
   });
+  expect(errors).toEqual([]);
+});
+
+test('reading mixes first letters with reading the order, both answered by tapping', async ({ page }, testInfo) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await page.goto('/?e2e&fast&picker');
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await skipSetup(page);
+  await page.waitForFunction(() => (window as PickerWindow).__ssa?.scene.picker, null, { timeout: 30_000 });
+  await page.evaluate(() => {
+    const ssa = (window as PickerWindow).__ssa!;
+    const { profile } = ssa.manager();
+    profile.settings.grade = 'kindergarten';
+    profile.currentRound = null;
+    ssa.scene.scene.restart();
+  });
+  await page.waitForFunction(() => (window as PickerWindow).__ssa?.scene.picker?.spots.reading, null, {
+    timeout: 30_000,
+  });
+  const reading = await page.evaluate(() => (window as PickerWindow).__ssa!.scene.picker!.spots.reading!);
+  await tapAt(page, reading.x, reading.y);
+
+  const seen = new Set<string>();
+  for (let index = 0; index < 8 && seen.size < 2; index++) {
+    await page.waitForFunction(() => (window as PickerWindow).__ssa?.scene.choices.isEnabled, null, {
+      timeout: 30_000,
+    });
+    const now = await page.evaluate(() => {
+      const ssa = (window as PickerWindow).__ssa!;
+      const manager = ssa.manager();
+      const { profile } = manager;
+      const order = manager.current()!;
+      return {
+        skill: profile.currentRound!.orders[order.index]!.spec.skillId,
+        spot: ssa.scene.choices.spots[order.presentation.correctAnswer]!,
+      };
+    });
+    if (!seen.has(now.skill)) await page.screenshot({ path: testInfo.outputPath(`reading-${now.skill}.png`) });
+    seen.add(now.skill);
+    await tapAt(page, now.spot.x, now.spot.y);
+    await page.waitForFunction((i) => (window as PickerWindow).__ssa!.manager().current()?.index === i + 1, index, {
+      timeout: 30_000,
+    });
+  }
+  expect([...seen].sort()).toEqual(['firstLetter', 'readOrder']);
   expect(errors).toEqual([]);
 });

@@ -25,6 +25,7 @@ type Objects = Phaser.GameObjects.GameObject[];
 
 export function drawOrderPicture(scene: Phaser.Scene, picture: OrderPicture, area: Rect, flavor: string): Objects {
   if (picture.kind === 'sprite') return drawSprite(scene, picture, area);
+  if (picture.kind === 'words') return drawWords(scene, picture.text, area);
   const key = scene.textures.exists(`scoop-${flavor}`) ? `scoop-${flavor}` : 'scoop-vanilla';
   return picture.kind === 'cone'
     ? drawCone(scene, picture.scoops, area, key)
@@ -53,6 +54,16 @@ function drawSprite(scene: Phaser.Scene, picture: Extract<OrderPicture, { kind: 
   const left = area.x + (area.w - size - WORD_GAP - word.displayWidth) / 2;
   image.setX(left + size / 2);
   return [image, word.setX(left + size + WORD_GAP)];
+}
+
+const WORDS_FONT_MAX = 72;
+
+/** An order in words, as big as the area allows. */
+function drawWords(scene: Phaser.Scene, line: string, area: Rect): Objects {
+  const label = scene.add.text(area.x + area.w / 2, area.y + area.h / 2, line, text(WORDS_FONT_MAX, CSS.ink));
+  label.setOrigin(0.5);
+  if (label.width > area.w) label.setScale(area.w / label.width);
+  return [label];
 }
 
 /** Largest whole-number scale (at most MAX_SCALE, at least 1) at which art of this size fits. */

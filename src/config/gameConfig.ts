@@ -33,11 +33,24 @@ export interface VocabWord {
   picture: string;
 }
 
+export interface VocabColor {
+  /** The colour word a child reads: "pink". */
+  word: string;
+  /** The tub's colour as a CSS hex. */
+  hex: string;
+}
+
 export interface VocabConfig {
   /** Words with a picture; every vocab game is built from them. */
   words: readonly VocabWord[];
   /** Buttons on a first-letter question: the right letter and this many minus one wrong ones. */
   letterChoices: number;
+  /** Colour words for "read the order", easiest first. */
+  colors: readonly VocabColor[];
+  /** Tubs on a read-the-order question: the right colour and this many minus one wrong ones. */
+  colorChoices: number;
+  /** An order asks for between these many tubs ("2 pink"). */
+  orderCount: RangeRule;
 }
 
 /** One game a child can pick for a round, e.g. "Grouping". */
@@ -329,6 +342,18 @@ export const GAME_CONFIG: GameConfig = {
       { word: 'apple', picture: 'apple' },
     ],
     letterChoices: 4,
+    colors: [
+      { word: 'red', hex: '#e84a5f' },
+      { word: 'pink', hex: '#ff8fb3' },
+      { word: 'blue', hex: '#6c9fe0' },
+      { word: 'green', hex: '#5fbf98' },
+      { word: 'yellow', hex: '#ffd93d' },
+      { word: 'orange', hex: '#ff9a3c' },
+      { word: 'purple', hex: '#9b84d1' },
+      { word: 'brown', hex: '#9a6b52' },
+    ],
+    colorChoices: 3,
+    orderCount: { min: 1, max: 3 },
   },
   grades: {
     defaultGrade: 'grade3',
@@ -367,12 +392,12 @@ export const GAME_CONFIG: GameConfig = {
             skills: ['counting', 'addition'],
           },
           {
-            id: 'letters',
-            label: 'First letter',
+            id: 'reading',
+            label: 'Reading',
             symbol: 'Aa',
-            hint: 'Which letter does it start with?',
+            hint: 'Letters and words',
             subject: 'vocab',
-            skills: ['firstLetter'],
+            skills: ['firstLetter', 'readOrder'],
           },
         ],
         startGame: 'mixed',

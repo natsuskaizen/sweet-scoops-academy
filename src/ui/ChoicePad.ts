@@ -19,6 +19,8 @@ export interface ChoicePadOptions {
 /** The biggest a picture is drawn on a button. */
 const PICTURE_MAX_SCALE = 8;
 const SWATCH_R = 26;
+/** A colour tub on its own is bigger than one beside a label. */
+const SWATCH_MAX_R = 60;
 
 export class ChoicePad {
   private buttons = new Map<string, Button>();
@@ -115,8 +117,9 @@ export class ChoicePad {
     if (!option.swatch) return null;
     const g = this.scene.add.graphics();
     const color = Number.parseInt(option.swatch.slice(1), 16);
-    g.fillStyle(color, 1).fillCircle(0, y, SWATCH_R);
-    g.lineStyle(4, COLORS.ink, 1).strokeCircle(0, y, SWATCH_R);
+    const r = withLabel ? SWATCH_R : Math.min(SWATCH_MAX_R, Math.round(Math.min(cell.w, cell.h) * 0.3));
+    g.fillStyle(color, 1).fillCircle(0, y, r);
+    g.lineStyle(4, COLORS.ink, 1).strokeCircle(0, y, r);
     return g;
   }
 }
