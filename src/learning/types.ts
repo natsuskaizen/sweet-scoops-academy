@@ -90,7 +90,9 @@ export type OrderPicture =
   /** Piles of scoops joined by plus signs: "put them together". */
   | { kind: 'piles'; parts: number[] }
   /** A little picture (a key from src/characters/wordArt.ts), with `word` beside it on the ticket. */
-  | { kind: 'sprite'; key: string; word?: string };
+  | { kind: 'sprite'; key: string; word?: string }
+  /** Words to read ("2 pink"), big, for the ticket. */
+  | { kind: 'words'; text: string };
 
 /**
  * Data-only description of a visual hint or explanation. The shop renders
@@ -107,8 +109,8 @@ export type VisualAid =
   | { kind: 'takeAway'; total: number; remove: number; showResult: boolean; caption: string }
   /** `total` scoops in rows of 5 to count; showNumbers counts them out one by one (explanation). */
   | { kind: 'count'; total: number; showNumbers: boolean; caption: string }
-  /** A word to read, with its picture; the first `lit` letters are lit up. */
-  | { kind: 'word'; word: string; picture?: string; lit: number; caption: string }
+  /** A word to read, with its picture or colour disc; the first `lit` letters are lit up. */
+  | { kind: 'word'; word: string; picture?: string; swatch?: string; lit: number; caption: string }
   | { kind: 'text'; caption: string };
 
 /** Customer-flavoured context the shop passes in so order text can be themed. */

@@ -311,8 +311,9 @@ export class VisualAidView extends Phaser.GameObjects.Container {
 
   private drawWord(aid: Extract<VisualAid, { kind: 'word' }>, area: Area): void {
     const s = Math.max(1, Math.min(WORD_PICTURE_MAX_SCALE, Math.floor(area.h / WORD_ART_SIZE)));
-    const size = aid.picture ? WORD_ART_SIZE * s : 0;
-    const gap = aid.picture ? WORD_GAP : 0;
+    const disc = Math.round(area.h * 0.7);
+    const size = aid.picture ? WORD_ART_SIZE * s : aid.swatch ? disc : 0;
+    const gap = size > 0 ? WORD_GAP : 0;
     const fit = (area.w - size - gap) / (aid.word.length * LETTER_WIDTH);
     const fontSize = Math.floor(Math.min(WORD_FONT_MAX, area.h * 0.7, fit));
     const letters = [...aid.word].map((ch, i) =>
@@ -323,15 +324,21 @@ export class VisualAidView extends Phaser.GameObjects.Container {
     const wordW = letters.reduce((sum, l) => sum + l.width, 0);
     const cy = area.y + area.h / 2;
     let x = area.x + (area.w - size - gap - wordW) / 2;
-    if (aid.picture) {
+    if (aid.picture)
       this.keep(this.scene.add.image(x + size / 2, cy, wordTexture(this.scene, aid.picture)).setScale(s));
-      x += size + gap;
-    }
+    else if (aid.swatch) this.drawDisc(x + size / 2, cy, size / 2, aid.swatch);
+    x += size + gap;
     for (const letter of letters) {
       letter.setPosition(x, cy);
       x += letter.width;
     }
     this.popIn(letters.slice(0, aid.lit), 0);
+  }
+
+  private drawDisc(x: number, y: number, r: number, hex: string): void {
+    const g = this.keep(this.scene.add.graphics());
+    g.fillStyle(Number.parseInt(hex.slice(1), 16), 1).fillCircle(x, y, r);
+    g.lineStyle(4, COLORS.ink, 1).strokeCircle(x, y, r);
   }
 
   private crossOut(x: number, y: number, r: number): void {

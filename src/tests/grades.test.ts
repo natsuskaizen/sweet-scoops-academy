@@ -76,13 +76,13 @@ describe('grade levels', () => {
     expect(added.ticketPicture).toBeUndefined();
   });
 
-  it('kindergarten first letters play the vocab subject, with its own progress in the save', () => {
-    const letters = { grade: 'kindergarten', game: 'letters' };
+  it('kindergarten reading plays the vocab subject, with its own progress in the save', () => {
+    const letters = { grade: 'kindergarten', game: 'reading' };
     const subject = subjectForGrade(letters);
-    expect(subject).toMatchObject({ id: 'vocab', gameType: 'kindergarten/letters' });
+    expect(subject).toMatchObject({ id: 'vocab', gameType: 'kindergarten/reading' });
     expect(gameCount(letters)).toBe(4);
     const specs = subject.planRound(subject.createProgress(), { roundNumber: 1, rng: createRng(7), count: 10, now: 0 });
-    expect(specs.every((spec) => spec.skillId === 'firstLetter')).toBe(true);
+    expect(specs.every((spec) => ['firstLetter', 'readOrder'].includes(spec.skillId))).toBe(true);
     const save = createSaveFile(1);
     const p = save.profiles[save.activeProfileId]!;
     chooseGrade(p, letters);

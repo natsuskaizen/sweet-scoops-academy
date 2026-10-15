@@ -3,6 +3,7 @@ import { GAME_CONFIG, type VocabConfig } from '../config/gameConfig';
 import { createRng } from '../core/rng';
 import { WORD_ART, WORD_ART_SIZE } from '../characters/wordArt';
 import { createFirstLetter } from '../learning/vocab/firstLetter';
+import { createReadOrder } from '../learning/vocab/readOrder';
 import { createVocabSkills } from '../learning/vocab/registry';
 import type { VocabChallengeSpec } from '../learning/vocab/skill';
 import { createVocabSubject } from '../learning/vocab/vocabSubject';
@@ -31,7 +32,7 @@ describe('first letter skill', () => {
   });
 
   it('falls back to any letter when the words have too few first letters', () => {
-    const few: VocabConfig = { words: [{ word: 'ant', picture: 'star' }], letterChoices: 4 };
+    const few: VocabConfig = { ...GAME_CONFIG.vocab, words: [{ word: 'ant', picture: 'star' }] };
     const spec = createFirstLetter(few).build('first:ant', createRng(3));
     expect(spec.options).toHaveLength(4);
     expect(spec.options).toContain('a');
@@ -125,5 +126,45 @@ describe('word pictures', () => {
       for (const row of rows!) expect(row).toHaveLength(WORD_ART_SIZE);
       expect(rows!.join('')).toMatch(/^[.xrRgyYbBwknNcaAls]+$/);
     }
+  });
+});
+
+describe('read the order', () => {
+  const skill = createReadOrder();
+  const build = (word: string, seed = 1) => skill.build(`color:${word}`, createRng(seed));
+
+  it('asks for a count of a colour in words, with only colours to tap', () => {
+    for (let seed = 1; seed <= 20; seed++) {
+      const spec = build('pink', seed);
+      expect(spec.options).toHaveLength(GAME_CONFIG.vocab.colorChoices);
+      expect(new Set(spec.options).size).toBe(spec.options.length);
+      expect(spec.options).toContain('pink');
+      expect(spec.count).toBeGreaterThanOrEqual(GAME_CONFIG.vocab.orderCount.min);
+      expect(spec.count).toBeLessThanOrEqual(GAME_CONFIG.vocab.orderCount.max);
+      expect(skill.validate(spec)).toBe(true);
+    }
+    expect(build('pink', 4)).toEqual(build('pink', 4));
+  });
+
+  it('shows no picture of the colour name, only swatches, and explains with the colour', () => {
+    const spec = { ...build('pink'), count: 2 };
+    const shown = skill.present(spec);
+    expect(shown).toMatchObject({
+      orderLine: '2 pink',
+      correctAnswer: 'pink',
+      ticketPicture: { kind: 'words', text: '2 pink' },
+    });
+    expect(shown.orderPicture).toBeUndefined();
+    const input = shown.answerInput;
+    expect(input.kind === 'choice' && input.options.every((o) => !o.label && o.swatch)).toBe(true);
+    expect(shown.explanation).toMatchObject({ kind: 'word', word: 'pink', swatch: '#ff8fb3' });
+  });
+
+  it('rejects a spec that does not fit the colours or count', () => {
+    const spec = build('pink');
+    expect(skill.validate({ ...spec, count: 0 })).toBe(false);
+    expect(skill.validate({ ...spec, options: ['pink', 'pink', 'red'] })).toBe(false);
+    expect(skill.validate({ ...spec, answer: 'red' })).toBe(false);
+    expect(() => skill.build('color:plaid', createRng(1))).toThrow(/Unknown vocab fact/);
   });
 });

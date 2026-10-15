@@ -22,6 +22,8 @@ export interface VocabChallengeSpec extends ChallengeSpec {
   options: string[];
   /** The id of the right button. */
   answer: string;
+  /** How many the order asks for ("2 pink"), for skills that read an order. */
+  count?: number;
 }
 
 export interface VocabSkill {
