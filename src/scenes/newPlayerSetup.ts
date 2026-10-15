@@ -7,7 +7,7 @@
 import type Phaser from 'phaser';
 import { friendLook } from '../characters/characterManager';
 import { friendName, isFriendId, keeperOrMomo, type FriendId } from '../characters/friendArt';
-import { GAME_CONFIG } from '../config/gameConfig';
+import { GAME_CONFIG, type GradeLevel } from '../config/gameConfig';
 import { createRng, randomSeed, type Rng } from '../core/rng';
 import type { NewPlayer } from '../save/profileActions';
 import { letterAs, ownedShopName, rollShopName, SHOP_NAME_IDEAS, typeKey, type LetterKey } from '../shop/playerNames';
@@ -31,11 +31,18 @@ export interface SetupHost {
 
 export type EditStep = 'name' | 'shop' | 'keeper';
 
-type Step = 'name' | 'shop' | 'typeShop' | 'keeper' | 'ready';
-const NEXT_STEP: Record<EditStep, Step> = { name: 'shop', shop: 'keeper', keeper: 'ready' };
+type Step = 'name' | 'shop' | 'typeShop' | 'keeper' | 'grade' | 'ready';
+const NEXT_STEP: Record<EditStep | 'grade', Step> = { name: 'shop', shop: 'keeper', keeper: 'grade', grade: 'ready' };
 /** Where ◀ goes from each step; the first step has none. */
-const PREVIOUS_STEP: Partial<Record<Step, Step>> = { shop: 'name', typeShop: 'shop', keeper: 'shop', ready: 'keeper' };
-const STEP_DOT: Record<Step, number> = { name: 0, shop: 1, typeShop: 1, keeper: 2, ready: 3 };
+const PREVIOUS_STEP: Partial<Record<Step, Step>> = {
+  shop: 'name',
+  typeShop: 'shop',
+  keeper: 'shop',
+  grade: 'keeper',
+  ready: 'grade',
+};
+const STEP_DOT: Record<Step, number> = { name: 0, shop: 1, typeShop: 1, keeper: 2, grade: 3, ready: 4 };
+const STEP_COUNT = 5;
 
 /** What the keys that aren't letters show. */
 const KEY_LABELS: Record<string, string> = { done: '✓', back: '⌫', ' ': 'space' };
@@ -59,6 +66,7 @@ export class NewPlayerSetup {
   private name = '';
   private shopName = '';
   private keeper: FriendId;
+  private grade: string = GAME_CONFIG.grades.defaultGrade;
   private nameText: Phaser.GameObjects.Text | null = null;
   /** The shop name before "Type my own" cleared it, for ◀. */
   private shopNameBeforeTyping = '';
@@ -110,6 +118,7 @@ export class NewPlayerSetup {
       typeShop: () => this.buildTyping('shop'),
       shop: () => this.buildShopName(),
       keeper: () => this.buildKeepers(),
+      grade: () => this.buildGrades(),
       ready: () => this.buildReady(),
     };
     build[step]();
@@ -119,15 +128,16 @@ export class NewPlayerSetup {
     const { scene } = this.host;
     const cx = LAYOUT.panel.x + LAYOUT.panel.w / 2;
     const dots = scene.add.graphics();
-    for (let i = 0; i < (this.host.edit ? 0 : 4); i++) {
+    for (let i = 0; i < (this.host.edit ? 0 : STEP_COUNT); i++) {
       dots.fillStyle(i <= STEP_DOT[step] ? COLORS.lavenderDark : COLORS.off, 1);
-      dots.fillCircle(cx + (i - 1.5) * 30, this.layout.dotsY, 9);
+      dots.fillCircle(cx + (i - (STEP_COUNT - 1) / 2) * 30, this.layout.dotsY, 9);
     }
     const titles: Record<Step, string> = {
       name: "What's your name?",
       shop: 'Name your shop!',
       typeShop: 'Type your shop name',
       keeper: 'Who works in your shop?',
+      grade: 'What grade are you in?',
       ready: 'Your shop is ready!',
     };
     const { onCancel } = this.host;
@@ -229,9 +239,13 @@ export class NewPlayerSetup {
   }
 
   /** On to the next step, or finished when only this one thing was being changed. */
-  private after(step: EditStep): void {
+  private after(step: EditStep | 'grade'): void {
     if (!this.host.edit) return this.show(NEXT_STEP[step]);
-    this.complete({ name: this.name, shop: { name: this.shopName, keeper: this.keeper } });
+    this.complete(this.player());
+  }
+
+  private player(): NewPlayer {
+    return { name: this.name, shop: { name: this.shopName, keeper: this.keeper }, grade: this.grade };
   }
 
   private rolled(): string {
@@ -295,6 +309,23 @@ export class NewPlayerSetup {
     this.host.onKeeper(id);
   }
 
+  /** The grades to choose from, one big card each, so the first round fits the player. */
+  private buildGrades(): void {
+    const levels = GAME_CONFIG.grades.levels;
+    const cells = gridCells(this.layout.body, levels.length, 1, 12);
+    const cards = levels.map((level, i) =>
+      button(this.host.scene, cells[i]!, level.label, 34, () => this.chooseGrade(level, cards, levels)),
+    );
+    this.page.add(cards);
+    this.chooseGrade(levels.find((l) => l.id === this.grade) ?? levels[0]!, cards, levels);
+    this.addNext(() => this.after('grade'));
+  }
+
+  private chooseGrade(level: GradeLevel, cards: Button[], levels: readonly GradeLevel[]): void {
+    this.grade = level.id;
+    cards.forEach((card, i) => card.setFill(levels[i] === level ? COLORS.lemon : COLORS.cream, COLORS.creamDark));
+  }
+
   private buildReady(): void {
     const { scene } = this.host;
     const { body } = this.layout;
@@ -305,7 +336,7 @@ export class NewPlayerSetup {
     const shop = scene.add.text(cx, body.y + body.h - 20, this.shopName, text(small ? 26 : 30, CSS.ink));
     shop.setOrigin(0.5).setScale(Math.min(1, body.w / Math.max(1, shop.width)));
     this.page.add([friend, shop]);
-    const player = { name: this.name, shop: { name: this.shopName, keeper: this.keeper } };
+    const player = this.player();
     this.addNext(() => this.complete(player), 'Open the shop!');
   }
 }

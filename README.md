@@ -118,7 +118,7 @@ src/
   scenes/
     BootScene.ts             builds textures, loads the save
     ShopScene.ts             the persistent shop: runs the order flow, animating what OrderManager decides
-    newPlayerSetup.ts        a new player's setup in the register: name, shop name, shopkeeper
+    newPlayerSetup.ts        a new player's setup in the register: name, shop name, shopkeeper, grade
     startScreen.ts           the start screen: hello to whoever played last, Open the shop!, the other players and New
     myShop.ts                My shop, the kids' settings from ⚙: shop name, shopkeeper, hints, calm mode, switch player
     parentArea.ts            what the grown-ups area shows and every action in it

@@ -381,7 +381,7 @@ this.start = new StartScreen({
 });
 ```
 
-Its pieces are placed by `startLayout()` in `src/ui/startLayout.ts` (unit tested). A brand new game, or New on the start screen, opens the new-player setup instead. It lives in the register panel, so the shop stays in view, and it only reports choices; the scene shows them and saves the result:
+Its pieces are placed by `startLayout()` in `src/ui/startLayout.ts` (unit tested). A brand new game, or New on the start screen, opens the new-player setup instead. It lives in the register panel, so the shop stays in view, and it only reports choices; the scene shows them and saves the result. The steps are name, shop name, shopkeeper and grade (`What grade are you in?`, one card per `GAME_CONFIG.grades.levels`); `addPlayer` starts the new player on that grade's first game, so their first round fits them:
 
 ```ts
 this.setup = new NewPlayerSetup({

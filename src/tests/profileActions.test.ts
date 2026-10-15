@@ -76,6 +76,24 @@ describe('players', () => {
     expect(validateSaveFile(save)).toEqual([]);
   });
 
+  it('starts a player in the grade they were set up with, and in the default grade otherwise', () => {
+    const save = createSaveFile(1);
+    const k = addPlayer(save, { ...ava, grade: 'kindergarten' }, 10)!;
+    expect(k.settings).toMatchObject({ grade: 'kindergarten', game: 'mixed' });
+    expect(validateSaveFile(save)).toEqual([]);
+    expect(addPlayer(save, { ...ava, name: 'Leo' }, 11)!.settings.grade).toBe(GAME_CONFIG.grades.defaultGrade);
+  });
+
+  it('moves the first player to the grade chosen in their setup', () => {
+    const save = createSaveFile(1);
+    const first = save.profiles[save.activeProfileId]!;
+    updatePlayer(first, { name: 'Ava', grade: 'kindergarten' });
+    expect(first.settings).toMatchObject({ grade: 'kindergarten', game: 'mixed' });
+    expect(validateSaveFile(save)).toEqual([]);
+    updatePlayer(first, { name: 'Ava' });
+    expect(first.settings.grade).toBe('kindergarten');
+  });
+
   it('gives players added in the same moment different ids', () => {
     const save = createSaveFile(1);
     const a = addPlayer(save, ava, 10)!;
