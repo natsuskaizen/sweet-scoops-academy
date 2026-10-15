@@ -252,11 +252,11 @@ describe('SaveManager', () => {
     v4.schemaVersion = 4;
     const settings = v4.profiles[v4.activeProfileId]!.settings as unknown as Record<string, unknown>;
     delete settings.grade;
-    delete settings.mathMode;
+    delete settings.game;
 
     const parsed = parseSave(JSON.stringify(v4));
     if (!parsed.ok) throw new Error(parsed.problems.join());
-    expect(parsed.save.profiles[v4.activeProfileId]!.settings).toMatchObject({ grade: 'grade3', mathMode: 'mixed' });
+    expect(parsed.save.profiles[v4.activeProfileId]!.settings).toMatchObject({ grade: 'grade3', game: 'mixed' });
   });
 
   it('upgrades a version 5 save: each day of the calendar gets an empty list of games played', () => {
@@ -270,16 +270,41 @@ describe('SaveManager', () => {
     expect(parsed.save.profiles[v5.activeProfileId]!.dailyLog['2026-10-12']).toMatchObject({ types: [], heart: true });
   });
 
+  it('upgrades a version 6 save: the picked game is called game, not math mode', () => {
+    const v6 = createSaveFile(1000);
+    v6.schemaVersion = 6;
+    const settings = v6.profiles[v6.activeProfileId]!.settings as unknown as Record<string, unknown>;
+    settings.mathMode = 'division';
+    delete settings.game;
+
+    const parsed = parseSave(JSON.stringify(v6));
+    if (!parsed.ok) throw new Error(parsed.problems.join());
+    const upgraded = parsed.save.profiles[v6.activeProfileId]!.settings as unknown as Record<string, unknown>;
+    expect(upgraded).toMatchObject({ game: 'division' });
+    expect(upgraded).not.toHaveProperty('mathMode');
+  });
+
+  it('checks every subject’s progress, and loads a save with vocab progress', () => {
+    const save = createSaveFile(1);
+    const p = save.profiles[save.activeProfileId]!;
+    p.learning.vocab = { firstLetter: { facts: {} } };
+    expect(validateSaveFile(save)).toEqual([]);
+    p.learning.vocab = { firstLetter: { facts: { 'first:sun': { key: 'first:sun' } as never } } };
+    expect(validateSaveFile(save).some((problem) => problem.includes('learning.vocab.firstLetter'))).toBe(true);
+    p.learning.vocab = 5 as never;
+    expect(validateSaveFile(save).some((problem) => problem.endsWith('learning.vocab invalid'))).toBe(true);
+  });
+
   it('rejects a player with no grade, but loads a grade this game does not know', () => {
     const save = createSaveFile(1);
     const settings = save.profiles[save.activeProfileId]!.settings;
     settings.grade = 'grade7';
     expect(validateSaveFile(save)).toEqual([]);
     settings.grade = '';
-    settings.mathMode = 3 as never;
+    settings.game = 3 as never;
     expect(validateSaveFile(save).map((problem) => problem.replace(/^profiles\[[^\]]+\]\./, ''))).toEqual([
       'settings.grade invalid',
-      'settings.mathMode invalid',
+      'settings.game invalid',
     ]);
   });
 

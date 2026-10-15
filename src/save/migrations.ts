@@ -74,7 +74,7 @@ function addGrades(data: Obj): void {
     if (!isObj(profile.settings)) continue;
     const start = defaultGradeChoice();
     profile.settings.grade ??= start.grade;
-    profile.settings.mathMode ??= start.mathMode;
+    profile.settings.game ??= start.game;
   }
 }
 
@@ -90,12 +90,26 @@ function addGameTypes(data: Obj): void {
   }
 }
 
+/**
+ * Version 7 calls the picked game just that: `mathMode` was named for when
+ * math was the only subject. Saves from before grades got `game` already.
+ */
+function renameMathMode(data: Obj): void {
+  for (const profile of profilesOf(data)) {
+    const settings = profile.settings;
+    if (!isObj(settings) || settings.mathMode === undefined) continue;
+    settings.game ??= settings.mathMode;
+    delete settings.mathMode;
+  }
+}
+
 export const MIGRATIONS: Readonly<Record<number, (data: Obj) => void>> = {
   1: addRoundTiming,
   2: addDailyLog,
   3: addShops,
   4: addGrades,
   5: addGameTypes,
+  6: renameMathMode,
 };
 
 /** Runs every step from the save's version up to `target`. Returns false if a step is missing. */

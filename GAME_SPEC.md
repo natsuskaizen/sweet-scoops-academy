@@ -158,9 +158,13 @@ The two operations must maintain independent adaptive learning records for every
 Each child has a grade level, chosen by a grown-up in the parent area (new players start in 3rd grade). The grade decides what the shop's questions practise:
 
 - **3rd grade**: three games: Grouping (multiplication only), Sharing (division only) and Mix it up (both).
-- **Kindergarten**: three games: How many? (counting up to 5), Adding (within 5) and Mix it up (both). Players can't read yet, so orders are drawn as pictures (a cone of scoops, or piles of scoops with a plus between) and the number keys show dots, so a child can match a count to its key. Every scoop is drawn whole and clear of its neighbours so none can be mistaken for hidden. More kindergarten question types (take away, make 10, which is more) and kindergarten reading follow; see the Milestone 5 tracker.
+- **Kindergarten**: four games: How many? (counting up to 5), Adding (within 5), Mix it up (both) and First letter (reading). Players can't read yet, so orders are drawn as pictures (a cone of scoops, or piles of scoops with a plus between) and the number keys show dots, so a child can match a count to its key. Every scoop is drawn whole and clear of its neighbours so none can be mistaken for hidden. More kindergarten question types (take away, make 10, which is more) and kindergarten reading follow; see the Milestone 5 tracker.
 
 Changing grade starts a fresh round. Each operation's learning record is kept, so a child who switches back carries on where they left off.
+
+### Kindergarten reading
+
+Reading is a second subject, played as its own games. **First letter** shows a picture (an apple) in the customer's bubble, and on the ticket the picture beside its word with the first letter missing (_pple). The child taps the right one of four big letter buttons, which stand where the number keypad would be. The wrong letters are the first letters of other pictured words. A first miss dims that button and shows the picture with the word and "Say it slowly: apple. What sound do you hear first?"; a second miss shows the whole word with its first letter lit ("apple starts with A!"). Everything stays visual, with no speech required. Words and their pictures are listed in `GAME_CONFIG.vocab`. Read the order and word to picture follow.
 
 ### Picking the next game
 

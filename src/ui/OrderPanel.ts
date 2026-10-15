@@ -65,8 +65,10 @@ export class OrderPanel extends Phaser.GameObjects.Container {
 
   /** The picture fills the expression row; "=" stands to its right. */
   private showPicture(order: OrderPicture, flavor: string): void {
-    this.expression.setText('=').setX(this.boxW - 56);
-    const area = { x: 24, y: 64, w: this.boxW - 120, h: 82 };
+    // A word picture is the whole question and takes the full width; a scoop picture has "=" beside it.
+    const wide = order.kind === 'sprite';
+    this.expression.setText(wide ? '' : '=').setX(this.boxW - 56);
+    const area = { x: 24, y: 64, w: this.boxW - (wide ? 48 : 120), h: wide ? 100 : 82 };
     this.picture = drawOrderPicture(this.scene, order, area, flavor);
     this.add(this.picture);
   }
