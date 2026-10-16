@@ -6,6 +6,8 @@ type PickerWindow = Window & {
   __ssa?: {
     scene: {
       picker: { spots: Spots } | null;
+      wallCalendar: { x: number; y: number };
+      calendar: object | null;
       keypad: { isEnabled: boolean };
       choices: { isEnabled: boolean; spots: Spots };
       scene: { restart: () => void };
@@ -47,6 +49,30 @@ test('a child picks the game before the first round, and the round plays just th
   expect(round.mode).toBe('division');
   expect(new Set(round.ops)).toEqual(new Set(['division']));
   expect(await page.evaluate(() => (window as PickerWindow).__ssa!.scene.picker)).toBeNull();
+  expect(errors).toEqual([]);
+});
+
+test('the wall calendar opens while a child picks a game, and the picker is still there after', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await page.goto('/?e2e&fast&picker');
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await skipSetup(page);
+  await page.waitForFunction(() => (window as PickerWindow).__ssa?.scene.picker, null, { timeout: 30_000 });
+
+  const wall = await page.evaluate(() => {
+    const { x, y } = (window as PickerWindow).__ssa!.scene.wallCalendar;
+    return { x, y };
+  });
+  await tapAt(page, wall.x + 60, wall.y + 60);
+  await page.waitForFunction(() => (window as PickerWindow).__ssa!.scene.calendar !== null);
+  await tapAt(page, 400, 40); // the shade above the card
+  await page.waitForFunction(() => (window as PickerWindow).__ssa!.scene.calendar === null);
+
+  const spot = await page.evaluate(() => (window as PickerWindow).__ssa!.scene.picker!.spots.division!);
+  await tapAt(page, spot.x, spot.y);
+  await page.waitForFunction(() => (window as HookWindow).__ssa?.scene.keypad.isEnabled, null, { timeout: 30_000 });
   expect(errors).toEqual([]);
 });
 
