@@ -12,6 +12,8 @@ export const TIER_COLORS: Readonly<Record<TierId, { main: readonly string[]; sha
   pink: { main: ['#ff9ec0'], shade: ['#e0607e'] },
   mint: { main: ['#9ee6c4'], shade: ['#5fbf98'] },
   sky: { main: ['#9cc8ff'], shade: ['#6c9fe0'] },
+  // A soft black: a charcoal grey, light enough that outlines still show on it.
+  charcoal: { main: ['#77737f'], shade: ['#57535f'] },
   silver: { main: ['#e4ecf6'], shade: ['#a8b4c8'] },
   golden: { main: ['#ffd84a'], shade: ['#e0a830'] },
   rainbow: { main: RAINBOW, shade: RAINBOW_SHADE },

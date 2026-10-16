@@ -3,8 +3,9 @@
  * read as part of the room. `L` and `l` pixels take the item's tier colours
  * (see tierColors.ts); the other letters are fixed below.
  *
- * Wall paint and doors are room surfaces: instead of standing in a spot they
- * repaint the room (shopRoom.ts); their grids here are the tray icons.
+ * Wall paint, doors and counter paint are room surfaces: instead of standing
+ * in a spot they repaint the room (shopRoom.ts); their grids here are the
+ * tray icons.
  */
 import type Phaser from 'phaser';
 import { makePixelTexture } from '../characters/pixelArt';
@@ -15,8 +16,8 @@ import { isRoomSurface, itemById, type CatalogDesign, type CatalogItem, type Sho
 import { itemInSpot } from '../shop/purchases';
 import { LAYOUT, type Layout, type Point, type Rect } from '../ui/theme';
 import { DOOR_ART, PAINT_TIN } from './doorArt';
-import { roomTexture } from './shopArt';
-import { doorFrameRect, PLAIN_ROOM, ROOM_OUTLINE, type RoomLook } from './shopRoom';
+import { counterTexture, roomTexture, type ShopRoom } from './shopArt';
+import { COUNTER_ART, doorFrameRect, PLAIN_ROOM, ROOM_OUTLINE, ROOM_SCALE, type RoomLook } from './shopRoom';
 
 const FIXED: Record<string, string> = {
   o: ROOM_OUTLINE,
@@ -246,6 +247,118 @@ function balloons(): string[] {
   );
 }
 
+/** A gumball machine: a glass globe of gumballs on a stand with a coin knob and a chute. */
+const GUMBALL_W = 16;
+const GLOBE = { x: 7.5, y: 8, r: 7.6 };
+const GUMBALL_COLORS = ['p', 'g', 'k', 'r', 'S'];
+const GUMBALL_STAND = [
+  '...oooooooooo...',
+  '..oLLLLLLLLLLo..',
+  '..oLwLLookoLLo..',
+  '..oLLLLokkoLLo..',
+  '..oLLLLLooLLLo..',
+  '..oLoooLLLLLLo..',
+  '..oLowoLLLLLLo..',
+  '..oLoooLLLLLLo..',
+  '..ollllllllllo..',
+  '.oooooooooooooo.',
+  '.ollllllllllllo.',
+  '.oooooooooooooo.',
+];
+
+function globeCell(x: number, y: number): string {
+  const d = Math.hypot(x + 0.5 - GLOBE.x - 0.5, y + 0.5 - GLOBE.y - 0.5);
+  if (d > GLOBE.r) return '.';
+  if (d > GLOBE.r - 1) return 'o';
+  if (x >= 3 && x <= 4 && y >= 4 && y <= 6) return 'w';
+  if (y < 6) return 'B';
+  const row = Math.floor(y / 2);
+  const col = Math.floor((x + (row % 2)) / 2);
+  return GUMBALL_COLORS[(col + row * 2) % GUMBALL_COLORS.length]!;
+}
+
+function gumballMachine(): string[] {
+  const lid = ['......oooo......', '.....oLLLLo.....'];
+  const globe = Array.from({ length: 16 }, (_, y) =>
+    Array.from({ length: GUMBALL_W }, (_, x) => globeCell(x, y)).join(''),
+  ).filter((row) => row.includes('o'));
+  return [...lid, ...globe.slice(1), ...GUMBALL_STAND];
+}
+
+/** A little wall shelf with three jars of sweets. */
+const JAR = ['.oooo.', '.oLLo.', 'oooooo', 'owpgko', 'owkrpo', 'ogpkgo', 'oooooo'];
+const SHELF_W = 24;
+
+function candyShelf(): string[] {
+  const jars = JAR.map((row) => `..${row}.${row}.${row}..`);
+  return [
+    ...jars,
+    'o'.repeat(SHELF_W),
+    `o${'L'.repeat(SHELF_W - 2)}o`,
+    `o${'l'.repeat(SHELF_W - 2)}o`,
+    'o'.repeat(SHELF_W),
+    '...ot..............to...',
+    '....ot............to....',
+    '.....oo..........oo.....',
+  ];
+}
+
+/** Three stars hanging from the ceiling on strings of different lengths. */
+const STAR = ['...o...', '..oLo..', 'ooLLLoo', 'oLLwLLo', '.oLLLo.', 'oLlolLo', 'oo...oo'];
+const STARS_AT = [
+  { x: 3, drop: 6 },
+  { x: 10, drop: 13 },
+  { x: 17, drop: 2 },
+];
+
+function hangingStars(): string[] {
+  const w = 21;
+  const h = Math.max(...STARS_AT.map((s) => s.drop)) + STAR.length;
+  const grid = Array.from({ length: h }, () => Array.from({ length: w }, () => '.'));
+  for (const s of STARS_AT) {
+    for (let y = 0; y < s.drop; y++) grid[y]![s.x] = 'o';
+    STAR.forEach((row, dy) => {
+      [...row].forEach((ch, dx) => {
+        if (ch !== '.') grid[s.drop + dy]![s.x - 3 + dx] = ch;
+      });
+    });
+  }
+  return grid.map((row) => row.join(''));
+}
+
+/** A string of hearts draped in two loops along the counter's front. */
+const GARLAND_W = 60;
+const GARLAND_HEART = ['.oo.oo.', 'oLLoLLo', 'oLwLLLo', '.oLLLo.', '..olo..', '...o...'];
+const GARLAND_HEARTS = [6, 18, 30, 42, 54];
+
+const garlandSag = (x: number): number => Math.round(3 * Math.abs(Math.sin((Math.PI * x) / (GARLAND_W / 2))));
+
+function heartGarland(): string[] {
+  const h = 3 + GARLAND_HEART.length + 1;
+  const grid = Array.from({ length: h }, () => Array.from({ length: GARLAND_W }, () => '.'));
+  for (let x = 0; x < GARLAND_W; x++) grid[garlandSag(x)]![x] = 'o';
+  for (const cx of GARLAND_HEARTS) {
+    const top = garlandSag(cx) + 1;
+    GARLAND_HEART.forEach((row, dy) => {
+      [...row].forEach((ch, dx) => {
+        if (ch !== '.') grid[top + dy]![cx - 3 + dx] = ch;
+      });
+    });
+  }
+  return grid.map((row) => row.join(''));
+}
+
+/** Counter paint's tray icon: a little counter, cream top over a striped front. */
+const COUNTER_ICON = [
+  'oooooooooooooooo',
+  'owwwwwwwwwwwwwwo',
+  'osssssssssssssso',
+  'oooooooooooooooo',
+  ...Array.from({ length: 7 }, () => '.oLLllLLllLLllo.'),
+  '.ollllllllllllo.',
+  '.oooooooooooooo.',
+];
+
 export const DECOR_ART: Readonly<Record<string, readonly string[]>> = {
   'deco-plant': PLANT,
   'deco-lamp': LAMP,
@@ -256,6 +369,11 @@ export const DECOR_ART: Readonly<Record<string, readonly string[]>> = {
   'deco-sign': SIGN,
   'deco-cupcakes': CUPCAKES,
   'deco-balloons': balloons(),
+  'deco-gumball': gumballMachine(),
+  'deco-shelf': candyShelf(),
+  'deco-stars': hangingStars(),
+  'deco-garland': heartGarland(),
+  'counter-paint': COUNTER_ICON,
   'wall-paint': PAINT_TIN,
   ...DOOR_ART,
 };
@@ -278,20 +396,37 @@ const spotOf = (design: Pick<CatalogDesign, 'placement'>): ShopSpot =>
 
 /**
  * What a design covers in the room, in game pixels: the whole wall for wall
- * paint, the door frame for a door, else the piece standing on its spot.
+ * paint, the door frame for a door, the counter (as far as the screen) for
+ * counter paint, else the piece standing on its spot.
  */
 export function pieceRect(design: Pick<CatalogDesign, 'asset' | 'placement'>, layout: Layout = LAYOUT): Rect {
   const spot = spotOf(design);
   if (spot === 'wall') return { x: 0, y: layout.shop.y, w: layout.width, h: layout.wallBottom - layout.shop.y };
   if (spot === 'door') return doorFrameRect();
+  if (spot === 'counter') {
+    const w = Math.min(COUNTER_ART.w * ROOM_SCALE, layout.width - COUNTER_ART.x);
+    return { x: COUNTER_ART.x, y: COUNTER_ART.y, w, h: COUNTER_ART.h * ROOM_SCALE };
+  }
   const at = layout.decorSpots[spot];
   const { w, h } = decorSize(design.asset);
   return { x: at.x - w / 2, y: at.y - h, w, h };
 }
 
-/** The wall paint and door in use (or being tried) as a look for the room. */
+/** The wall paint, door and counter paint in use (or being tried) as a look for the room. */
 export function roomLookOf(decorations: readonly PlacedDecoration[]): RoomLook {
-  return { wall: itemInSpot(decorations, 'wall')?.tier ?? null, door: itemInSpot(decorations, 'door') ?? null };
+  return {
+    wall: itemInSpot(decorations, 'wall')?.tier ?? null,
+    door: itemInSpot(decorations, 'door') ?? null,
+    counter: itemInSpot(decorations, 'counter')?.tier ?? null,
+  };
+}
+
+/** The look with `item` (wall paint, a door or counter paint) tried on in place of what is in use. */
+export function lookWith(look: RoomLook, item: CatalogItem): RoomLook {
+  const spot = item.placement.kind === 'shop' ? item.placement.spot : null;
+  if (spot === 'wall') return { ...look, wall: item.tier };
+  if (spot === 'counter') return { ...look, counter: item.tier };
+  return spot === 'door' ? { ...look, door: item } : look;
 }
 
 /** The item's texture (its design drawn in its tier's colours), or null for a design with no art. */
@@ -307,10 +442,10 @@ export function decorationTexture(scene: Phaser.Scene, item: CatalogItem): strin
   );
 }
 
-/** Rugs lie under everything; counter-top pieces stand in front of the counter; the rest sit behind people. */
+/** Rugs lie under everything; counter-top and counter-front pieces stand in front of the counter; the rest sit behind people. */
 function depthFor(item: CatalogItem): number {
   if (item.placement.kind !== 'shop') return 2;
-  if (item.placement.spot === 'counter-top') return 31;
+  if (item.placement.spot === 'counter-top' || item.placement.spot === 'counter-front') return 31;
   return item.placement.spot === 'floor-center' ? 1.5 : 2;
 }
 
@@ -353,7 +488,7 @@ export function twinkle(scene: Phaser.Scene, box: Phaser.GameObjects.Container, 
   }
 }
 
-/** The decorations standing in the room, and the wall paint and door it is painted with; redrawn whenever the save changes. */
+/** The decorations standing in the room, and the wall paint, door and counter paint it is painted with; redrawn whenever the save changes. */
 export class PlacedDecorations {
   private shown = new Map<ShopSpot, Phaser.GameObjects.Container>();
   private look: RoomLook = PLAIN_ROOM;
@@ -361,7 +496,7 @@ export class PlacedDecorations {
 
   constructor(
     private readonly scene: Phaser.Scene,
-    private readonly room: Phaser.GameObjects.Image,
+    private readonly shop: Pick<ShopRoom, 'room' | 'counter'>,
   ) {}
 
   draw(decorations: readonly PlacedDecoration[]): void {
@@ -381,14 +516,14 @@ export class PlacedDecorations {
     this.shown.get(spot)?.setVisible(visible);
   }
 
-  /** Repaints the room trying wall paint or a door; null goes back to what is in use. */
+  /** Repaints the room trying wall paint, a door or counter paint; null goes back to what is in use. */
   tryOn(item: CatalogItem | null): void {
-    if (!item || item.placement.kind !== 'shop') return this.paint(this.look);
-    this.paint(item.placement.spot === 'wall' ? { ...this.look, wall: item.tier } : { ...this.look, door: item });
+    this.paint(item ? lookWith(this.look, item) : this.look);
   }
 
   private paint(look: RoomLook): void {
-    this.room.setTexture(roomTexture(this.scene, look));
+    this.shop.room.setTexture(roomTexture(this.scene, look));
+    this.shop.counter.setTexture(counterTexture(this.scene, look.counter));
     this.sparkle?.destroy();
     this.sparkle = null;
     if (look.door?.tier !== 'rainbow') return;

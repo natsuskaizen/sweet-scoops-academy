@@ -491,19 +491,20 @@ function paintPlainDoor(p: Pixels): void {
 }
 
 // shopArt.ts: one texture per screen shape and per look (wall paint, door), painted when first needed
-const key = roomTexture(scene, { wall: 'sky', door: itemById('door-arch.golden') });
+const key = roomTexture(scene, { wall: 'sky', door: itemById('door-arch.golden'), counter: null });
+counterTexture(scene, 'charcoal'); // 'room-counter-charcoal': the counter in Soft Black counter paint
 ```
 
 Wall paint and doors bought in Decorate repaint the room rather than standing in it: `wallColors(tier)` gives the wallpaper's stripes, valance and panels in the tier's colours (Sparkly Rainbow in bands), and a bought door's grid from `doorArt.ts` is painted over the door frame. Every door keeps the OPEN sign and the customers' `LAYOUT.doorSpot` where they were.
 
-The counter is a second canvas on a higher layer so it hides the shopkeeper's legs.
+The counter is a second canvas on a higher layer so it hides the shopkeeper's legs. Counter paint repaints it: `counterColors(tier)` gives the front, its stripes and the base trim in the tier's colours (Sparkly Rainbow in bands), and the cream top stays.
 
 ## 9. Buying, decorating and dressing up: `src/shop/catalog.ts`, `purchases.ts`, `src/scenes/decorateMode.ts`, `closetMode.ts`
 
-The catalog lists designs; each comes in six tiers, and each tier is its own item to buy and own (`hat-beret.golden`). Plain colours cost the base price, then Silver ×2.5, Golden ×5 and Sparkly Rainbow ×10:
+The catalog lists designs; each comes in seven tiers, and each tier is its own item to buy and own (`hat-beret.golden`). The four plain colours (Pink, Mint, Sky and Soft Black, a charcoal grey) cost the base price, then Silver ×2.5, Golden ×5 and Sparkly Rainbow ×10:
 
 ```ts
-(wear('hat-beret', 'Beret', 80, 'hat'), // 80 / 80 / 80 / 200 / 400 / 800
+(wear('hat-beret', 'Beret', 80, 'hat'), // 80 / 80 / 80 / 80 / 200 / 400 / 800
   decoration('deco-cafe', 'Café Set', 100, 'floor-right'),
   itemById('hat-beret.golden')); // { name: 'Golden Beret', price: 400, tier: 'golden', ... }
 ```
@@ -515,7 +516,7 @@ offerFor(profile, item); // { kind: 'buy', price } | { kind: 'short', short } | 
 takeOffer(profile, item); // buys, puts in the shop, or takes away; the scene then saves
 ```
 
-Decorate opens from the results card, or from the Sprinkle Shop menu (`ShopMenu`) that the Sprinkles balance in the top bar opens between rounds or while a customer waits; the keypad is off while any of them is open (`syncInput`). Each decoration has a spot (`LAYOUT.decorSpots`); its art is a text grid in `decorArt.ts` whose `L`/`l` pixels take the tier's colours (`tierColors.ts`), and Sparkly Rainbow pieces twinkle. Two spots are room surfaces (`isRoomSurface`): `'wall'` for wall paint and `'door'` for the doors. What is used there repaints the room (`PlacedDecorations.tryOn` previews it), and taking it away brings back the plain wall or door. Tapping a colour shows the piece in the room right away; `TierCard` shows the swatches and the button, placed by `tierCardRect` clear of what the piece covers (`pieceRect`). The tray shows a page of big bubbles between ◀ ▶ arrows (`decorTraySlots` in `theme.ts`).
+Decorate opens from the results card, or from the Sprinkle Shop menu (`ShopMenu`) that the Sprinkles balance in the top bar opens between rounds or while a customer waits; the keypad is off while any of them is open (`syncInput`). Each decoration has a spot (`LAYOUT.decorSpots`); its art is a text grid in `decorArt.ts` whose `L`/`l` pixels take the tier's colours (`tierColors.ts`), and Sparkly Rainbow pieces twinkle. Three spots are room surfaces (`isRoomSurface`): `'wall'` for wall paint, `'door'` for the doors and `'counter'` for counter paint. What is used there repaints the room (`PlacedDecorations.tryOn` previews it, through `lookWith`), and taking it away brings back the plain wall, door or counter. Tapping a colour shows the piece in the room right away; `TierCard` shows the swatches and the button, placed by `tierCardRect` clear of what the piece covers (`pieceRect`). The tray shows a page of big bubbles between ◀ ▶ arrows (`decorTraySlots` in `theme.ts`).
 
 ```ts
 (decoration('door-arch', 'Arched Door', 220, 'door', 'furniture'), // a new door design: add its grid to DOOR_ART

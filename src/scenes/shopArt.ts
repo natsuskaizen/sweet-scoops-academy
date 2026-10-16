@@ -17,6 +17,7 @@ import {
   ROOM_TEXT,
   type RoomLook,
 } from './shopRoom';
+import type { TierId } from '../shop/catalog';
 import { CSS, text } from '../ui/theme';
 
 /** Small pixel textures used across the scene. */
@@ -85,9 +86,18 @@ export function roomTexture(scene: Phaser.Scene, look: RoomLook): string {
   return key;
 }
 
+/** The counter's texture in a counter paint's colours (null for the parlour's own pink), painted the first time it is needed. */
+export function counterTexture(scene: Phaser.Scene, tier: TierId | null): string {
+  const key = `room-counter-${tier ?? 'plain'}`;
+  paintTexture(scene, key, COUNTER_ART, (p) => paintCounter(p, tier));
+  return key;
+}
+
 export interface ShopRoom {
   /** Wall paint and doors repaint this. */
   room: Phaser.GameObjects.Image;
+  /** Counter paint repaints this. */
+  counter: Phaser.GameObjects.Image;
   /** The shop's name over the window (setShopSign changes it). */
   sign: Phaser.GameObjects.Text;
   /** The sign hanging on the door. */
@@ -103,14 +113,17 @@ export function setShopSign(sign: Phaser.GameObjects.Text, name: string): void {
 /** Draws the room, its shop sign and the door's OPEN sign. */
 export function drawShopRoom(scene: Phaser.Scene, shopName: string): ShopRoom {
   const room = roomArt();
-  paintTexture(scene, 'room-counter', COUNTER_ART, paintCounter);
   const image = scene.add
     .image(room.x, room.y, roomTexture(scene, PLAIN_ROOM))
     .setOrigin(0)
     .setScale(ROOM_SCALE)
     .setDepth(0);
   // The counter sits on a higher layer so it hides the shopkeeper's legs.
-  scene.add.image(COUNTER_ART.x, COUNTER_ART.y, 'room-counter').setOrigin(0).setScale(ROOM_SCALE).setDepth(30);
+  const counter = scene.add
+    .image(COUNTER_ART.x, COUNTER_ART.y, counterTexture(scene, null))
+    .setOrigin(0)
+    .setScale(ROOM_SCALE)
+    .setDepth(30);
   const { sign, open } = ROOM_TEXT;
   const name = scene.add
     .text(sign.x, sign.y, '', text(40, CSS.white, { stroke: CSS.ink, strokeThickness: 6 }))
@@ -118,5 +131,5 @@ export function drawShopRoom(scene: Phaser.Scene, shopName: string): ShopRoom {
     .setDepth(1);
   setShopSign(name, shopName);
   const doorSign = scene.add.text(open.x, open.y, 'OPEN', text(20, CSS.white)).setOrigin(0.5).setDepth(1);
-  return { room: image, sign: name, doorSign };
+  return { room: image, counter, sign: name, doorSign };
 }

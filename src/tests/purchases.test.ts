@@ -53,15 +53,16 @@ describe('catalog', () => {
   it('prices plain colours at the base price and each later tier higher, rainbow highest', () => {
     for (const d of DESIGNS) {
       const prices = variantsOf(d).map((v) => v.price);
-      expect(prices.slice(0, 3)).toEqual([d.basePrice, d.basePrice, d.basePrice]);
-      for (let i = 3; i < prices.length; i++) expect(prices[i]).toBeGreaterThan(prices[i - 1]!);
+      expect(prices.slice(0, 4)).toEqual([d.basePrice, d.basePrice, d.basePrice, d.basePrice]);
+      for (let i = 4; i < prices.length; i++) expect(prices[i]).toBeGreaterThan(prices[i - 1]!);
     }
-    expect(variantsOf(design('hat-beret')).map((v) => v.price)).toEqual([80, 80, 80, 200, 400, 800]);
+    expect(variantsOf(design('hat-beret')).map((v) => v.price)).toEqual([80, 80, 80, 80, 200, 400, 800]);
   });
 
   it('names each item after its tier and design', () => {
     expect(item('hat-beret.golden').name).toBe('Golden Beret');
     expect(item('deco-rug.rainbow').name).toBe('Sparkly Rainbow Heart Rug');
+    expect(item('counter-paint.charcoal').name).toBe('Soft Black Counter Paint');
     expect(tierPrice(design('bow-strawberry'), 'silver')).toBe(125);
   });
 
@@ -267,10 +268,12 @@ describe('wall paint and doors', () => {
   it('are room surfaces, sold in Decorate like any decoration', () => {
     expect(isRoomSurface('wall')).toBe(true);
     expect(isRoomSurface('door')).toBe(true);
+    expect(isRoomSurface('counter')).toBe(true);
     expect(isRoomSurface('floor-left')).toBe(false);
-    for (const id of ['wall-paint', 'door-cottage', 'door-candy', 'door-arch']) {
+    expect(isRoomSurface('counter-front')).toBe(false);
+    for (const id of ['wall-paint', 'door-cottage', 'door-candy', 'door-arch', 'counter-paint']) {
       expect(shopOf(design(id))).toBe('decorate');
-      expect(variantsOf(design(id))).toHaveLength(6);
+      expect(variantsOf(design(id))).toHaveLength(TIERS.length);
     }
     expect(item('wall-paint.rainbow').name).toBe('Sparkly Rainbow Wall Paint');
   });

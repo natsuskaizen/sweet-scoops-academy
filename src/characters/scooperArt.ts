@@ -47,6 +47,7 @@ export const SCOOPER_LOOKS: Record<ScooperId, ScooperLook> = {
   pink: plain('#ff8fb1', '#e0607f'),
   mint: plain('#9ee6c4', '#5fbf98'),
   sky: plain('#9cc8ff', '#6c9fe0'),
+  charcoal: plain('#77737f', '#57535f'),
   silver: { colors: { 1: '#d4dce8', 2: '#d4dce8', 3: '#a8b4c8', m: '#f4f8fc', w: '#ffffff' }, sparkles: ['#ffffff'] },
   golden: {
     colors: { 1: '#8a5cc4', 2: '#8a5cc4', 3: '#6a3fa0', m: '#ffcf4a', w: '#fff6c0' },

@@ -15,9 +15,11 @@ export interface TierCardOptions {
 
 const SWATCH_R = 30;
 const SWATCH_STEP = 84;
+/** Room either side of the swatch row. */
+const SWATCH_MARGIN = 24;
 
 /**
- * The shop's colour card: the design's name, its six tiers as swatches with
+ * The shop's colour card: the design's name, its tiers as swatches with
  * prices (or a tick when owned), and one big button that buys, uses or
  * puts away the chosen tier. Too dear shows how many Sprinkles are still
  * needed instead of a "no".
@@ -50,16 +52,23 @@ export class TierCard extends Phaser.GameObjects.Container {
     this.add(g);
     this.add(this.scene.add.text(24, 16, item.name, text(28)).setOrigin(0, 0));
     this.add(this.scene.add.text(w - 24, 22, 'Tap a colour to try it', text(17, CSS.inkSoft)).setOrigin(1, 0));
-    const startX = (w - SWATCH_STEP * (TIERS.length - 1)) / 2;
+    const step = Math.min(SWATCH_STEP, (w - 2 * SWATCH_MARGIN) / TIERS.length);
+    const startX = (w - step * (TIERS.length - 1)) / 2;
     TIERS.forEach((tier, i) =>
-      this.swatch({ x: startX + i * SWATCH_STEP, y: 104 }, design, tier, tier === selected, profile),
+      this.swatch({ x: startX + i * step, y: 104, step }, design, tier, tier === selected, profile),
     );
     this.action = this.button(design, item, offerFor(profile, item));
     this.add(this.action);
   }
 
-  private swatch(at: Point, design: CatalogDesign, tier: TierId, on: boolean, profile: Profile): void {
-    const { x, y } = at;
+  private swatch(
+    at: Point & { step: number },
+    design: CatalogDesign,
+    tier: TierId,
+    on: boolean,
+    profile: Profile,
+  ): void {
+    const { x, y, step } = at;
     const item = itemById(itemId(design.id, tier))!;
     const g = this.scene.add.graphics();
     if (on) g.lineStyle(6, COLORS.lavenderDark, 1).strokeCircle(x, y, SWATCH_R + 8);
@@ -68,7 +77,7 @@ export class TierCard extends Phaser.GameObjects.Container {
     const caption = owns(profile, item) ? '✓' : `✦${item.price}`;
     const color = owns(profile, item) ? CSS.mint : CSS.strawberry;
     const label = this.scene.add.text(x, y + SWATCH_R + 18, caption, text(18, color)).setOrigin(0.5);
-    const hit = this.scene.add.zone(x, y, SWATCH_STEP, SWATCH_STEP).setInteractive({ useHandCursor: true });
+    const hit = this.scene.add.zone(x, y, step, step).setInteractive({ useHandCursor: true });
     hit.on('pointerup', () => this.opts.onPick(tier));
     this.add([g, label, hit]);
   }
