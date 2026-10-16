@@ -11,8 +11,9 @@
  * door, wall line and counter follow LAYOUT, so moving them in theme.ts
  * moves the art too.
  *
- * Wall paint and doors bought in Decorate repaint the room: `RoomLook` says
- * which are in use, and each look is its own texture.
+ * Wall paint, doors and counter paint bought in Decorate repaint the room:
+ * `RoomLook` says which are in use, and each look is its own texture (the
+ * counter has its own, one per counter paint).
  */
 import { FLAVOR_COLORS } from '../characters/sprites';
 import { tierPixel, tint, TIER_COLORS } from '../characters/tierColors';
@@ -108,13 +109,14 @@ export function doorFrameRect(): Rect {
   return { x: f.x * ROOM_SCALE, y: LAYOUT.shop.y + f.y * ROOM_SCALE, w: f.w * ROOM_SCALE, h: f.h * ROOM_SCALE };
 }
 
-/** The wall paint (its tier) and the door in use; null for the room's own. */
+/** The wall paint and counter paint (their tiers) and the door in use; null for the room's own. */
 export interface RoomLook {
   wall: TierId | null;
   door: CatalogItem | null;
+  counter: TierId | null;
 }
 
-export const PLAIN_ROOM: RoomLook = { wall: null, door: null };
+export const PLAIN_ROOM: RoomLook = { wall: null, door: null, counter: null };
 
 export function paintRoom(p: Pixels, look: RoomLook = PLAIN_ROOM): void {
   paintWall(p, wallColors(look.wall));
@@ -325,13 +327,35 @@ function paintDisplayCase(p: Pixels): void {
   p.rect(x + 5, y + 4, 1, 8, C.white).rect(x + 7, y + 4, 1, 4, C.white);
 }
 
-/** Cream top, candy-striped front with a scalloped trim. */
-export function paintCounter(p: Pixels): void {
+export interface CounterColors {
+  front: Band;
+  stripe: Band;
+  base: Band;
+}
+
+const PLAIN_COUNTER: CounterColors = { front: () => C.pink, stripe: () => C.pinkLight, base: () => C.pinkDark };
+
+/** The counter front's colours: the parlour's pink, or counter paint in a tier's colours (Sparkly Rainbow in bands). */
+export function counterColors(tier: TierId | null): CounterColors {
+  if (!tier) return PLAIN_COUNTER;
+  const { main, shade } = TIER_COLORS[tier];
+  const band =
+    (colors: readonly string[], amount: number): Band =>
+    (i) =>
+      tint(colors[Math.floor(i) % colors.length]!, amount);
+  return { front: band(main, 0), stripe: band(main, 0.45), base: band(shade, 0) };
+}
+
+/** Cream top, candy-striped front with a scalloped trim, in the counter paint's colours. */
+export function paintCounter(p: Pixels, tier: TierId | null = null): void {
   const { w, h } = COUNTER_ART;
+  const c = counterColors(tier);
   p.box(0, 0, w, 10, C.cream).rect(1, 7, w - 2, 2, C.creamDark);
-  p.rect(2, 10, w - 4, h - 10, C.pink);
-  for (let x = 2; x < w - 2; x += 10) p.rect(x, 10, 5, h - 10, C.pinkLight);
+  for (let x = 2; x < w - 2; x += 10) {
+    const rest = w - 2 - x;
+    p.rect(x, 10, Math.min(10, rest), h - 10, c.front(x / 10)).rect(x, 10, Math.min(5, rest), h - 10, c.stripe(x / 10));
+    p.rect(x, h - 4, Math.min(10, rest), 4, c.base(x / 10));
+  }
   for (let x = 2; x < w - 2; x += 6) p.disc(x + 3, 10, 2, C.cream);
   p.rect(1, 10, 1, h - 10, C.outline).rect(w - 2, 10, 1, h - 10, C.outline);
-  p.rect(2, h - 4, w - 4, 4, C.pinkDark);
 }

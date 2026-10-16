@@ -1,14 +1,14 @@
 /**
  * Item catalog: the one place prices live.
  *
- * Each design (a beret, a café set) comes in six tiers: three plain colours
+ * Each design (a beret, a café set) comes in seven tiers: four plain colours
  * at the design's base price, then Silver, Golden and Sparkly Rainbow, each
  * dearer than the last. Every tier is its own item to buy and own, with an
  * id like `hat-beret.golden`.
  *
  * Wearables and scoopers are sold in Momo's Closet; decorations in Decorate.
- * Most decorations stand in a spot in the room; wall paint and doors are
- * room surfaces, which repaint the room itself.
+ * Most decorations stand in a spot in the room; wall paint, doors and
+ * counter paint are room surfaces, which repaint the room itself.
  */
 /** `outfit` is a whole outfit (a dress), worn instead of a `top` and `bottom`. */
 export type EquipSlot = 'outfit' | 'top' | 'bottom' | 'shoes' | 'hat' | 'bow' | 'glasses' | 'hearing' | 'handheld';
@@ -31,24 +31,30 @@ export type ShopSpot =
   | 'floor-back'
   | 'counter-top'
   | 'counter-end'
+  | 'counter-front'
   | 'window'
+  | 'wall-low'
+  | 'ceiling'
+  | 'floor-front'
   | 'wall'
-  | 'door';
+  | 'door'
+  | 'counter';
 
 /** Spots that are part of the room itself: what is used there repaints the room instead of standing in it. */
-export const ROOM_SURFACES: readonly ShopSpot[] = ['wall', 'door'];
+export const ROOM_SURFACES: readonly ShopSpot[] = ['wall', 'door', 'counter'];
 
 export const isRoomSurface = (spot: ShopSpot): boolean => ROOM_SURFACES.includes(spot);
 
 export type Placement = { kind: 'equip'; slot: EquipSlot } | { kind: 'shop'; spot: ShopSpot };
 
-export const TIERS = ['pink', 'mint', 'sky', 'silver', 'golden', 'rainbow'] as const;
+export const TIERS = ['pink', 'mint', 'sky', 'charcoal', 'silver', 'golden', 'rainbow'] as const;
 export type TierId = (typeof TIERS)[number];
 
 export const TIER_INFO: Readonly<Record<TierId, { name: string; priceFactor: number }>> = {
   pink: { name: 'Pink', priceFactor: 1 },
   mint: { name: 'Mint', priceFactor: 1 },
   sky: { name: 'Sky', priceFactor: 1 },
+  charcoal: { name: 'Soft Black', priceFactor: 1 },
   silver: { name: 'Silver', priceFactor: 2.5 },
   golden: { name: 'Golden', priceFactor: 5 },
   rainbow: { name: 'Sparkly Rainbow', priceFactor: 10 },
@@ -135,7 +141,12 @@ export const DESIGNS: readonly CatalogDesign[] = [
   decoration('deco-sign', 'Cone Sign', 70, 'wall-left', 'sign'),
   decoration('deco-balloons', 'Balloon Bunch', 80, 'floor-back'),
   decoration('deco-cupcakes', 'Cupcake Stand', 90, 'counter-end'),
+  decoration('deco-shelf', 'Candy Shelf', 80, 'wall-low'),
+  decoration('deco-stars', 'Hanging Stars', 80, 'ceiling'),
+  decoration('deco-garland', 'Heart Garland', 90, 'counter-front'),
+  decoration('deco-gumball', 'Gumball Machine', 110, 'floor-front'),
   decoration('wall-paint', 'Wall Paint', 150, 'wall', 'wallpaper'),
+  decoration('counter-paint', 'Counter Paint', 150, 'counter', 'furniture'),
   decoration('door-cottage', 'Cottage Door', 180, 'door', 'furniture'),
   decoration('door-candy', 'Candy Door', 200, 'door', 'furniture'),
   decoration('door-arch', 'Arched Door', 220, 'door', 'furniture'),

@@ -23,7 +23,7 @@ export interface Hook {
     setup: { complete: (player: object) => void } | null;
     shopMenu: { close: () => void } | null;
     openCloset: () => void;
-    placed: { room: { texture: { key: string } } };
+    room: { room: { texture: { key: string } }; counter: { texture: { key: string } } };
     aid: { visible: boolean };
     bubble: { visible: boolean; hide: () => void };
     showResults: (summary: object, stickers: [], outcomes: []) => Promise<void>;

@@ -99,8 +99,8 @@ describe('decorating layout', () => {
         if (design.placement.kind !== 'shop') continue;
         const at = l.decorSpots[design.placement.spot];
         const r = pieceRect(design, l);
-        // The piece as drawn, with the preview outline's margin (the wall gets no outline).
-        const m = design.placement.spot === 'wall' ? 0 : 12;
+        // The piece as drawn, with the preview outline's margin (wall and counter paint get no outline).
+        const m = ['wall', 'counter'].includes(design.placement.spot) ? 0 : 12;
         const piece = { x: r.x - m, y: r.y - m, w: r.w + 2 * m, h: r.h + 2 * m };
         const card = tierCardRect(l, r);
         const name = `${l.orientation} ${design.id}`;
@@ -108,7 +108,8 @@ describe('decorating layout', () => {
         expect(piece.x, name).toBeGreaterThanOrEqual(0);
         expect(piece.x + piece.w, name).toBeLessThanOrEqual(l.width);
         expect(r.y, name).toBeGreaterThanOrEqual(l.shop.y);
-        expect(at.y, name).toBeLessThanOrEqual(tray.y);
+        // The room's own counter runs on under the tray in landscape; counter paint repaints all of it.
+        if (design.placement.spot !== 'counter') expect(at.y, name).toBeLessThanOrEqual(tray.y);
         expect(overlaps(card, tray), name).toBe(false);
         // In landscape the card always sits on the wall, so wall paint shows around it.
         if (design.placement.spot === 'wall' && l.orientation === 'landscape') continue;
@@ -123,7 +124,8 @@ describe('decorating layout', () => {
     expect(new Set(standing).size).toBe(standing.length);
     for (const l of screens) {
       const rects = designsIn('decorate')
-        .filter((d) => d.placement.kind === 'shop' && !['wall', 'floor-center'].includes(d.placement.spot))
+        // The rug lies under things, and wall and counter paint repaint what pieces stand on.
+        .filter((d) => d.placement.kind === 'shop' && !['wall', 'counter', 'floor-center'].includes(d.placement.spot))
         .map((d) => ({ id: d.id, r: pieceRect(d, l) }));
       const doors = (a: string, b: string) => a.startsWith('door-') && b.startsWith('door-');
       const pairs = rects.flatMap((a) => rects.filter((b) => a.id < b.id && !doors(a.id, b.id)).map((b) => [a, b]));
