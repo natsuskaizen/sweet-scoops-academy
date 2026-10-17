@@ -145,10 +145,19 @@ const DECOR_SPOTS: Omit<Record<ShopSpot, Point>, 'wall-right' | 'floor-right'> =
   'counter-top': { x: 528, y: 496 },
   // The counter's far end, past the shopkeeper.
   'counter-end': { x: 748, y: 496 },
+  // Hanging from the front of the counter, under its lip.
+  'counter-front': { x: 635, y: 590 },
   window: { x: 324, y: 236 },
-  // Room surfaces (wall paint, doors) repaint the room; their spot is the bottom centre of what they cover.
+  // On the wall under the window, beside the balloons.
+  'wall-low': { x: 290, y: 455 },
+  // Hanging from the valance, over the display case.
+  ceiling: { x: 720, y: 200 },
+  // The front corner by the door, past where customers walk in.
+  'floor-front': { x: 110, y: 770 },
+  // Room surfaces (wall paint, doors, counter paint) repaint the room; their spot is the bottom centre of what they cover.
   wall: { x: 400, y: 560 },
   door: { x: 105, y: 560 },
+  counter: { x: 635, y: 712 },
 };
 
 const SHOP_PARTS = {
@@ -191,6 +200,10 @@ function landscapeLayout(): Layout {
       'floor-right': { x: 1030, y: 690 },
       // Clear of Decorate's tray, just behind where customers stand.
       'floor-center': { x: 360, y: 696 },
+      // Just under the door, clear of Decorate's tray.
+      'floor-front': { x: 105, y: 700 },
+      // Over the door, clear of the colour card.
+      ceiling: { x: 105, y: 200 },
     },
     registerArea: { x: SHOP_W, y: 72, w: width - SHOP_W, h: height - 72 },
     panel: { x: 812, y: 80, w: 458, h: 790 },

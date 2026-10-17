@@ -52,7 +52,7 @@ test('Decorate opens from the results card, and a bought plant is saved in its s
   expect(errors).toEqual([]);
 });
 
-test('Wall paint and a new door repaint the room, and taking the paint away brings back the plain wall', async ({
+test('Wall paint, a new door and counter paint repaint the room, and taking the paint away brings back the plain wall', async ({
   page,
 }, testInfo) => {
   const errors: string[] = [];
@@ -63,7 +63,8 @@ test('Wall paint and a new door repaint the room, and taking the paint away brin
     (ssa.scene as unknown as { openDecorate: (cover: unknown[]) => void }).openDecorate([ssa.scene.results]);
   });
   await page.waitForFunction(() => (window as HookWindow).__ssa!.scene.decorate !== null);
-  const roomKey = () => page.evaluate(() => (window as HookWindow).__ssa!.scene.placed.room.texture.key);
+  const roomKey = () => page.evaluate(() => (window as HookWindow).__ssa!.scene.room.room.texture.key);
+  const counterKey = () => page.evaluate(() => (window as HookWindow).__ssa!.scene.room.counter.texture.key);
 
   await page.evaluate(() => {
     const decorate = (window as HookWindow).__ssa!.scene.decorate!;
@@ -74,9 +75,13 @@ test('Wall paint and a new door repaint the room, and taking the paint away brin
     decorate.selectById('door-cottage');
     decorate.pick('golden');
     decorate.act();
+    decorate.selectById('counter-paint');
+    decorate.pick('charcoal');
+    decorate.act();
     decorate.selectById('deco-cafe');
   });
   expect(await roomKey()).toMatch(/-sky-door-cottage\.golden$/);
+  expect(await counterKey()).toBe('room-counter-charcoal');
   await page.screenshot({ path: testInfo.outputPath('decorate-wall-door.png') });
 
   // Trying another door only previews it; leaving puts the bought one back.
@@ -90,7 +95,11 @@ test('Wall paint and a new door repaint the room, and taking the paint away brin
   });
   expect(await roomKey()).toMatch(/-plain-door-cottage\.golden$/);
   const profile = await page.evaluate(() => (window as HookWindow).__ssa!.manager().profile);
-  expect(profile.sprinkles).toBe(2000 - 150 - 900);
-  expect(profile.decorations).toEqual([{ itemId: 'door-cottage.golden', spot: 'door' }]);
+  expect(await counterKey()).toBe('room-counter-charcoal');
+  expect(profile.sprinkles).toBe(2000 - 150 - 900 - 150);
+  expect(profile.decorations).toEqual([
+    { itemId: 'door-cottage.golden', spot: 'door' },
+    { itemId: 'counter-paint.charcoal', spot: 'counter' },
+  ]);
   expect(errors).toEqual([]);
 });

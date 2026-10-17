@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { tierSwatch, tint } from '../characters/tierColors';
-import { DECOR_ART, decorSize, roomLookOf } from '../scenes/decorArt';
+import { DECOR_ART, decorSize, lookWith, roomLookOf } from '../scenes/decorArt';
 import { DOOR_ART, DOOR_H, DOOR_W } from '../scenes/doorArt';
-import { doorFrame, wallColors } from '../scenes/shopRoom';
+import { counterColors, doorFrame, PLAIN_ROOM, wallColors } from '../scenes/shopRoom';
 import { DESIGNS, itemById, shopOf, TIERS } from '../shop/catalog';
 
 const HEX = /^#[0-9a-f]{6}$/;
@@ -39,14 +39,41 @@ describe('decoration art', () => {
 });
 
 describe('room look', () => {
-  it('reads the wall paint and door in use from the placed decorations', () => {
-    expect(roomLookOf([])).toEqual({ wall: null, door: null });
+  it('reads the wall paint, door and counter paint in use from the placed decorations', () => {
+    expect(roomLookOf([])).toEqual(PLAIN_ROOM);
     const look = roomLookOf([
       { itemId: 'deco-plant.pink', spot: 'floor-left' },
       { itemId: 'wall-paint.golden', spot: 'wall' },
       { itemId: 'door-arch.sky', spot: 'door' },
+      { itemId: 'counter-paint.charcoal', spot: 'counter' },
     ]);
-    expect(look).toEqual({ wall: 'golden', door: itemById('door-arch.sky') });
+    expect(look).toEqual({ wall: 'golden', door: itemById('door-arch.sky'), counter: 'charcoal' });
+  });
+
+  it('tries wall paint, a door or counter paint on over the look in use, leaving the rest', () => {
+    const look = roomLookOf([{ itemId: 'wall-paint.mint', spot: 'wall' }]);
+    expect(lookWith(look, itemById('counter-paint.rainbow')!)).toEqual({ ...look, counter: 'rainbow' });
+    expect(lookWith(look, itemById('wall-paint.sky')!)).toEqual({ ...look, wall: 'sky' });
+    expect(lookWith(look, itemById('door-candy.pink')!)).toEqual({ ...look, door: itemById('door-candy.pink') });
+    expect(lookWith(look, itemById('deco-plant.pink')!)).toEqual(look);
+  });
+
+  it('paints the counter front in the tier colours, and keeps the parlour pink otherwise', () => {
+    const plain = counterColors(null);
+    expect(plain.front(0)).toBe('#ff8fb3');
+    for (const tier of TIERS) {
+      const c = counterColors(tier);
+      for (const color of [c.front(0), c.stripe(2), c.base(1.5)]) expect(color, tier).toMatch(HEX);
+      expect(c.front(0)).toBe(tierSwatch(tier));
+    }
+    const rainbow = counterColors('rainbow');
+    expect(new Set([0, 1, 2, 3, 4, 5].map(rainbow.front)).size).toBe(6);
+  });
+
+  it('has a soft black that is a grey, not black', () => {
+    const n = parseInt(tierSwatch('charcoal').slice(1), 16);
+    const channels = [n >> 16, (n >> 8) & 0xff, n & 0xff];
+    for (const c of channels) expect(c).toBeGreaterThan(0x50);
   });
 
   it('paints the wall in the tier colours, Sparkly Rainbow in bands, and keeps the plain wall otherwise', () => {
