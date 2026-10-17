@@ -687,10 +687,13 @@ export class ShopScene extends Phaser.Scene {
   // Progress calendar
   // -------------------------------------------------------------------------
 
-  /** The wall calendar opens the progress calendar whenever the Sprinkle Shop could open. */
+  /**
+   * The wall calendar opens the progress calendar whenever it can be seen: while a
+   * game is being picked, a customer is served or the results card is up. It only
+   * shows progress, so the shop carries on underneath and the keypad waits for it to close.
+   */
   private openCalendar(): void {
     if (this.calendar || this.shopMenu || this.gate || this.decorate || this.closet) return;
-    if (this.busy && !this.results) return;
     this.calendar = new CalendarScreen(this, {
       profile: () => this.manager.profile,
       subjects: this.services.subjectsFor(this.manager.profile),

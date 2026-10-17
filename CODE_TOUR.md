@@ -253,7 +253,7 @@ export function addRound(log, round, subjectId, goal, gameType?): boolean {
 }
 ```
 
-The log keeps `GAME_CONFIG.calendar.keepDays` days, separate from the 100-round history, so old months stay on the calendar. `dayView` and `monthView` turn it into what is drawn (gentle words such as "One new game for a heart!" or "A rest day", never a cross). In the shop, `src/ui/WallCalendar.ts` hangs between the window and the display case with one heart slice per different game today; tapping it opens `src/ui/CalendarScreen.ts` over the shop: the chosen day with a heart that fills a slice per game, and the month of heart stamps. Each subject played shows its `badge` as a chip, so math and later subjects share one calendar.
+The log keeps `GAME_CONFIG.calendar.keepDays` days, separate from the 100-round history, so old months stay on the calendar. `dayView` and `monthView` turn it into what is drawn (gentle words such as "One new game for a heart!" or "A rest day", never a cross). In the shop, `src/ui/WallCalendar.ts` hangs between the window and the display case with one heart slice per different game today; tapping it opens `src/ui/CalendarScreen.ts` over the shop at any time it can be seen (while a game is picked, mid-order or on the results card; the keypad waits until it closes): the chosen day with a heart that fills a slice per game, and the month of heart stamps. Each subject played shows its `badge` as a chip, so math and later subjects share one calendar.
 
 ## 5. Saving: `src/save/saveManager.ts`
 
